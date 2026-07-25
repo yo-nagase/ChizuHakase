@@ -30,6 +30,10 @@ Packages/
 ## them up even by accident.
 assets/
 
+## tmp/ — scratch space for generating card art before it is cut down.
+## Same rule: originals stay out.
+tmp/
+
 ## tools/ — large intermediates. PrefectureShapes.json itself IS committed
 ## (see CLAUDE.md §3: generated but checked in, never rebuilt at build time).
 tools/japan.geojson
