@@ -58,6 +58,13 @@ struct PrefectureMapView: View {
     var hintCode: Int?
     var effect: MapEffect?
     var showsOkinawaInset = true
+    /// How much the caller has magnified this view.
+    ///
+    /// Outlines are drawn before `scaleEffect` is applied, so at 4x a 1.5pt
+    /// border lands as 6pt and swallows the small prefectures whole. Dividing
+    /// by the zoom keeps every line the same width on the glass no matter how
+    /// far in the child has pinched.
+    var zoom: CGFloat = 1
     var onTap: ((Prefecture?) -> Void)?
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -89,6 +96,7 @@ struct PrefectureMapView: View {
                         prefecture: prefecture,
                         transform: transform,
                         canvasSize: geo.size,
+                        zoom: zoom,
                         appearance: appearance(prefecture),
                         isHinted: hintCode == prefecture.code,
                         effect: effect?.code == prefecture.code ? effect : nil,
@@ -129,6 +137,7 @@ private struct PrefectureLayer: View {
     let prefecture: Prefecture
     let transform: CGAffineTransform
     let canvasSize: CGSize
+    let zoom: CGFloat
     let appearance: PrefectureAppearance
     let isHinted: Bool
     let effect: MapEffect?
@@ -148,7 +157,14 @@ private struct PrefectureLayer: View {
     /// The white die-cut has to scale with the render, or an 84pt stage
     /// thumbnail is drawn almost entirely in border and the colour disappears.
     private var dieCutWidth: CGFloat {
-        min(max(canvasSize.width * 0.009, 0.5), 3)
+        min(max(canvasSize.width * 0.009, 0.5), 3) / max(zoom, 1)
+    }
+
+    /// The prefecture boundary itself. Deliberately hair-thin: at 47 shapes it
+    /// is a grid of borders, and anything heavier reads as the lines being the
+    /// subject rather than the country.
+    private var boundaryWidth: CGFloat {
+        min(max(canvasSize.width * 0.0028, 0.35), 1) / max(zoom, 1)
     }
 
     private var anchor: UnitPoint {
@@ -203,7 +219,7 @@ private struct PrefectureLayer: View {
                 // A thin printed edge, no white die-cut. Solid rather than
                 // dashed — at 47 prefectures a dashed edge reads as scribble,
                 // and the fresh-save map is the first thing seen.
-                path.stroke(appearance.stroke, lineWidth: max(0.5, dieCutWidth * 0.5))
+                path.stroke(appearance.stroke, lineWidth: boundaryWidth)
             }
 
             if appearance.isSparkling {
@@ -219,13 +235,18 @@ private struct PrefectureLayer: View {
                 // Outside the die-cut branch: the my-map screen draws every
                 // prefecture with the same printed edge, and Lv3 still owes the
                 // child the gold frame §5 promises.
-                path.stroke(Palette.gold, lineWidth: max(1.4, dieCutWidth * 1.6))
+                // Sized against the boundary, not against the die-cut: once the
+                // borders went hair-thin a 1.6x die-cut rim was wide enough to
+                // fill Kagawa and Osaka with gold, and the prefecture colour
+                // CLAUDE.md §5 calls for vanished under the reward for having
+                // learned it.
+                path.stroke(Palette.gold, lineWidth: max(1.2 / max(zoom, 1), boundaryWidth * 2.6))
                     .mask(path.fill(style: FillStyle(eoFill: true)))
                     .modifier(SlowGlow(enabled: !reduceMotion))
             }
 
             if isHinted {
-                path.stroke(Palette.red, lineWidth: 3.5)
+                path.stroke(Palette.red, lineWidth: 3.5 / max(zoom, 1))
                     .modifier(HintBlink(enabled: !reduceMotion))
             }
         }

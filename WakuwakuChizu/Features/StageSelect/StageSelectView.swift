@@ -20,7 +20,8 @@ struct StageSelectView: View {
                     StageSheet(stage: stage,
                                mapData: app.mapData,
                                record: app.save.data.record(forStage: stage.index),
-                               stuckCount: stuckCount(stage)) {
+                               stuckCount: stuckCount(stage),
+                               sparklingCount: sparklingCount(stage)) {
                         onPlay(stage)
                     }
                 }
@@ -37,6 +38,11 @@ struct StageSelectView: View {
     private func stuckCount(_ stage: Stage) -> Int {
         stage.codes.filter { app.save.data.masteryLevel(of: $0) > 0 }.count
     }
+
+    /// How many have reached キラキラ (CLAUDE.md §5, level 3).
+    private func sparklingCount(_ stage: Stage) -> Int {
+        stage.codes.filter { app.save.data.masteryLevel(of: $0) >= GameRules.maxMastery }.count
+    }
 }
 
 private struct StageSheet: View {
@@ -45,6 +51,7 @@ private struct StageSheet: View {
     let mapData: MapData
     let record: StageRecord?
     let stuckCount: Int
+    let sparklingCount: Int
     var action: () -> Void
 
     var body: some View {
@@ -75,10 +82,22 @@ private struct StageSheet: View {
                                 .padding(.leading, 4)
                         }
                     }
-                    Text("\(mode.stickerCount) \(stuckCount) / \(stage.questionCount)")
-                        .font(AppFont.rounded(12, relativeTo: .caption))
-                        .foregroundStyle(Palette.ink.opacity(0.5))
-                        .monospacedDigit()
+                    HStack(spacing: 8) {
+                        Text("\(mode.stickerCount) \(stuckCount) / \(stage.questionCount)")
+                            .font(AppFont.rounded(12, relativeTo: .caption))
+                            .foregroundStyle(Palette.ink.opacity(0.5))
+                            .monospacedDigit()
+
+                        // Only once there is one to show. A 「✨ 0 / 9」 on every
+                        // untouched stage would read as something missing
+                        // rather than as something still to find.
+                        if sparklingCount > 0 {
+                            Text("✨ \(mode.sparklingCount) \(sparklingCount)")
+                                .font(AppFont.rounded(12, relativeTo: .caption))
+                                .foregroundStyle(Palette.gold)
+                                .monospacedDigit()
+                        }
+                    }
                 }
 
                 Spacer(minLength: 4)
@@ -106,7 +125,11 @@ private struct StageSheet: View {
     }
 
     private var accessibilityText: String {
-        "\(stage.displayName(mode))。\(stage.questionCount) もん。\(mode.starCount(record?.stars ?? 0))"
+        var text = "\(stage.displayName(mode))。\(stage.questionCount) もん。"
+            + "\(mode.starCount(record?.stars ?? 0))。"
+            + "\(mode.stickerCount) \(stuckCount)"
+        if sparklingCount > 0 { text += "。\(mode.sparklingCount) \(sparklingCount)" }
+        return text
     }
 }
 

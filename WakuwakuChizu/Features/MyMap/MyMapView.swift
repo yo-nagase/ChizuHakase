@@ -10,6 +10,10 @@ struct MyMapView: View {
 
     @State private var selected: Prefecture?
     @State private var eraseStep = 0   // 0 = idle, 1 = asked once, 2 = confirming
+    @State private var zoom: CGFloat = 1
+    @State private var pan: CGSize = .zero
+
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private var save: SaveData { app.save.data }
 
@@ -18,26 +22,72 @@ struct MyMapView: View {
             VStack(spacing: 14) {
                 legend
 
-                PrefectureMapView(
-                    mapData: app.mapData,
-                    codes: Array(1...47),
-                    appearance: appearance,
-                    interactiveCodes: Set(1...47),
-                    onTap: { selected = $0 })
-                .aspectRatio(PrefectureGeometry.aspectRatio(of: app.mapData.prefectures),
-                             contentMode: .fit)
-                .background(Palette.seaGradient)
-                .stickerCard(fill: .clear, cornerRadius: 26)
+                map
 
                 summary
                 eraseSection
             }
             .padding(16)
         }
+        // While zoomed the map owns dragging, or the column would scroll away
+        // underneath a child trying to move around Kyushu. The reset button is
+        // always on screen, so the way back to scrolling is one tap.
+        .scrollDisabled(ZoomPan.isZoomed(zoom))
         .background(AlbumPage())
         .navigationTitle(mode.myMap)
         .navigationBarTitleDisplayMode(.inline)
         .sheet(item: $selected) { PrefectureDetailSheet(prefecture: $0) }
+    }
+
+    /// Pinchable, and draggable once pinched. The zoom lives on the map itself
+    /// rather than on the whole screen so the legend and the counts stay put —
+    /// they are the key to what the colours mean, and scaling them away while
+    /// looking closely at a prefecture would be backwards.
+    private var map: some View {
+        PrefectureMapView(
+            mapData: app.mapData,
+            codes: Array(1...47),
+            appearance: appearance,
+            interactiveCodes: Set(1...47),
+            zoom: zoom,
+            onTap: { selected = $0 })
+        .aspectRatio(PrefectureGeometry.aspectRatio(of: app.mapData.prefectures),
+                     contentMode: .fit)
+        .zoomPan(scale: $zoom, offset: $pan)
+        // Clipped to its own card: a zoomed map must not spill over the legend
+        // or the buttons underneath it.
+        .clipShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
+        .background(Palette.seaGradient)
+        .stickerCard(fill: .clear, cornerRadius: 26)
+        .overlay(alignment: .topTrailing) { resetZoomButton }
+        .accessibilityZoomAction { action in
+            // VoiceOver cannot pinch, so it gets the same range through the
+            // rotor-driven zoom action.
+            zoom = ZoomPan.clamp(scale: action.direction == .zoomIn ? zoom * 1.5 : zoom / 1.5)
+            if !ZoomPan.isZoomed(zoom) { pan = .zero }
+        }
+    }
+
+    /// The way back out.
+    ///
+    /// A visible button rather than a double-tap: double tap would have to be
+    /// disambiguated from the single tap that opens a prefecture, delaying
+    /// every selection, and a five-year-old who has pinched into a corner
+    /// needs an escape hatch they can see rather than one they must know about.
+    @ViewBuilder private var resetZoomButton: some View {
+        if ZoomPan.isZoomed(zoom) {
+            Button(mode.resetZoom) {
+                let reset = { zoom = 1; pan = .zero }
+                if reduceMotion { reset() } else { withAnimation(.spring(duration: 0.3), reset) }
+            }
+            .font(AppFont.rounded(13, relativeTo: .caption))
+            .foregroundStyle(Palette.ink)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 7)
+            .background(Capsule().fill(.white.opacity(0.92)))
+            .overlay(Capsule().strokeBorder(Palette.ink.opacity(0.12)))
+            .padding(10)
+        }
     }
 
     private func appearance(_ pref: Prefecture) -> PrefectureAppearance {

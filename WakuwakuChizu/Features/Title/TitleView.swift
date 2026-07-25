@@ -108,11 +108,16 @@ struct TitleView: View {
 /// Mastery ramp shared by the title art and the my-map screen (CLAUDE.md §5),
 /// expressed as sticker states: an empty slot fills in, then goes キラ.
 enum MasteryStyle {
+    /// CLAUDE.md §5 asked for 33% / 73% / solid. On the real map 33% sat close
+    /// enough to the unlearned grey that a child could not tell at a glance
+    /// which prefectures they had answered — the one question this screen
+    /// exists to answer. The first step now lands as unmistakably coloured, and
+    /// the ramp above it still reads as three distinct stages.
     static func fill(level: Int, code: Int) -> Color {
         switch level {
         case ..<1: Palette.unlearned
-        case 1: Palette.fill(for: code, strength: 0.33)
-        case 2: Palette.fill(for: code, strength: 0.73)
+        case 1: Palette.fill(for: code, strength: 0.58)
+        case 2: Palette.fill(for: code, strength: 0.82)
         default: Palette.fill(for: code)
         }
     }

@@ -79,6 +79,7 @@ nonisolated extension TextMode {
     var sparklingCount: String { isKids ? "キラキラ" : "キラキラ" }
     var learnedCount: String { isKids ? "おぼえた" : "覚えた" }
     var stickerCount: String { isKids ? "シール" : "シール" }
+    var resetZoom: String { isKids ? "もとの おおきさ" : "元の大きさ" }
     var eraseEverything: String { isKids ? "きろくを ぜんぶ けす" : "記録をすべて消去" }
     var eraseConfirm1: String { isKids ? "ほんとうに けしても いい?" : "本当に消去しますか?" }
     var eraseConfirm2: String { isKids ? "けすと もどせないよ。いい?" : "消去すると元に戻せません" }

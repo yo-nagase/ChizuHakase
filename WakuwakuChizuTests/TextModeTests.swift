@@ -133,7 +133,7 @@ extension TextMode {
          cardWonNew, cardWonShiny, cardWonDuplicate, specialtyCards, notCollectedYet,
          allCategories,
          points, bestScore, playAgain, chooseStage, becameSparkling, starCount(3),
-         sparklingCount, learnedCount, stickerCount,
+         sparklingCount, learnedCount, stickerCount, resetZoom,
          eraseEverything, eraseConfirm1, eraseConfirm2, eraseCancel, eraseNext,
          eraseConfirmAction,
          soundSection, soundEffects, speech, voiceSection, voiceOnDeviceNote, micDenied,
