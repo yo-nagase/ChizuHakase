@@ -89,7 +89,7 @@ struct PrefectureGeometryTests {
                                              among: prefs, transform: t) == nil)
     }
 
-    // MARK: - Near-miss tolerance
+    // MARK: - Near-miss resolution
 
     @Test func aNearMissOnTheAskedPrefectureCounts() throws {
         let prefs = stagePrefectures(4)   // Chugoku/Shikoku, includes tiny Kagawa
@@ -98,57 +98,60 @@ struct PrefectureGeometryTests {
             into: CGSize(width: 390, height: 600))
         let kagawa = try #require(map[37])
         let centre = PrefectureGeometry.screenCentroid(of: kagawa, transform: t)
-        let tolerance = PrefectureGeometry.effectiveTolerance(for: kagawa, among: prefs,
-                                                              transform: t)
-        // Just inside the allowance, in a direction that leaves the shape.
-        let near = CGPoint(x: centre.x, y: centre.y - tolerance * 0.9)
-        #expect(PrefectureGeometry.isNearMiss(near, of: kagawa, among: prefs, transform: t))
+        // Walk north out of Kagawa into the Inland Sea until we leave the shape.
+        var point = centre
+        while PrefectureGeometry.distanceToOutline(point, of: kagawa, transform: t) == 0 {
+            point.y -= 1
+        }
+        point.y -= 4   // a few points out to sea
+
+        let resolved = PrefectureGeometry.resolveTap(at: point, target: kagawa,
+                                                     among: prefs, transform: t)
+        #expect(resolved?.code == kagawa.code,
+                "a tap just off Kagawa should still reach it, got \(resolved?.name ?? "sea")")
     }
 
-    @Test func aFarMissDoesNotCount() throws {
+    @Test func aFarMissResolvesToNothing() throws {
         let prefs = stagePrefectures(4)
         let t = PrefectureGeometry.fitTransform(
             bounds: PrefectureGeometry.boundingBox(of: prefs),
             into: CGSize(width: 390, height: 600))
         let kagawa = try #require(map[37])
         let centre = PrefectureGeometry.screenCentroid(of: kagawa, transform: t)
-        let far = CGPoint(x: centre.x + 200, y: centre.y + 200)
-        #expect(!PrefectureGeometry.isNearMiss(far, of: kagawa, among: prefs, transform: t))
+        let far = CGPoint(x: centre.x + 400, y: centre.y + 400)
+        #expect(PrefectureGeometry.resolveTap(at: far, target: kagawa,
+                                              among: prefs, transform: t) == nil)
     }
 
-    /// The reason the tolerance is clamped rather than a flat 22pt: on the
-    /// all-Japan stage Tokyo and Kanagawa sit 17.5 map units apart, so a fixed
-    /// allowance would hand Tokyo a tap that is sitting on Kanagawa.
-    @Test func toleranceShrinksWhereNeighboursAreTight() throws {
-        let prefs = stagePrefectures(6)
+    @Test func distanceToOutlineIsZeroInsideAndGrowsOutside() throws {
+        let prefs = stagePrefectures(1)
         let t = PrefectureGeometry.fitTransform(
             bounds: PrefectureGeometry.boundingBox(of: prefs),
             into: CGSize(width: 390, height: 600))
-        let tokyo = try #require(map[13])
-        let tolerance = PrefectureGeometry.effectiveTolerance(for: tokyo, among: prefs,
-                                                              transform: t)
-        #expect(tolerance < GameRules.tapTolerancePoints,
-                "crowded Kanto should not get the full allowance")
-        #expect(tolerance > 0)
+        for pref in prefs {
+            let centre = PrefectureGeometry.screenCentroid(of: pref, transform: t)
+            #expect(PrefectureGeometry.distanceToOutline(centre, of: pref, transform: t) == 0,
+                    "\(pref.name) centroid should read as inside")
+            let far = CGPoint(x: centre.x + 1000, y: centre.y)
+            #expect(PrefectureGeometry.distanceToOutline(far, of: pref, transform: t) > 100)
+        }
     }
 
-    @Test func toleranceNeverReachesAcrossToANeighboursCentroid() {
-        let size = CGSize(width: 390, height: 600)
-        for stage in Stage.all {
-            let prefs = map.prefectures(in: stage.codes)
-            let t = PrefectureGeometry.fitTransform(
-                bounds: PrefectureGeometry.boundingBox(of: prefs), into: size)
-            for pref in prefs {
-                let tolerance = PrefectureGeometry.effectiveTolerance(for: pref, among: prefs,
-                                                                      transform: t)
-                for other in prefs where other.code != pref.code {
-                    let d = PrefectureGeometry.distance(
-                        PrefectureGeometry.screenCentroid(of: pref, transform: t),
-                        PrefectureGeometry.screenCentroid(of: other, transform: t))
-                    #expect(tolerance <= d / 2 + 1e-9,
-                            "\(stage.name): \(pref.name) tolerance \(tolerance) reaches \(other.name) at \(d)")
-                }
-            }
+    /// The reason resolution is nearest-outline rather than a radius around the
+    /// asked prefecture's centroid: on the all-Japan stage Kagawa is ~6pt across
+    /// and Tokyo/Kanagawa sit a few points apart, so any radius wide enough for
+    /// Kagawa would also swallow its neighbours.
+    @Test func everyPrefectureIsReachableEvenOnTheAllJapanStage() {
+        let prefs = stagePrefectures(6)
+        let t = PrefectureGeometry.fitTransform(
+            bounds: PrefectureGeometry.boundingBox(of: prefs),
+            into: CGSize(width: 358, height: 500))
+        for pref in prefs {
+            let point = PrefectureGeometry.screenCentroid(of: pref, transform: t)
+            let resolved = PrefectureGeometry.resolveTap(at: point, target: pref,
+                                                         among: prefs, transform: t)
+            #expect(resolved?.code == pref.code,
+                    "\(pref.name) unreachable on the all-Japan stage: got \(resolved?.name ?? "sea")")
         }
     }
 
@@ -168,6 +171,32 @@ struct PrefectureGeometryTests {
         #expect(resolved?.code == chiba.code)
     }
 
+    /// The target bias may break a tie, but must not overturn a tap that is
+    /// clearly nearer a neighbour.
+    @Test func targetBiasCannotOverturnAClearlyCloserNeighbour() throws {
+        let prefs = stagePrefectures(1)
+        let t = PrefectureGeometry.fitTransform(
+            bounds: PrefectureGeometry.boundingBox(of: prefs),
+            into: CGSize(width: 390, height: 600))
+        let tokyo = try #require(map[13])
+        let chiba = try #require(map[12])
+        let centre = PrefectureGeometry.screenCentroid(of: chiba, transform: t)
+
+        // Just outside Chiba, still far from Tokyo.
+        var point = centre
+        while PrefectureGeometry.distanceToOutline(point, of: chiba, transform: t) == 0 {
+            point.x += 1
+        }
+        point.x += 3
+        let toChiba = PrefectureGeometry.distanceToOutline(point, of: chiba, transform: t)
+        let toTokyo = PrefectureGeometry.distanceToOutline(point, of: tokyo, transform: t)
+        try #require(toTokyo > toChiba + GameRules.tapTargetBiasPoints)
+
+        let resolved = PrefectureGeometry.resolveTap(at: point, target: tokyo,
+                                                     among: prefs, transform: t)
+        #expect(resolved?.code == chiba.code)
+    }
+
     @Test func resolveTapPrefersTheDirectHit() {
         let prefs = stagePrefectures(0)
         let t = PrefectureGeometry.fitTransform(
@@ -179,6 +208,15 @@ struct PrefectureGeometryTests {
                                                          among: prefs, transform: t)
             #expect(resolved?.code == pref.code)
         }
+    }
+
+    @Test func aTapInOpenSeaFarFromLandResolvesToNothing() {
+        let prefs = stagePrefectures(1)
+        let t = PrefectureGeometry.fitTransform(
+            bounds: PrefectureGeometry.boundingBox(of: prefs),
+            into: CGSize(width: 390, height: 600))
+        #expect(PrefectureGeometry.resolveTap(at: CGPoint(x: 1, y: 1), target: nil,
+                                              among: prefs, transform: t) == nil)
     }
 
     // MARK: - Paths

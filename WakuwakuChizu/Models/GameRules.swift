@@ -28,6 +28,10 @@ nonisolated enum GameRules {
 
     /// Screen-space slack for taps that miss every prefecture (CLAUDE.md §3).
     static let tapTolerancePoints: CGFloat = 22
+    /// Head start the prefecture being asked about gets when a tap falls
+    /// between two of them. Smaller than the tolerance so it can tip a genuinely
+    /// close call without overriding a tap that clearly landed elsewhere.
+    static let tapTargetBiasPoints: CGFloat = 10
 
     // MARK: - Score
 
@@ -128,4 +132,16 @@ nonisolated enum GameRules {
         return StageRecord(stars: max(existing.stars, new.stars),
                            score: max(existing.score, new.score))
     }
+}
+
+/// Type-erased RNG so the quiz can hold one as a stored property and tests can
+/// swap in a seeded generator to make shuffles and card draws reproducible.
+nonisolated struct AnyRandomNumberGenerator: RandomNumberGenerator {
+    private var base: any RandomNumberGenerator
+
+    init(_ base: any RandomNumberGenerator = SystemRandomNumberGenerator()) {
+        self.base = base
+    }
+
+    mutating func next() -> UInt64 { base.next() }
 }

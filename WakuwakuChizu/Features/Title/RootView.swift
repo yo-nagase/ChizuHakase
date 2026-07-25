@@ -1,81 +1,111 @@
 import SwiftUI
 
-/// Phase 2 harness: exercises `PrefectureMapView` across stages and shows what
-/// a tap resolved to. Replaced by the real title screen once the quiz lands.
+/// Navigation shell. Owns the stack so the quiz can hand its result to the
+/// result screen and unwind cleanly afterwards.
 struct RootView: View {
     @Environment(AppState.self) private var app
 
-    @State private var stageIndex = 6
-    @State private var tapped: Prefecture?
-    @State private var answered: Set<Int> = []
-    @State private var effect: MapEffect?
-    @State private var effectCounter = 0
+    @State private var path: [Route] = []
+    @State private var showsParentalGate = false
 
-    private var stage: Stage { Stage.all[stageIndex] }
-    private var target: Prefecture? {
-        app.mapData.prefectures(in: stage.codes).first { !answered.contains($0.code) }
+    enum Route: Hashable {
+        case stageSelect
+        case quiz(stageIndex: Int)
+        case result(stageIndex: Int)
+        case myMap
+        case cardBook
     }
+
+    /// Held outside `Route` because `StageResult` is not Hashable and there is
+    /// only ever one result in flight.
+    @State private var pendingResult: StageResult?
+    @State private var pendingSparkles: [Int] = []
 
     var body: some View {
-        VStack(spacing: 10) {
-            Picker("すてーじ", selection: $stageIndex) {
-                ForEach(Stage.all) { Text($0.name).tag($0.index) }
-            }
-            .pickerStyle(.menu)
-            .tint(Palette.ink)
-
-            Text(target.map { "\($0.kana) は どこかな?" } ?? "ぜんぶ こたえたよ!")
-                .font(AppFont.rounded(20, relativeTo: .title3))
-                .foregroundStyle(Palette.ink)
-
-            PrefectureMapView(
-                mapData: app.mapData,
-                codes: stage.codes,
-                appearance: appearance,
-                interactiveCodes: Set(stage.codes).subtracting(answered),
-                targetCode: target?.code,
-                hintCode: nil,
-                effect: effect,
-                onTap: handleTap)
-            .aspectRatio(PrefectureGeometry.aspectRatio(
-                of: app.mapData.prefectures(in: stage.codes)), contentMode: .fit)
-            .background(Palette.seaGradient)
-            .clipShape(RoundedRectangle(cornerRadius: 18))
-
-            Text(tapped.map { "タップ: \($0.name)" } ?? "タップ: うみ")
-                .font(AppFont.rounded(15, relativeTo: .footnote))
-                .foregroundStyle(Palette.ink.opacity(0.7))
-
-            Button("もういちど") {
-                answered = []
-                tapped = nil
-            }
-            .font(AppFont.rounded(17, relativeTo: .body))
-            .tint(Palette.orange)
+        NavigationStack(path: $path) {
+            TitleView(onStart: { path.append(.stageSelect) },
+                      onMyMap: { path.append(.myMap) },
+                      onCardBook: { path.append(.cardBook) })
+                .navigationDestination(for: Route.self, destination: destination)
         }
-        .padding(16)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Palette.background)
+        .tint(Palette.orange)
+        .sheet(isPresented: $showsParentalGate) {
+            ParentalGateView { showsParentalGate = false }
+        }
+        .task { applyDebugRoute() }
     }
 
-    private func appearance(_ pref: Prefecture) -> PrefectureAppearance {
-        if answered.contains(pref.code) {
-            PrefectureAppearance(fill: Palette.fill(for: pref.code))
-        } else {
-            PrefectureAppearance(fill: Palette.unlearned)
+    /// Jump straight to a screen via `-startAt <route>`, for capturing store
+    /// screenshots and for poking at one screen without replaying to it.
+    /// Debug builds only — it must not be reachable in a shipped app.
+    private func applyDebugRoute() {
+        #if DEBUG
+        let arguments = ProcessInfo.processInfo.arguments
+        guard let index = arguments.firstIndex(of: "-startAt"),
+              index + 1 < arguments.count else { return }
+        switch arguments[index + 1] {
+        case "stageSelect": path = [.stageSelect]
+        case "myMap": path = [.myMap]
+        case "cardBook": path = [.cardBook]
+        case let value where value.hasPrefix("quiz:"):
+            if let i = Int(value.dropFirst(5)) { path = [.stageSelect, .quiz(stageIndex: i)] }
+        default: break
+        }
+        #endif
+    }
+
+    @ViewBuilder
+    private func destination(_ route: Route) -> some View {
+        switch route {
+        case .stageSelect:
+            StageSelectView(onPlay: { path.append(.quiz(stageIndex: $0.index)) },
+                            onLocked: { showsParentalGate = true })
+
+        case .quiz(let stageIndex):
+            if let stage = Stage.stage(at: stageIndex) {
+                QuizView(stage: stage) { result in
+                    finish(result, stage: stage)
+                }
+            }
+
+        case .result(let stageIndex):
+            if let stage = Stage.stage(at: stageIndex), let result = pendingResult {
+                ResultView(stage: stage,
+                           result: result,
+                           newlySparkling: pendingSparkles,
+                           onReplay: { replay(stage) },
+                           onExit: { backToStageSelect() })
+            }
+
+        case .myMap:
+            MyMapView()
+
+        case .cardBook:
+            CardBookView()
         }
     }
 
-    private func handleTap(_ pref: Prefecture?) {
-        tapped = pref
-        guard let pref else { return }
-        effectCounter += 1
-        if pref.code == target?.code {
-            answered.insert(pref.code)
-            effect = MapEffect(code: pref.code, kind: .pop, id: effectCounter)
-        } else {
-            effect = MapEffect(code: pref.code, kind: .shake, id: effectCounter)
-        }
+    // MARK: - Flow
+
+    /// Persist once, at stage end (CLAUDE.md §6), then show the result.
+    private func finish(_ result: StageResult, stage: Stage) {
+        pendingSparkles = app.save.applyStageResult(result)
+        pendingResult = result
+        path.removeLast()                       // drop the quiz
+        path.append(.result(stageIndex: stage.index))
+    }
+
+    private func replay(_ stage: Stage) {
+        pendingResult = nil
+        pendingSparkles = []
+        path.removeLast()
+        path.append(.quiz(stageIndex: stage.index))
+    }
+
+    private func backToStageSelect() {
+        pendingResult = nil
+        pendingSparkles = []
+        path.removeLast()
     }
 }
 

@@ -82,11 +82,7 @@ struct PrefectureMapView: View {
     private func resolve(_ point: CGPoint, transform: CGAffineTransform) -> Prefecture? {
         let candidates = prefectures.filter { interactiveCodes.contains($0.code) }
         guard !candidates.isEmpty else { return nil }
-        guard let target = targetCode.flatMap({ mapData[$0] }),
-              interactiveCodes.contains(target.code) else {
-            return PrefectureGeometry.directHit(at: point, among: candidates,
-                                                transform: transform)
-        }
+        let target = targetCode.flatMap { mapData[$0] }
         return PrefectureGeometry.resolveTap(at: point, target: target,
                                              among: candidates, transform: transform)
     }

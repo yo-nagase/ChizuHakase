@@ -142,68 +142,75 @@ nonisolated enum PrefectureGeometry {
         prefecture.centroid.applying(transform)
     }
 
-    /// How much slack a near-miss on `target` gets, in screen points.
+    /// Distance from a point to the nearest edge of a prefecture, 0 if inside.
     ///
-    /// The nominal 22pt exists so Kagawa, Osaka and Okinawa stay reachable with
-    /// a child's finger. But centroids get close on the all-Japan stage — Tokyo
-    /// and Kanagawa are only 17.5 map units apart — so a flat 22pt would happily
-    /// accept a tap sitting on top of the neighbour. Clamping to half the
-    /// distance to the nearest other candidate keeps the generosity where
-    /// there is room for it and withdraws it where there is not.
-    static func effectiveTolerance(
-        for target: Prefecture,
-        among prefectures: [Prefecture],
-        transform: CGAffineTransform,
-        base: CGFloat = GameRules.tapTolerancePoints
-    ) -> CGFloat {
-        let centre = screenCentroid(of: target, transform: transform)
-        let nearest = prefectures
-            .filter { $0.code != target.code }
-            .map { distance(centre, screenCentroid(of: $0, transform: transform)) }
-            .min()
-        guard let nearest else { return base }
-        return min(base, nearest / 2)
-    }
-
-    /// Spec rule (CLAUDE.md §3): when a tap hits no prefecture at all, still
-    /// count it if it lands near the prefecture being asked about.
-    static func isNearMiss(
+    /// Measured against the outline rather than the centroid: a centroid is a
+    /// terrible proxy for a long prefecture like Nagano, where one end sits far
+    /// from the middle.
+    static func distanceToOutline(
         _ point: CGPoint,
-        of target: Prefecture,
-        among prefectures: [Prefecture],
-        transform: CGAffineTransform,
-        base: CGFloat = GameRules.tapTolerancePoints
-    ) -> Bool {
-        let tolerance = effectiveTolerance(for: target, among: prefectures,
-                                           transform: transform, base: base)
-        guard tolerance > 0 else { return false }
-        let centre = screenCentroid(of: target, transform: transform)
-        if distance(point, centre) <= tolerance { return true }
-        // Long, thin prefectures put their centroid far from the tapped end, so
-        // also accept a tap just outside the outline itself.
-        let grown = bbox(of: target, transform: transform).insetBy(dx: -tolerance, dy: -tolerance)
-        return grown.contains(point)
-            && contains(nudge(point, toward: centre, by: tolerance),
-                        prefecture: target, transform: transform)
+        of prefecture: Prefecture,
+        transform: CGAffineTransform
+    ) -> CGFloat {
+        if contains(point, prefecture: prefecture, transform: transform) { return 0 }
+        var best = CGFloat.greatestFiniteMagnitude
+        for ring in prefecture.rings {
+            guard ring.count >= 2 else { continue }
+            var previous = ring[0].applying(transform)
+            for raw in ring.dropFirst() {
+                let current = raw.applying(transform)
+                best = min(best, distanceToSegment(point, previous, current))
+                previous = current
+            }
+        }
+        return best
     }
 
-    /// Resolves a tap to a prefecture: direct hit first, then the near-miss
-    /// allowance for the prefecture being asked about.
+    private static func distanceToSegment(_ p: CGPoint,
+                                          _ a: CGPoint,
+                                          _ b: CGPoint) -> CGFloat {
+        let ab = b - a
+        let lengthSquared = ab.x * ab.x + ab.y * ab.y
+        guard lengthSquared > 0 else { return distance(p, a) }
+        var t = ((p.x - a.x) * ab.x + (p.y - a.y) * ab.y) / lengthSquared
+        t = min(max(t, 0), 1)
+        return distance(p, CGPoint(x: a.x + ab.x * t, y: a.y + ab.y * t))
+    }
+
+    /// Resolves a tap to a prefecture (CLAUDE.md §3).
+    ///
+    /// Direct hit wins. Otherwise the nearest outline within `tolerance` wins,
+    /// with the prefecture being asked about credited a `targetBias` head start.
+    ///
+    /// Nearest-outline rather than a plain radius around the target's centroid,
+    /// because a radius cannot work at both ends of the scale: on the all-Japan
+    /// stage Kagawa is about 6pt across and Tokyo and Kanagawa sit ~5pt apart,
+    /// so any radius wide enough to make Kagawa reachable also hands Tokyo taps
+    /// that landed on Kanagawa. Nearest-wins is self-limiting — it cannot
+    /// misattribute a tap that is plainly closer to a neighbour — and the bias
+    /// still gives the asked prefecture the benefit of the doubt when the child
+    /// aimed at the right place and missed by a finger-width.
     static func resolveTap(
         at point: CGPoint,
-        target: Prefecture,
+        target: Prefecture?,
         among prefectures: [Prefecture],
         transform: CGAffineTransform,
-        base: CGFloat = GameRules.tapTolerancePoints
+        tolerance: CGFloat = GameRules.tapTolerancePoints,
+        targetBias: CGFloat = GameRules.tapTargetBiasPoints
     ) -> Prefecture? {
         if let hit = directHit(at: point, among: prefectures, transform: transform) {
             return hit
         }
-        if isNearMiss(point, of: target, among: prefectures,
-                      transform: transform, base: base) {
-            return target
+        var best: (prefecture: Prefecture, score: CGFloat)?
+        for prefecture in prefectures {
+            let raw = distanceToOutline(point, of: prefecture, transform: transform)
+            let score = prefecture.code == target?.code ? raw - targetBias : raw
+            guard raw <= tolerance else { continue }
+            if best == nil || score < best!.score {
+                best = (prefecture, score)
+            }
         }
-        return nil
+        return best?.prefecture
     }
 
     // MARK: - Small helpers
