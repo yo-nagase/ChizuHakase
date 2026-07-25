@@ -60,6 +60,18 @@ struct RootView: View {
         case "cardBook": path = [.cardBook]
         case let value where value.hasPrefix("quiz:"):
             if let i = Int(value.dropFirst(5)) { path = [.stageSelect, .quiz(stageIndex: i)] }
+        case "result":
+            // Synthetic 3-star clear so the celebration can be captured.
+            let cards = Array(app.cards.all.prefix(3))
+            pendingResult = StageResult(
+                stageIndex: 1, score: 1120, stars: 3,
+                firstTryByPrefecture: Dictionary(uniqueKeysWithValues:
+                    Stage.all[1].codes.map { ($0, true) }),
+                cardDraws: cards.enumerated().map { index, card in
+                    index == 0 ? .shiny(card) : .new(card)
+                })
+            pendingSparkles = [13, 14]
+            path = [.stageSelect, .result(stageIndex: 1)]
         default: break
         }
         #endif

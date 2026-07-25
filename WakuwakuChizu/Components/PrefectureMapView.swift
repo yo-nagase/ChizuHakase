@@ -5,14 +5,33 @@ import SwiftUI
 /// mode enum baked into the view.
 nonisolated struct PrefectureAppearance: Equatable {
     var fill: Color
-    var stroke: Color = .white
-    var lineWidth: CGFloat = 1.2
-    /// Gold outline used for mastery level 3.
+    var stroke: Color = Palette.dieCut
+    var lineWidth: CGFloat = Palette.stickerEdgeWidth
+    /// キラ: gold edge plus the holographic sheen (CLAUDE.md §5, level 3).
     var isSparkling: Bool = false
-    /// Specialty emoji floating above the shape after a correct answer.
+    /// A stuck sticker gets the white die-cut edge and lifts off the page.
+    /// False is the album's faintly pre-printed slot — visible, so the map is
+    /// never a grey blank, but obviously not yet earned.
+    var isStuck: Bool = true
+    /// Specialty emoji floating up from a prefecture just won.
     var badge: String?
 
-    static let hidden = PrefectureAppearance(fill: .clear, stroke: .clear, lineWidth: 0)
+    /// The pre-printed slot: the prefecture's own colour, washed out.
+    static func slot(for code: Int) -> PrefectureAppearance {
+        PrefectureAppearance(fill: Palette.fill(for: code, strength: 0.22),
+                             stroke: Palette.emptySlot.opacity(0.55),
+                             lineWidth: 1.2,
+                             isStuck: false)
+    }
+
+    /// A sticker pressed onto the page.
+    static func stuck(for code: Int, strength: Double = 1, sparkling: Bool = false,
+                      badge: String? = nil) -> PrefectureAppearance {
+        PrefectureAppearance(fill: Palette.fill(for: code, strength: strength),
+                             isSparkling: sparkling,
+                             isStuck: true,
+                             badge: badge)
+    }
 }
 
 /// A one-shot visual reaction targeted at a single prefecture.
@@ -58,6 +77,15 @@ struct PrefectureMapView: View {
                     OkinawaInsetFrame(rect: mapData.okinawaInset.applying(transform))
                 }
 
+                // One shadow for the whole sheet of stuck stickers rather than
+                // 47 individual ones: a single draw, and it reads correctly
+                // because adjacent prefectures form one contiguous cut-out.
+                stuckSilhouette(transform: transform)
+                    .fill(Palette.stickerShadow)
+                    .offset(y: min(max(geo.size.width * 0.008, 1), Sticker.lift))
+                    .blur(radius: min(max(geo.size.width * 0.007, 0.8), 2.5))
+                    .allowsHitTesting(false)
+
                 ForEach(prefectures) { prefecture in
                     PrefectureLayer(
                         prefecture: prefecture,
@@ -76,6 +104,15 @@ struct PrefectureMapView: View {
                 onTap(resolve(location, transform: transform))
             }
         }
+    }
+
+    /// Combined outline of everything currently stuck down.
+    private func stuckSilhouette(transform: CGAffineTransform) -> Path {
+        var path = Path()
+        for prefecture in prefectures where appearance(prefecture).isStuck {
+            path.addPath(PrefectureGeometry.path(for: prefecture, transform: transform))
+        }
+        return path
     }
 
     /// Direct hit first, then the near-miss allowance for the asked prefecture.
@@ -110,6 +147,12 @@ private struct PrefectureLayer: View {
     /// scaleEffect anchors in unit space of the whole canvas, and the path
     /// carries absolute coordinates, so the anchor is the centroid as a
     /// fraction of the canvas.
+    /// The white die-cut has to scale with the render, or an 84pt stage
+    /// thumbnail is drawn almost entirely in border and the colour disappears.
+    private var dieCutWidth: CGFloat {
+        min(max(canvasSize.width * 0.009, 0.5), 3)
+    }
+
     private var anchor: UnitPoint {
         guard canvasSize.width > 0, canvasSize.height > 0 else { return .center }
         return UnitPoint(x: screenCentroid.x / canvasSize.width,
@@ -133,14 +176,31 @@ private struct PrefectureLayer: View {
             // Holes are handled by the fill rule rather than by subtracting
             // paths, which is why every ring can live in one Path.
             path.fill(appearance.fill, style: FillStyle(eoFill: true))
-            path.stroke(appearance.stroke, lineWidth: appearance.lineWidth)
 
-            if appearance.isSparkling {
-                path.stroke(Palette.gold, lineWidth: 2.4)
-                    .modifier(SlowGlow(enabled: !reduceMotion))
+            if appearance.isStuck {
+                path.stroke(appearance.stroke, lineWidth: dieCutWidth)
+                if appearance.isSparkling {
+                    // Drawn at double width and masked to the shape, so the gold
+                    // sits entirely *inside* the outline. A centred stroke
+                    // covers Osaka, Tokyo and Kagawa completely at map scale and
+                    // the prefecture colour CLAUDE.md §5 calls for disappears.
+                    //
+                    // No holographic wash here either: at 47 small shapes it
+                    // flattened every colour toward the same gold. The sheen
+                    // stays on the cards, where there is room to enjoy it.
+                    path.stroke(Palette.gold, lineWidth: max(1.4, dieCutWidth * 1.6))
+                        .mask(path.fill(style: FillStyle(eoFill: true)))
+                        .modifier(SlowGlow(enabled: !reduceMotion))
+                }
+            } else {
+                // Not earned yet: a thin printed edge, no white die-cut. Solid
+                // rather than dashed — at 47 prefectures a dashed edge reads as
+                // scribble, and the fresh-save map is the first thing seen.
+                path.stroke(appearance.stroke, lineWidth: max(0.5, dieCutWidth * 0.5))
             }
+
             if isHinted {
-                path.stroke(Palette.red, lineWidth: 3)
+                path.stroke(Palette.red, lineWidth: 3.5)
                     .modifier(HintBlink(enabled: !reduceMotion))
             }
         }

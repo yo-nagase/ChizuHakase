@@ -31,7 +31,7 @@ struct CardBookView: View {
             }
             .padding(16)
         }
-        .background(Palette.background)
+        .background(AlbumPage())
         .navigationTitle("ずかん")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -56,7 +56,7 @@ struct CardBookView: View {
             }
             .padding(.vertical, 8)
         }
-        .background(Palette.background)
+        .background(Palette.page)
     }
 
     private func chip(title: String, isOn: Bool, action: @escaping () -> Void) -> some View {
@@ -76,7 +76,7 @@ struct CardBookView: View {
         return VStack(alignment: .leading, spacing: 8) {
             HStack {
                 Text(pref.kana)
-                    .font(AppFont.rounded(17, relativeTo: .headline))
+                    .font(AppFont.rounded(18, relativeTo: .headline))
                     .foregroundStyle(Palette.ink)
                 Spacer()
                 Text("\(owned) / \(cards.count)")

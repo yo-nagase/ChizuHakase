@@ -12,7 +12,7 @@ struct TitleView: View {
 
     var body: some View {
         ZStack {
-            Palette.background.ignoresSafeArea()
+            AlbumPage()
             VStack(spacing: 0) {
                 HStack {
                     Spacer()
@@ -23,11 +23,12 @@ struct TitleView: View {
                 Spacer(minLength: 4)
 
                 Text("わくわく")
-                    .font(AppFont.rounded(34, relativeTo: .largeTitle))
-                    .foregroundStyle(Palette.orange)
+                    .stickerText(32, relativeTo: .largeTitle, color: Palette.orange,
+                                 outlineWidth: 3.5)
+                    .rotationEffect(.degrees(-4))
                 Text("ちずクイズ")
-                    .font(AppFont.rounded(44, relativeTo: .largeTitle))
-                    .foregroundStyle(Palette.ink)
+                    .stickerText(46, relativeTo: .largeTitle, outlineWidth: 4)
+                    .rotationEffect(.degrees(1.5))
 
                 miniMap
                     .frame(maxHeight: 260)
@@ -67,39 +68,64 @@ struct TitleView: View {
         PrefectureMapView(
             mapData: app.mapData,
             codes: Array(1...47),
-            appearance: { pref in
-                let level = app.save.data.masteryLevel(of: pref.code)
-                return PrefectureAppearance(fill: MasteryStyle.fill(level: level,
-                                                                    code: pref.code),
-                                            isSparkling: level >= GameRules.maxMastery)
-            })
+            appearance: { MasteryStyle.appearance(for: $0.code, save: app.save.data) })
         .aspectRatio(PrefectureGeometry.aspectRatio(of: app.mapData.prefectures),
                      contentMode: .fit)
         .allowsHitTesting(false)
     }
 
+    /// Two counts, phrased as a sticker tally rather than as statistics.
     private var progressLine: some View {
-        HStack(spacing: 16) {
-            Label("\(app.save.data.sparklingPrefectureCount) / 47",
-                  systemImage: "sparkles")
-            Label("\(app.save.data.totalOwnedCards) / \(max(app.cards.count, 1))",
-                  systemImage: "square.grid.2x2.fill")
+        HStack(spacing: 10) {
+            tally("🗾", app.save.data.mastery.values.filter { $0 > 0 }.count, 47, "けん")
+            tally("✨", app.save.data.sparklingPrefectureCount, 47, "キラ")
+            tally("🃏", app.save.data.totalOwnedCards, max(app.cards.count, 1), "カード")
         }
-        .font(AppFont.rounded(13, relativeTo: .caption))
-        .foregroundStyle(Palette.ink.opacity(0.55))
+    }
+
+    private func tally(_ emoji: String, _ have: Int, _ total: Int,
+                       _ label: String) -> some View {
+        VStack(spacing: 1) {
+            Text(emoji).font(.system(size: 17))
+            Text("\(have)")
+                .font(AppFont.rounded(17, relativeTo: .headline))
+                .foregroundStyle(Palette.ink)
+                .monospacedDigit()
+            Text("/ \(total) \(label)")
+                .font(AppFont.rounded(10, relativeTo: .caption2))
+                .foregroundStyle(Palette.ink.opacity(0.45))
+                .monospacedDigit()
+        }
+        .padding(.vertical, 8)
+        .frame(maxWidth: .infinity)
+        .stickerCard(cornerRadius: 16, edge: 2.5)
     }
 }
 
-/// Mastery colour ramp shared by the title art and the my-map screen
-/// (CLAUDE.md §5).
+/// Mastery ramp shared by the title art and the my-map screen (CLAUDE.md §5),
+/// expressed as sticker states: an empty slot fills in, then goes キラ.
 enum MasteryStyle {
     static func fill(level: Int, code: Int) -> Color {
         switch level {
         case ..<1: Palette.unlearned
-        case 1: Palette.fill(for: code).opacity(0.33)
-        case 2: Palette.fill(for: code).opacity(0.73)
+        case 1: Palette.fill(for: code, strength: 0.33)
+        case 2: Palette.fill(for: code, strength: 0.73)
         default: Palette.fill(for: code)
         }
+    }
+
+    static func appearance(for code: Int, save: SaveData) -> PrefectureAppearance {
+        let level = save.masteryLevel(of: code)
+        guard level > 0 else {
+            // Nothing earned yet: an outlined slot, not a grey blob.
+            return PrefectureAppearance(fill: Palette.unlearned,
+                                        stroke: Palette.emptySlot.opacity(0.7),
+                                        lineWidth: 1.4,
+                                        isStuck: false)
+        }
+        return PrefectureAppearance(fill: fill(level: level, code: code),
+                                    isSparkling: level >= GameRules.maxMastery,
+                                    isStuck: true)
     }
 
     static func label(level: Int) -> String {

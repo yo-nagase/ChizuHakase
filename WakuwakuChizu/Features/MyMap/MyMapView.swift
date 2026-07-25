@@ -25,23 +25,21 @@ struct MyMapView: View {
                 .aspectRatio(PrefectureGeometry.aspectRatio(of: app.mapData.prefectures),
                              contentMode: .fit)
                 .background(Palette.seaGradient)
-                .clipShape(RoundedRectangle(cornerRadius: 22))
+                .stickerCard(fill: .clear, cornerRadius: 26)
 
                 summary
                 eraseSection
             }
             .padding(16)
         }
-        .background(Palette.background)
+        .background(AlbumPage())
         .navigationTitle("マイマップ")
         .navigationBarTitleDisplayMode(.inline)
         .sheet(item: $selected) { PrefectureDetailSheet(prefecture: $0) }
     }
 
     private func appearance(_ pref: Prefecture) -> PrefectureAppearance {
-        let level = save.masteryLevel(of: pref.code)
-        return PrefectureAppearance(fill: MasteryStyle.fill(level: level, code: pref.code),
-                                    isSparkling: level >= GameRules.maxMastery)
+        MasteryStyle.appearance(for: pref.code, save: save)
     }
 
     private var legend: some View {
@@ -78,12 +76,13 @@ struct MyMapView: View {
                 .font(AppFont.rounded(12, relativeTo: .caption))
                 .foregroundStyle(Palette.ink.opacity(0.6))
             Text(value)
-                .font(AppFont.rounded(21, relativeTo: .title3))
+                .font(AppFont.rounded(23, relativeTo: .title3))
                 .foregroundStyle(Palette.ink)
+                .monospacedDigit()
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 14)
-        .background(.white, in: RoundedRectangle(cornerRadius: 20))
+        .stickerCard(cornerRadius: 20)
     }
 
     /// Two deliberate steps before anything is destroyed (CLAUDE.md §6).
@@ -135,7 +134,7 @@ private struct PrefectureDetailSheet: View {
         ScrollView {
             VStack(spacing: 14) {
                 Text(prefecture.kana)
-                    .font(AppFont.rounded(30, relativeTo: .largeTitle))
+                    .font(AppFont.rounded(33, relativeTo: .largeTitle))
                     .foregroundStyle(Palette.ink)
                 Text(prefecture.name)
                     .font(AppFont.rounded(15, relativeTo: .subheadline))
@@ -143,7 +142,7 @@ private struct PrefectureDetailSheet: View {
 
                 HStack(spacing: 4) {
                     ForEach(1...GameRules.maxMastery, id: \.self) { i in
-                        Text(i <= level ? "⭐️" : "☆").font(.system(size: 22))
+                        StarBadge(filled: i <= level, size: 24)
                     }
                 }
                 Text(MasteryStyle.label(level: level))
@@ -167,7 +166,7 @@ private struct PrefectureDetailSheet: View {
             }
             .padding(20)
         }
-        .background(Palette.background)
+        .background(AlbumPage())
         .presentationDetents([.medium, .large])
     }
 }

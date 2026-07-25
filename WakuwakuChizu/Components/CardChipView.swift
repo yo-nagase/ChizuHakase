@@ -36,12 +36,8 @@ struct CardChipView: View {
         .padding(.vertical, 12)
         .padding(.horizontal, 8)
         .frame(maxWidth: .infinity)
-        .background(background)
-        .overlay {
-            RoundedRectangle(cornerRadius: 18)
-                .strokeBorder(isShiny ? Palette.gold : Color.black.opacity(0.06),
-                              lineWidth: isShiny ? 2.5 : 1)
-        }
+        .stickerCard(fill: chipFill, cornerRadius: 18,
+                     edge: isOwned ? 3 : 1.5, isHolographic: isShiny)
         .overlay(alignment: .topTrailing) {
             if isShiny {
                 Text("✨")
@@ -50,22 +46,15 @@ struct CardChipView: View {
                     .modifier(ShinyTwinkle(enabled: !reduceMotion))
             }
         }
-        .clipShape(RoundedRectangle(cornerRadius: 18))
+        // Uncollected slots sit flat on the page; earned ones are stuck on.
+        .opacity(isOwned ? 1 : 0.72)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(accessibilityText)
     }
 
-    private var background: some View {
-        Group {
-            if isShiny {
-                LinearGradient(colors: [Color(hex: 0xFFF3CE), .white, Color(hex: 0xFFF3CE)],
-                               startPoint: .topLeading, endPoint: .bottomTrailing)
-            } else if isOwned {
-                Color.white
-            } else {
-                Palette.unlearned.opacity(0.55)
-            }
-        }
+    private var chipFill: Color {
+        if isShiny { return Color(hex: 0xFFF6DC) }
+        return isOwned ? .white : Color(hex: 0xF1ECE0)
     }
 
     private var accessibilityText: String {

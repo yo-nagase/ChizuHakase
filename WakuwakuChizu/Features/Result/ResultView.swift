@@ -16,6 +16,7 @@ struct ResultView: View {
     var onExit: () -> Void
 
     @State private var revealedStars = 0
+    @State private var celebrating = false
 
     private var newCards: [SpecialtyCard] {
         result.cardDraws.compactMap { if case .new(let c) = $0 { c } else { nil } }
@@ -26,12 +27,12 @@ struct ResultView: View {
 
     var body: some View {
         ZStack {
-            Palette.background.ignoresSafeArea()
+            AlbumPage()
             ScrollView {
                 VStack(spacing: 18) {
                     Text(stage.name)
-                        .font(AppFont.rounded(17, relativeTo: .headline))
-                        .foregroundStyle(Palette.ink.opacity(0.6))
+                        .font(AppFont.rounded(18, relativeTo: .headline))
+                        .foregroundStyle(Palette.ink.opacity(0.65))
 
                     stars
                     scoreCard
@@ -43,6 +44,11 @@ struct ResultView: View {
                 }
                 .padding(20)
             }
+            if celebrating {
+                ConfettiView()
+                    .ignoresSafeArea()
+                    .transition(.opacity)
+            }
         }
         .navigationBarBackButtonHidden()
         .task { await revealStars() }
@@ -51,13 +57,17 @@ struct ResultView: View {
     // MARK: - Pieces
 
     private var stars: some View {
-        HStack(spacing: 10) {
+        HStack(spacing: 12) {
             ForEach(1...3, id: \.self) { i in
-                Text(i <= result.stars ? "⭐️" : "☆")
-                    .font(.system(size: 54))
-                    .opacity(i <= revealedStars ? 1 : (i <= result.stars ? 0 : 0.28))
-                    .scaleEffect(i <= revealedStars ? 1 : 0.5)
-                    .animation(reduceMotion ? nil : .spring(duration: 0.4), value: revealedStars)
+                StarBadge(filled: i <= revealedStars, size: 54)
+                    // Each star lands slightly crooked, the way a child presses
+                    // a sticker down. Same tilt every time so it reads as
+                    // placement, not as jitter.
+                    .rotationEffect(.degrees(i <= revealedStars ? Double(i - 2) * 6 : 0))
+                    .scaleEffect(i <= revealedStars ? 1 : 0.55)
+                    .opacity(i <= result.stars ? 1 : 0.3)
+                    .animation(reduceMotion ? nil : .spring(duration: 0.45, bounce: 0.45),
+                               value: revealedStars)
             }
         }
         .accessibilityElement(children: .ignore)
@@ -66,28 +76,29 @@ struct ResultView: View {
 
     private var scoreCard: some View {
         VStack(spacing: 4) {
-            Text("\(result.score)")
-                .font(AppFont.rounded(44, relativeTo: .largeTitle))
-                .foregroundStyle(Palette.orange)
+            Text(verbatim: "\(result.score)")
+                .font(AppFont.rounded(46, relativeTo: .largeTitle))
+                .monospacedDigit()
+                .stickerPill()
             Text("てん")
                 .font(AppFont.rounded(15, relativeTo: .subheadline))
                 .foregroundStyle(Palette.ink.opacity(0.6))
 
             if let best = app.save.data.record(forStage: stage.index), best.score > result.score {
-                Text("さいこう \(best.score) てん")
+                Text(verbatim: "さいこう \(best.score) てん")
                     .font(AppFont.rounded(12, relativeTo: .caption))
                     .foregroundStyle(Palette.ink.opacity(0.45))
             }
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 18)
-        .background(.white, in: RoundedRectangle(cornerRadius: 24))
+        .stickerCard(cornerRadius: 24)
     }
 
     private var sparklePanel: some View {
         VStack(spacing: 10) {
             Text("✨ キラキラに なった けん!")
-                .font(AppFont.rounded(18, relativeTo: .headline))
+                .font(AppFont.rounded(19, relativeTo: .headline))
                 .foregroundStyle(Palette.ink)
             FlowRow(spacing: 8) {
                 ForEach(newlySparkling, id: \.self) { code in
@@ -96,20 +107,21 @@ struct ResultView: View {
                         .foregroundStyle(Palette.ink)
                         .padding(.horizontal, 12)
                         .padding(.vertical, 7)
-                        .background(Palette.gold.opacity(0.28), in: Capsule())
-                        .overlay { Capsule().strokeBorder(Palette.gold, lineWidth: 1.5) }
+                        .background(Palette.gold.opacity(0.3), in: Capsule())
+                        .overlay { Capsule().strokeBorder(Palette.gold, lineWidth: 2) }
+                        .shadow(color: Palette.stickerShadow, radius: 0, y: 2)
                 }
             }
         }
         .frame(maxWidth: .infinity)
         .padding(16)
-        .background(.white, in: RoundedRectangle(cornerRadius: 24))
+        .stickerCard(cornerRadius: 24, isHolographic: true)
     }
 
     private var cardPanel: some View {
         VStack(spacing: 10) {
             Text("とくさんひん カード")
-                .font(AppFont.rounded(18, relativeTo: .headline))
+                .font(AppFont.rounded(19, relativeTo: .headline))
                 .foregroundStyle(Palette.ink)
 
             LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: 3),
@@ -123,7 +135,7 @@ struct ResultView: View {
             }
         }
         .padding(16)
-        .background(.white, in: RoundedRectangle(cornerRadius: 24))
+        .stickerCard(cornerRadius: 24)
     }
 
     private var buttons: some View {
@@ -136,14 +148,19 @@ struct ResultView: View {
         .padding(.top, 4)
     }
 
-    /// Stars land one at a time so each one gets its moment.
+    /// Stars press on one at a time so each one gets its moment, then the
+    /// confetti falls.
     private func revealStars() async {
-        guard !reduceMotion else { revealedStars = result.stars; return }
+        guard !reduceMotion else {
+            revealedStars = result.stars
+            return
+        }
         for i in 1...max(1, result.stars) {
-            try? await Task.sleep(for: .milliseconds(320))
+            try? await Task.sleep(for: .milliseconds(340))
             revealedStars = i
             SoundService.shared.play(.star, enabled: app.save.data.settings.soundEnabled)
         }
+        celebrating = true
     }
 }
 

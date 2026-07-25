@@ -15,7 +15,7 @@ struct QuizView: View {
 
     var body: some View {
         ZStack {
-            Palette.background.ignoresSafeArea()
+            AlbumPage()
             if let quiz {
                 content(quiz)
             }
@@ -37,7 +37,9 @@ struct QuizView: View {
         VStack(spacing: 12) {
             header(quiz)
             question(quiz)
+            Spacer(minLength: 0)
             map(quiz)
+            Spacer(minLength: 0)
             footer(quiz)
         }
         .padding(.horizontal, 16)
@@ -54,10 +56,11 @@ struct QuizView: View {
 
             Spacer(minLength: 4)
 
-            VStack(alignment: .trailing, spacing: 0) {
-                Text("\(quiz.score)")
-                    .font(AppFont.rounded(22, relativeTo: .title3))
-                    .foregroundStyle(Palette.ink)
+            VStack(alignment: .trailing, spacing: 3) {
+                Text(verbatim: "\(quiz.score)")
+                    .font(AppFont.rounded(20, relativeTo: .title3))
+                    .monospacedDigit()
+                    .stickerPill()
                     .contentTransition(.numericText())
                 if quiz.combo >= 2 {
                     Text("\(quiz.combo) れんぞく!")
@@ -73,7 +76,7 @@ struct QuizView: View {
         HStack(spacing: 10) {
             VStack(spacing: 1) {
                 Text(quiz.target?.kana ?? "")
-                    .font(AppFont.rounded(28, relativeTo: .title))
+                    .font(AppFont.rounded(31, relativeTo: .title))
                     .foregroundStyle(Palette.ink)
                     .minimumScaleFactor(0.6)
                     .lineLimit(1)
@@ -103,7 +106,7 @@ struct QuizView: View {
         .frame(maxWidth: .infinity)
         .padding(.vertical, 10)
         .padding(.horizontal, 14)
-        .background(.white, in: RoundedRectangle(cornerRadius: 22))
+        .stickerCard()
     }
 
     private func map(_ quiz: QuizViewModel) -> some View {
@@ -119,8 +122,7 @@ struct QuizView: View {
         .aspectRatio(PrefectureGeometry.aspectRatio(
             of: app.mapData.prefectures(in: quiz.order)), contentMode: .fit)
         .background(Palette.seaGradient)
-        .clipShape(RoundedRectangle(cornerRadius: 22))
-        .frame(maxHeight: .infinity)
+        .stickerCard(fill: .clear, cornerRadius: 26)
     }
 
     @ViewBuilder
@@ -143,15 +145,16 @@ struct QuizView: View {
     // MARK: - Appearance
 
     private func appearance(for pref: Prefecture, quiz: QuizViewModel) -> PrefectureAppearance {
-        let answered = quiz.answeredCodes.contains(pref.code)
-        return PrefectureAppearance(
-            fill: answered ? Palette.fill(for: pref.code) : Palette.unlearned,
-            stroke: .white,
-            lineWidth: 1.2,
-            // The emoji rises only on the prefecture just won, and only while
-            // its celebration is on screen.
-            badge: answered && quiz.effect?.code == pref.code && quiz.phase == .celebrating
-                ? quiz.lastDraw?.card.emoji : nil)
+        guard quiz.answeredCodes.contains(pref.code) else {
+            // Pre-printed slot, not a grey blank: the map should look like a
+            // sticker album waiting to be filled from the very first question.
+            return .slot(for: pref.code)
+        }
+        // The emoji rises only on the prefecture just won, and only while its
+        // celebration is on screen.
+        let isCelebrating = quiz.effect?.code == pref.code && quiz.phase == .celebrating
+        return .stuck(for: pref.code,
+                      badge: isCelebrating ? quiz.lastDraw?.card.emoji : nil)
     }
 
     // MARK: - Actions
@@ -231,6 +234,11 @@ private struct ProgressPips: View {
 private struct CardWinBanner: View {
     let draw: GameRules.CardDraw
 
+    private var isShiny: Bool {
+        if case .shiny = draw { return true }
+        return false
+    }
+
     private var headline: String {
         switch draw {
         case .new: "カードを もらったよ!"
@@ -247,18 +255,13 @@ private struct CardWinBanner: View {
                     .font(AppFont.rounded(13, relativeTo: .caption))
                     .foregroundStyle(Palette.ink.opacity(0.65))
                 Text(draw.card.nameKana)
-                    .font(AppFont.rounded(19, relativeTo: .headline))
+                    .font(AppFont.rounded(20, relativeTo: .headline))
                     .foregroundStyle(Palette.ink)
             }
             Spacer(minLength: 0)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 10)
-        .background(.white, in: RoundedRectangle(cornerRadius: 18))
-        .overlay {
-            if case .shiny = draw {
-                RoundedRectangle(cornerRadius: 18).strokeBorder(Palette.gold, lineWidth: 2.5)
-            }
-        }
+        .stickerCard(cornerRadius: 18, isHolographic: isShiny)
     }
 }

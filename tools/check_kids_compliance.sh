@@ -82,9 +82,24 @@ else
             pass "ASIdentifierManager absent from the binary"
         fi
 
+        # A Debug bundle that has been through `xcodebuild test` carries Apple's
+        # XCTest payload. That is an artefact of the test run, not a shipped
+        # dependency, so it is reported and skipped rather than failed.
         frameworks="$APP/Frameworks"
-        if [ -d "$frameworks" ] && [ -n "$(ls -A "$frameworks" 2>/dev/null)" ]; then
-            fail "third-party frameworks bundled: $(ls "$frameworks" | tr '\n' ' ')"
+        if [ -d "$frameworks" ]; then
+            injected=$(ls "$frameworks" 2>/dev/null \
+                | grep -E '^(XCTest|XCTAutomation|XCUIAutomation|XCUnit|Testing|libXCTest)' || true)
+            others=$(ls "$frameworks" 2>/dev/null \
+                | grep -vE '^(XCTest|XCTAutomation|XCUIAutomation|XCUnit|Testing|libXCTest)' || true)
+            if [ -n "$others" ]; then
+                fail "third-party frameworks bundled: $(echo "$others" | tr '\n' ' ')"
+            else
+                pass "no third-party frameworks bundled"
+            fi
+            if [ -n "$injected" ]; then
+                echo "       note: XCTest payload present — this bundle has been"
+                echo "             through a test run. Check Release before shipping."
+            fi
         else
             pass "no third-party frameworks bundled"
         fi
