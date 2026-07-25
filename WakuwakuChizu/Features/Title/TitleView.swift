@@ -117,18 +117,20 @@ enum MasteryStyle {
         }
     }
 
+    /// Only the fill moves as a prefecture is learned.
+    ///
+    /// Answered prefectures used to get the white die-cut edge and the lift
+    /// that goes with it, which cut the country into loose pieces floating over
+    /// the sea while the rest stayed printed flat — the border between 東北 and
+    /// 関東 became a seam. The outline is now the same printed edge at every
+    /// level, so progress reads as colour spreading across one whole map.
+    /// Lv3 keeps the gold frame CLAUDE.md §5 promises.
     static func appearance(for code: Int, save: SaveData) -> PrefectureAppearance {
         let level = save.masteryLevel(of: code)
-        guard level > 0 else {
-            // Nothing earned yet: an outlined slot, not a grey blob.
-            return PrefectureAppearance(fill: Palette.unlearned,
-                                        stroke: Palette.emptySlot.opacity(0.7),
-                                        lineWidth: 1.4,
-                                        isStuck: false)
-        }
         return PrefectureAppearance(fill: fill(level: level, code: code),
+                                    stroke: Palette.emptySlot.opacity(0.7),
                                     isSparkling: level >= GameRules.maxMastery,
-                                    isStuck: true)
+                                    isStuck: false)
     }
 
     static func label(level: Int) -> String {

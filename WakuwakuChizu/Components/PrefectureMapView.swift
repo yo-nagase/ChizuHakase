@@ -6,7 +6,6 @@ import SwiftUI
 nonisolated struct PrefectureAppearance: Equatable {
     var fill: Color
     var stroke: Color = Palette.dieCut
-    var lineWidth: CGFloat = Palette.stickerEdgeWidth
     /// キラ: gold edge plus the holographic sheen (CLAUDE.md §5, level 3).
     var isSparkling: Bool = false
     /// A stuck sticker gets the white die-cut edge and lifts off the page.
@@ -20,7 +19,6 @@ nonisolated struct PrefectureAppearance: Equatable {
     static func slot(for code: Int) -> PrefectureAppearance {
         PrefectureAppearance(fill: Palette.fill(for: code, strength: 0.22),
                              stroke: Palette.emptySlot.opacity(0.55),
-                             lineWidth: 1.2,
                              isStuck: false)
     }
 
@@ -201,24 +199,29 @@ private struct PrefectureLayer: View {
 
             if appearance.isStuck {
                 path.stroke(appearance.stroke, lineWidth: dieCutWidth)
-                if appearance.isSparkling {
-                    // Drawn at double width and masked to the shape, so the gold
-                    // sits entirely *inside* the outline. A centred stroke
-                    // covers Osaka, Tokyo and Kagawa completely at map scale and
-                    // the prefecture colour CLAUDE.md §5 calls for disappears.
-                    //
-                    // No holographic wash here either: at 47 small shapes it
-                    // flattened every colour toward the same gold. The sheen
-                    // stays on the cards, where there is room to enjoy it.
-                    path.stroke(Palette.gold, lineWidth: max(1.4, dieCutWidth * 1.6))
-                        .mask(path.fill(style: FillStyle(eoFill: true)))
-                        .modifier(SlowGlow(enabled: !reduceMotion))
-                }
             } else {
-                // Not earned yet: a thin printed edge, no white die-cut. Solid
-                // rather than dashed — at 47 prefectures a dashed edge reads as
-                // scribble, and the fresh-save map is the first thing seen.
+                // A thin printed edge, no white die-cut. Solid rather than
+                // dashed — at 47 prefectures a dashed edge reads as scribble,
+                // and the fresh-save map is the first thing seen.
                 path.stroke(appearance.stroke, lineWidth: max(0.5, dieCutWidth * 0.5))
+            }
+
+            if appearance.isSparkling {
+                // Drawn at double width and masked to the shape, so the gold
+                // sits entirely *inside* the outline. A centred stroke covers
+                // Osaka, Tokyo and Kagawa completely at map scale and the
+                // prefecture colour CLAUDE.md §5 calls for disappears.
+                //
+                // No holographic wash here either: at 47 small shapes it
+                // flattened every colour toward the same gold. The sheen stays
+                // on the cards, where there is room to enjoy it.
+                //
+                // Outside the die-cut branch: the my-map screen draws every
+                // prefecture with the same printed edge, and Lv3 still owes the
+                // child the gold frame §5 promises.
+                path.stroke(Palette.gold, lineWidth: max(1.4, dieCutWidth * 1.6))
+                    .mask(path.fill(style: FillStyle(eoFill: true)))
+                    .modifier(SlowGlow(enabled: !reduceMotion))
             }
 
             if isHinted {
