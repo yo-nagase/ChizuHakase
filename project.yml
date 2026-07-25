@@ -16,7 +16,9 @@ settings:
     SWIFT_DEFAULT_ACTOR_ISOLATION: MainActor
     SWIFT_STRICT_CONCURRENCY: complete
     SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY: "YES"
-    DEVELOPMENT_TEAM: ""
+    # .xcodeproj は生成物(.gitignore 済み)なので、GUI で選んだ Team は
+    # xcodegen generate のたびに消える。ここが唯一の永続化先。
+    DEVELOPMENT_TEAM: R4PM3WY76A
     CODE_SIGN_STYLE: Automatic
     ENABLE_USER_SCRIPT_SANDBOXING: "YES"
     GCC_WARN_ABOUT_RETURN_TYPE: "YES_ERROR"
