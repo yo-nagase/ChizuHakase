@@ -33,8 +33,17 @@ struct RootView: View {
                 .navigationDestination(for: Route.self, destination: destination)
         }
         .tint(Palette.orange)
-        .sheet(isPresented: $showsUnlock) { UnlockView() }
-        .sheet(isPresented: $showsSettings) { SettingsView() }
+        // One injection point: every screen reads the mode from the environment
+        // rather than reaching into the save store itself.
+        .environment(\.textMode, app.save.data.settings.textMode)
+        // Sheets are presented outside the stack, so the mode is handed to
+        // them explicitly rather than inherited.
+        .sheet(isPresented: $showsUnlock) {
+            UnlockView().environment(\.textMode, app.save.data.settings.textMode)
+        }
+        .sheet(isPresented: $showsSettings) {
+            SettingsView().environment(\.textMode, app.save.data.settings.textMode)
+        }
         .task {
             applyDebugRoute()
             await app.purchases.load()

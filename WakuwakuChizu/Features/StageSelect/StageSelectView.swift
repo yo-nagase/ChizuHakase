@@ -9,6 +9,7 @@ import SwiftUI
 /// question is asked — and the sticker count says what there is to collect.
 struct StageSelectView: View {
     @Environment(AppState.self) private var app
+    @Environment(\.textMode) private var mode
 
     var onPlay: (Stage) -> Void
     var onLocked: () -> Void
@@ -30,7 +31,7 @@ struct StageSelectView: View {
             .padding(.vertical, 18)
         }
         .background(AlbumPage())
-        .navigationTitle("ステージ")
+        .navigationTitle(mode.stages)
         .navigationBarTitleDisplayMode(.inline)
     }
 
@@ -41,6 +42,7 @@ struct StageSelectView: View {
 }
 
 private struct StageSheet: View {
+    @Environment(\.textMode) private var mode
     let stage: Stage
     let mapData: MapData
     let record: StageRecord?
@@ -55,7 +57,7 @@ private struct StageSheet: View {
                     .frame(width: 76, height: 76)
 
                 VStack(alignment: .leading, spacing: 6) {
-                    Text(stage.name)
+                    Text(stage.displayName(mode))
                         .font(AppFont.rounded(19, relativeTo: .headline))
                         .foregroundStyle(Palette.ink)
                         // Wraps rather than truncating: 「ちゅうごく…」 tells a
@@ -77,12 +79,12 @@ private struct StageSheet: View {
                                     .padding(.leading, 4)
                             }
                         }
-                        Text("シール \(stuckCount) / \(stage.questionCount)")
+                        Text("\(mode.stickerCount) \(stuckCount) / \(stage.questionCount)")
                             .font(AppFont.rounded(12, relativeTo: .caption))
                             .foregroundStyle(Palette.ink.opacity(0.5))
                             .monospacedDigit()
                     } else {
-                        Text("おうちのひとと いっしょに")
+                        Text(mode.lockedHint)
                             .font(AppFont.rounded(12, relativeTo: .caption))
                             .foregroundStyle(Palette.ink.opacity(0.5))
                     }
@@ -94,7 +96,7 @@ private struct StageSheet: View {
                     Image(systemName: "lock.fill")
                         .font(.system(size: 19, weight: .bold))
                         .foregroundStyle(Palette.ink.opacity(0.28))
-                        .accessibilityLabel("まだ あそべない")
+                        .accessibilityLabel(mode.lockedLabel)
                 }
             }
             .padding(14)
@@ -120,8 +122,9 @@ private struct StageSheet: View {
     }
 
     private var accessibilityText: String {
-        guard isPlayable else { return "\(stage.name)。まだ あそべません" }
-        return "\(stage.name)。\(stage.questionCount) もん。ほし \(record?.stars ?? 0) こ"
+        let name = stage.displayName(mode)
+        guard isPlayable else { return "\(name)。\(mode.lockedLabel)" }
+        return "\(name)。\(stage.questionCount) もん。\(mode.starCount(record?.stars ?? 0))"
     }
 }
 

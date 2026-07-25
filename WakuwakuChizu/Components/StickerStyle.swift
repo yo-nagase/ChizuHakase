@@ -138,6 +138,20 @@ struct StickerCardModifier: ViewModifier {
     }
 }
 
+// MARK: - Text mode
+
+private struct TextModeKey: EnvironmentKey {
+    static let defaultValue: TextMode = .kids
+}
+
+extension EnvironmentValues {
+    /// Child or adult wording. Injected once at the root from the save store.
+    var textMode: TextMode {
+        get { self[TextModeKey.self] }
+        set { self[TextModeKey.self] = newValue }
+    }
+}
+
 // MARK: - Layout helpers
 
 nonisolated extension DynamicTypeSize {

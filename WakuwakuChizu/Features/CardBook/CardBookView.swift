@@ -6,6 +6,7 @@ import SwiftUI
 struct CardBookView: View {
     @Environment(AppState.self) private var app
     @Environment(\.dynamicTypeSize) private var typeSize
+    @Environment(\.textMode) private var mode
 
     @State private var category: SpecialtyCard.Category?
 
@@ -33,7 +34,7 @@ struct CardBookView: View {
             .padding(16)
         }
         .background(AlbumPage())
-        .navigationTitle("ずかん")
+        .navigationTitle(mode.cardBook)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
@@ -48,9 +49,9 @@ struct CardBookView: View {
     private var filterBar: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
-                chip(title: "ぜんぶ", isOn: category == nil) { category = nil }
+                chip(title: mode.allCategories, isOn: category == nil) { category = nil }
                 ForEach(SpecialtyCard.Category.allCases, id: \.self) { c in
-                    chip(title: "\(c.emoji) \(c.kanaLabel)", isOn: category == c) {
+                    chip(title: "\(c.emoji) \(c.label(mode))", isOn: category == c) {
                         category = category == c ? nil : c
                     }
                 }
@@ -76,7 +77,7 @@ struct CardBookView: View {
         let owned = cards.filter { save.owns($0.id) }.count
         return VStack(alignment: .leading, spacing: 8) {
             HStack {
-                Text(pref.kana)
+                Text(pref.displayName(mode))
                     .font(AppFont.rounded(18, relativeTo: .headline))
                     .foregroundStyle(Palette.ink)
                 Spacer()

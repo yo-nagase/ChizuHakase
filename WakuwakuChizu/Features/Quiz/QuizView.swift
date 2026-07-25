@@ -7,6 +7,7 @@ struct QuizView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.dynamicTypeSize) private var typeSize
+    @Environment(\.textMode) private var mode
 
     let stage: Stage
     var onFinish: (StageResult) -> Void
@@ -51,7 +52,7 @@ struct QuizView: View {
         HStack(spacing: 12) {
             Button { leave() } label: { Text("←") }
                 .buttonStyle(CircleIconButtonStyle(diameter: 42))
-                .accessibilityLabel("やめる")
+                .accessibilityLabel(mode.quit)
 
             ProgressPips(current: quiz.questionNumber, total: quiz.questionCount)
 
@@ -64,7 +65,7 @@ struct QuizView: View {
                     .stickerPill()
                     .contentTransition(.numericText())
                 if quiz.combo >= 2 {
-                    Text("\(quiz.combo) れんぞく!")
+                    Text("\(quiz.combo) \(mode.combo)")
                         .font(AppFont.rounded(12, relativeTo: .caption))
                         .foregroundStyle(Palette.orange)
                 }
@@ -106,21 +107,25 @@ struct QuizView: View {
 
     private func questionName(_ quiz: QuizViewModel) -> some View {
         VStack(alignment: typeSize.isAccessibilitySize ? .leading : .center, spacing: 1) {
-            Text(quiz.target?.kana ?? "")
+            Text(quiz.target?.displayName(mode) ?? "")
                 .font(AppFont.rounded(31, relativeTo: .title))
                 .foregroundStyle(Palette.ink)
-                // No lineLimit: wrapping is always better than hiding the answer.
+                // Side by side with the prompt there is only room for one line,
+                // so shrink slightly rather than wrap. In the stacked
+                // accessibility layout the name owns the full width and may
+                // wrap — what it must never do is truncate.
+                .lineLimit(typeSize.isAccessibilitySize ? nil : 1)
                 .minimumScaleFactor(0.7)
                 .fixedSize(horizontal: false, vertical: true)
             // Kanji stays secondary: the reading is what a 5-year-old uses.
-            Text(quiz.target?.name ?? "")
+            Text(quiz.target?.secondaryName(mode) ?? "")
                 .font(AppFont.rounded(13, relativeTo: .caption))
                 .foregroundStyle(Palette.ink.opacity(0.5))
         }
     }
 
     private var prompt: some View {
-        Text("は どこかな?")
+        Text(mode.questionSuffix)
             .font(AppFont.rounded(19, relativeTo: .title3))
             .foregroundStyle(Palette.ink)
             .fixedSize(horizontal: false, vertical: true)
@@ -129,7 +134,7 @@ struct QuizView: View {
     private func speakButton(_ quiz: QuizViewModel) -> some View {
         Button { speak(quiz) } label: { Text("🔊") }
             .buttonStyle(CircleIconButtonStyle(diameter: 44))
-            .accessibilityLabel("もんだいを よむ")
+            .accessibilityLabel(mode.readAloud)
     }
 
     @ViewBuilder
@@ -141,7 +146,7 @@ struct QuizView: View {
             .buttonStyle(CircleIconButtonStyle(
                 background: app.voice.isListening ? Palette.teal : .white,
                 diameter: 44))
-            .accessibilityLabel(app.voice.isListening ? "きいています" : "こえで こたえる")
+            .accessibilityLabel(app.voice.isListening ? mode.listening : mode.answerByVoice)
         }
     }
 
@@ -170,7 +175,7 @@ struct QuizView: View {
                 CardWinBanner(draw: draw)
                     .transition(.scale(scale: 0.8).combined(with: .opacity))
             } else if quiz.attempts >= GameRules.missesBeforeHint {
-                Text("ひかっている ところだよ")
+                Text(mode.hintNudge)
                     .font(AppFont.rounded(16, relativeTo: .body))
                     .foregroundStyle(Palette.ink.opacity(0.75))
             }
@@ -255,6 +260,7 @@ struct QuizView: View {
 // MARK: - Pieces
 
 private struct ProgressPips: View {
+    @Environment(\.textMode) private var mode
     let current: Int
     let total: Int
 
@@ -263,11 +269,12 @@ private struct ProgressPips: View {
             .font(AppFont.rounded(15, relativeTo: .subheadline))
             .foregroundStyle(Palette.ink.opacity(0.6))
             .monospacedDigit()
-            .accessibilityLabel("\(total) もんちゅう \(current) もんめ")
+            .accessibilityLabel(mode.questionCounter(current, total))
     }
 }
 
 private struct CardWinBanner: View {
+    @Environment(\.textMode) private var mode
     let draw: GameRules.CardDraw
 
     private var isShiny: Bool {
@@ -277,9 +284,9 @@ private struct CardWinBanner: View {
 
     private var headline: String {
         switch draw {
-        case .new: "カードを もらったよ!"
-        case .shiny: "キラカードに なった!"
-        case .duplicate: "もっている カードだね"
+        case .new: mode.cardWonNew
+        case .shiny: mode.cardWonShiny
+        case .duplicate: mode.cardWonDuplicate
         }
     }
 
@@ -290,7 +297,7 @@ private struct CardWinBanner: View {
                 Text(headline)
                     .font(AppFont.rounded(13, relativeTo: .caption))
                     .foregroundStyle(Palette.ink.opacity(0.65))
-                Text(draw.card.nameKana)
+                Text(draw.card.displayName(mode))
                     .font(AppFont.rounded(20, relativeTo: .headline))
                     .foregroundStyle(Palette.ink)
             }

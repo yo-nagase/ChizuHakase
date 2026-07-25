@@ -8,6 +8,7 @@ struct CardChipView: View {
     var showsDescription = true
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.textMode) private var mode
 
     private var isOwned: Bool { ownedCount > 0 }
     private var isShiny: Bool { ownedCount >= GameRules.maxCardCopies }
@@ -18,7 +19,7 @@ struct CardChipView: View {
                 .font(.system(size: 40))
                 .frame(height: 46)
 
-            Text(isOwned ? card.nameKana : "？？？")
+            Text(isOwned ? card.displayName(mode) : "？？？")
                 .font(AppFont.rounded(15, relativeTo: .subheadline))
                 .foregroundStyle(Palette.ink)
                 .multilineTextAlignment(.center)
@@ -60,8 +61,9 @@ struct CardChipView: View {
     }
 
     private var accessibilityText: String {
-        guard isOwned else { return "まだ もっていない カード" }
-        return isShiny ? "\(card.nameKana) キラカード" : card.nameKana
+        guard isOwned else { return mode.notCollectedYet }
+        let name = card.displayName(mode)
+        return isShiny ? "\(name) キラカード" : name
     }
 }
 

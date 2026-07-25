@@ -9,6 +9,8 @@ nonisolated struct Settings: Codable, Sendable, Equatable {
     var soundEnabled = true
     var speechEnabled = true
     var voiceInputEnabled = false
+    /// Child mode is the product; adult mode is the accommodation.
+    var textMode: TextMode = .kids
 
     // Explicit decoding so a save file written by an older build (missing a
     // key) keeps the default instead of failing the whole decode and wiping
@@ -20,6 +22,8 @@ nonisolated struct Settings: Codable, Sendable, Equatable {
         soundEnabled = try c.decodeIfPresent(Bool.self, forKey: .soundEnabled) ?? true
         speechEnabled = try c.decodeIfPresent(Bool.self, forKey: .speechEnabled) ?? true
         voiceInputEnabled = try c.decodeIfPresent(Bool.self, forKey: .voiceInputEnabled) ?? false
+        // A save written before this setting existed is a child's save.
+        textMode = try c.decodeIfPresent(TextMode.self, forKey: .textMode) ?? .kids
     }
 }
 

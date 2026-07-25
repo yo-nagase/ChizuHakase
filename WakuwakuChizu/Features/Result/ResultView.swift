@@ -8,6 +8,7 @@ struct ResultView: View {
     @Environment(AppState.self) private var app
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.dynamicTypeSize) private var typeSize
+    @Environment(\.textMode) private var mode
 
     let stage: Stage
     let result: StageResult
@@ -31,7 +32,7 @@ struct ResultView: View {
             AlbumPage()
             ScrollView {
                 VStack(spacing: 18) {
-                    Text(stage.name)
+                    Text(stage.displayName(mode))
                         .font(AppFont.rounded(18, relativeTo: .headline))
                         .foregroundStyle(Palette.ink.opacity(0.65))
 
@@ -72,7 +73,7 @@ struct ResultView: View {
             }
         }
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("ほし \(result.stars) こ")
+        .accessibilityLabel(mode.starCount(result.stars))
     }
 
     private var scoreCard: some View {
@@ -81,12 +82,12 @@ struct ResultView: View {
                 .font(AppFont.rounded(46, relativeTo: .largeTitle))
                 .monospacedDigit()
                 .stickerPill()
-            Text("てん")
+            Text(mode.points)
                 .font(AppFont.rounded(15, relativeTo: .subheadline))
                 .foregroundStyle(Palette.ink.opacity(0.6))
 
             if let best = app.save.data.record(forStage: stage.index), best.score > result.score {
-                Text(verbatim: "さいこう \(best.score) てん")
+                Text(verbatim: "\(mode.bestScore) \(best.score) \(mode.points)")
                     .font(AppFont.rounded(12, relativeTo: .caption))
                     .foregroundStyle(Palette.ink.opacity(0.45))
             }
@@ -98,12 +99,12 @@ struct ResultView: View {
 
     private var sparklePanel: some View {
         VStack(spacing: 10) {
-            Text("✨ キラキラに なった けん!")
+            Text(mode.becameSparkling)
                 .font(AppFont.rounded(19, relativeTo: .headline))
                 .foregroundStyle(Palette.ink)
             FlowRow(spacing: 8) {
                 ForEach(newlySparkling, id: \.self) { code in
-                    Text(app.mapData[code]?.kana ?? "")
+                    Text(app.mapData[code]?.displayName(mode) ?? "")
                         .font(AppFont.rounded(15, relativeTo: .subheadline))
                         .foregroundStyle(Palette.ink)
                         .padding(.horizontal, 12)
@@ -121,7 +122,7 @@ struct ResultView: View {
 
     private var cardPanel: some View {
         VStack(spacing: 10) {
-            Text("とくさんひん カード")
+            Text(mode.specialtyCards)
                 .font(AppFont.rounded(19, relativeTo: .headline))
                 .foregroundStyle(Palette.ink)
 
@@ -141,9 +142,9 @@ struct ResultView: View {
 
     private var buttons: some View {
         VStack(spacing: 12) {
-            Button("もういちど") { onReplay() }
+            Button(mode.playAgain) { onReplay() }
                 .buttonStyle(.bouncy)
-            Button("ステージを えらぶ") { onExit() }
+            Button(mode.chooseStage) { onExit() }
                 .buttonStyle(.bouncy(Palette.teal, fontSize: 18))
         }
         .padding(.top, 4)

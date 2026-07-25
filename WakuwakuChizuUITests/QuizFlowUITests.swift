@@ -19,6 +19,17 @@ final class QuizFlowUITests: XCTestCase {
         app.launch()
     }
 
+    /// Waits for the quiz to finish laying out.
+    ///
+    /// Reading the question and tapping the map immediately after `launch()`
+    /// is a race: the elements exist before the map has settled at its final
+    /// position, so the tap can land on stale coordinates. Only shows up when
+    /// the suite runs together, which is exactly when it matters.
+    @discardableResult
+    private func waitUntilQuizIsReady(questions: Int = 7) -> Bool {
+        app.staticTexts["\(questions) もんちゅう 1 もんめ"].waitForExistence(timeout: 10)
+    }
+
     /// The prefecture being asked about, read off the question card. The kanji
     /// name is shown under the reading and matches the map's accessibility
     /// labels.
@@ -47,6 +58,7 @@ final class QuizFlowUITests: XCTestCase {
 
     func testTappingTheAskedPrefectureScores() throws {
         launch(at: "quiz:0")
+        XCTAssertTrue(waitUntilQuizIsReady(), "the quiz never appeared")
 
         let target = try XCTUnwrap(currentTargetName(), "no question on screen")
         XCTAssertTrue(app.staticTexts["0"].exists, "score should start at zero")
@@ -60,6 +72,7 @@ final class QuizFlowUITests: XCTestCase {
 
     func testTappingTheWrongPrefectureDoesNotScore() throws {
         launch(at: "quiz:0")
+        XCTAssertTrue(waitUntilQuizIsReady(), "the quiz never appeared")
 
         let target = try XCTUnwrap(currentTargetName())
         let wrong = try XCTUnwrap(Self.tohokuNames.first { $0 != target })
@@ -75,6 +88,7 @@ final class QuizFlowUITests: XCTestCase {
     /// with three stars.
     func testPlayingAStageThroughReachesTheResultScreen() throws {
         launch(at: "quiz:0")
+        XCTAssertTrue(waitUntilQuizIsReady(), "the quiz never appeared")
 
         for question in 1...7 {
             guard let target = currentTargetName() else {
@@ -106,6 +120,7 @@ final class QuizFlowUITests: XCTestCase {
     /// in the geometry unit tests.
     func testEveryPrefectureInTheStageIsTappable() {
         launch(at: "quiz:0")
+        waitUntilQuizIsReady()
         for name in Self.tohokuNames {
             let element = app.buttons[name]
             XCTAssertTrue(element.waitForExistence(timeout: 3),
@@ -119,6 +134,7 @@ final class QuizFlowUITests: XCTestCase {
     /// apart and direct-touch exploration was meaningless.
     func testPrefectureElementsDoNotAllShareTheSameFrame() {
         launch(at: "quiz:0")
+        waitUntilQuizIsReady()
         var frames: [CGRect] = []
         for name in Self.tohokuNames {
             let element = app.buttons[name]

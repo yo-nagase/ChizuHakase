@@ -6,6 +6,7 @@ import SwiftUI
 struct MyMapView: View {
     @Environment(AppState.self) private var app
     @Environment(\.dynamicTypeSize) private var typeSize
+    @Environment(\.textMode) private var mode
 
     @State private var selected: Prefecture?
     @State private var eraseStep = 0   // 0 = idle, 1 = asked once, 2 = confirming
@@ -34,7 +35,7 @@ struct MyMapView: View {
             .padding(16)
         }
         .background(AlbumPage())
-        .navigationTitle("マイマップ")
+        .navigationTitle(mode.myMap)
         .navigationBarTitleDisplayMode(.inline)
         .sheet(item: $selected) { PrefectureDetailSheet(prefecture: $0) }
     }
@@ -56,7 +57,7 @@ struct MyMapView: View {
                                     .strokeBorder(Palette.gold, lineWidth: 2)
                             }
                         }
-                    Text(MasteryStyle.label(level: level))
+                    Text(mode.masteryLabel(level))
                         .font(AppFont.rounded(10, relativeTo: .caption2))
                         .foregroundStyle(Palette.ink.opacity(0.6))
                 }
@@ -66,8 +67,8 @@ struct MyMapView: View {
 
     private var summary: some View {
         HStack(spacing: 12) {
-            stat("✨ キラキラ", "\(save.sparklingPrefectureCount) / 47")
-            stat("🗾 おぼえた", "\(save.mastery.values.filter { $0 > 0 }.count) / 47")
+            stat("✨ \(mode.sparklingCount)", "\(save.sparklingPrefectureCount) / 47")
+            stat("🗾 \(mode.learnedCount)", "\(save.mastery.values.filter { $0 > 0 }.count) / 47")
         }
     }
 
@@ -91,27 +92,27 @@ struct MyMapView: View {
         VStack(spacing: 10) {
             switch eraseStep {
             case 0:
-                Button("きろくを ぜんぶ けす") { eraseStep = 1 }
+                Button(mode.eraseEverything) { eraseStep = 1 }
                     .font(AppFont.rounded(14, relativeTo: .footnote))
                     .foregroundStyle(Palette.ink.opacity(0.45))
             case 1:
-                Text("ほんとうに けしても いい?")
+                Text(mode.eraseConfirm1)
                     .font(AppFont.rounded(15, relativeTo: .subheadline))
                     .foregroundStyle(Palette.ink)
                 HStack(spacing: 12) {
-                    Button("やめる") { eraseStep = 0 }
+                    Button(mode.eraseCancel) { eraseStep = 0 }
                         .buttonStyle(.bouncy(Palette.teal, fontSize: 15))
-                    Button("つぎへ") { eraseStep = 2 }
+                    Button(mode.eraseNext) { eraseStep = 2 }
                         .buttonStyle(.bouncy(Palette.ink.opacity(0.5), fontSize: 15))
                 }
             default:
-                Text("けすと もどせないよ。いい?")
+                Text(mode.eraseConfirm2)
                     .font(AppFont.rounded(15, relativeTo: .subheadline))
                     .foregroundStyle(Palette.red)
                 HStack(spacing: 12) {
-                    Button("やめる") { eraseStep = 0 }
+                    Button(mode.eraseCancel) { eraseStep = 0 }
                         .buttonStyle(.bouncy(Palette.teal, fontSize: 15))
-                    Button("けす") {
+                    Button(mode.eraseConfirmAction) {
                         app.save.eraseAll()
                         eraseStep = 0
                     }
@@ -127,6 +128,7 @@ struct MyMapView: View {
 private struct PrefectureDetailSheet: View {
     @Environment(AppState.self) private var app
     @Environment(\.dynamicTypeSize) private var typeSize
+    @Environment(\.textMode) private var mode
     let prefecture: Prefecture
 
     var body: some View {
@@ -135,10 +137,10 @@ private struct PrefectureDetailSheet: View {
 
         ScrollView {
             VStack(spacing: 14) {
-                Text(prefecture.kana)
+                Text(prefecture.displayName(mode))
                     .font(AppFont.rounded(33, relativeTo: .largeTitle))
                     .foregroundStyle(Palette.ink)
-                Text(prefecture.name)
+                Text(prefecture.secondaryName(mode))
                     .font(AppFont.rounded(15, relativeTo: .subheadline))
                     .foregroundStyle(Palette.ink.opacity(0.5))
 
@@ -147,7 +149,7 @@ private struct PrefectureDetailSheet: View {
                         StarBadge(filled: i <= level, size: 24)
                     }
                 }
-                Text(MasteryStyle.label(level: level))
+                Text(mode.masteryLabel(level))
                     .font(AppFont.rounded(14, relativeTo: .footnote))
                     .foregroundStyle(Palette.ink.opacity(0.6))
 
@@ -160,7 +162,7 @@ private struct PrefectureDetailSheet: View {
                 }
                 .padding(.top, 4)
 
-                Button("🔊 よみあげる") {
+                Button("🔊 \(mode.speech)") {
                     SpeechService.shared.speak(prefecture.kana)
                 }
                 .buttonStyle(.bouncy(Palette.teal, fontSize: 16))

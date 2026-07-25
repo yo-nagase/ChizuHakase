@@ -4,6 +4,7 @@ import SwiftUI
 /// CLAUDE.md §3.
 struct TitleView: View {
     @Environment(AppState.self) private var app
+    @Environment(\.textMode) private var mode
 
     var onStart: () -> Void
     var onMyMap: () -> Void
@@ -18,15 +19,15 @@ struct TitleView: View {
                     Spacer()
                     Button { onSettings() } label: { Text("⚙️") }
                         .buttonStyle(CircleIconButtonStyle(diameter: 40))
-                        .accessibilityLabel("せってい")
+                        .accessibilityLabel(mode.settings)
                 }
                 Spacer(minLength: 4)
 
-                Text("わくわく")
+                Text(mode.appTitleTop)
                     .stickerText(32, relativeTo: .largeTitle, color: Palette.orange,
                                  outlineWidth: 3.5)
                     .rotationEffect(.degrees(-4))
-                Text("ちずクイズ")
+                Text(mode.appTitleMain)
                     .stickerText(46, relativeTo: .largeTitle, outlineWidth: 4)
                     .rotationEffect(.degrees(1.5))
 
@@ -39,14 +40,14 @@ struct TitleView: View {
                 Spacer(minLength: 12)
 
                 VStack(spacing: 14) {
-                    Button("あそぶ") { onStart() }
+                    Button(mode.play) { onStart() }
                         .buttonStyle(BouncyButtonStyle(horizontalPadding: 52,
                                                        verticalPadding: 16,
                                                        fontSize: 24))
                     HStack(spacing: 12) {
-                        Button("マイマップ") { onMyMap() }
+                        Button(mode.myMap) { onMyMap() }
                             .buttonStyle(.bouncy(Palette.teal, fontSize: 17))
-                        Button("ずかん") { onCardBook() }
+                        Button(mode.cardBook) { onCardBook() }
                             .buttonStyle(.bouncy(Palette.teal, fontSize: 17))
                     }
                 }
@@ -77,8 +78,10 @@ struct TitleView: View {
     /// Two counts, phrased as a sticker tally rather than as statistics.
     private var progressLine: some View {
         HStack(spacing: 10) {
-            tally("🗾", app.save.data.mastery.values.filter { $0 > 0 }.count, 47, "けん")
+            tally("🗾", app.save.data.mastery.values.filter { $0 > 0 }.count, 47,
+                  mode.isKids ? "けん" : "県")
             tally("✨", app.save.data.sparklingPrefectureCount, 47, "キラ")
+
             tally("🃏", app.save.data.totalOwnedCards, max(app.cards.count, 1), "カード")
         }
     }
