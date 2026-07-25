@@ -1,0 +1,31 @@
+{
+  "identifier" : "wakuwaku-chizu-products",
+  "nonRenewingSubscriptions" : [],
+  "products" : [
+    {
+      "displayPrice" : "490",
+      "familyShareable" : true,
+      "internalID" : "1",
+      "localizations" : [
+        {
+          "description" : "ぜんぶの ステージと 141まいの カードが あそべます。買い切りです。",
+          "displayName" : "ぜんぶ あそべるセット",
+          "locale" : "ja_JP"
+        }
+      ],
+      "productID" : "com.wakuwaku.chizu.full",
+      "referenceName" : "Full unlock",
+      "type" : "NonConsumable"
+    }
+  ],
+  "settings" : {
+    "_applicationInternalID" : "1",
+    "_developerTeamID" : "",
+    "_lastSynchronizedDate" : 0
+  },
+  "subscriptionGroups" : [],
+  "version" : {
+    "major" : 4,
+    "minor" : 0
+  }
+}

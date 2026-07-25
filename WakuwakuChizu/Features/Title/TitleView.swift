@@ -8,12 +8,19 @@ struct TitleView: View {
     var onStart: () -> Void
     var onMyMap: () -> Void
     var onCardBook: () -> Void
+    var onSettings: () -> Void
 
     var body: some View {
         ZStack {
             Palette.background.ignoresSafeArea()
             VStack(spacing: 0) {
-                Spacer(minLength: 12)
+                HStack {
+                    Spacer()
+                    Button { onSettings() } label: { Text("⚙️") }
+                        .buttonStyle(CircleIconButtonStyle(diameter: 40))
+                        .accessibilityLabel("せってい")
+                }
+                Spacer(minLength: 4)
 
                 Text("わくわく")
                     .font(AppFont.rounded(34, relativeTo: .largeTitle))

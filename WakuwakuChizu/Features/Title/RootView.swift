@@ -5,8 +5,11 @@ import SwiftUI
 struct RootView: View {
     @Environment(AppState.self) private var app
 
+    @Environment(\.scenePhase) private var scenePhase
+
     @State private var path: [Route] = []
-    @State private var showsParentalGate = false
+    @State private var showsUnlock = false
+    @State private var showsSettings = false
 
     enum Route: Hashable {
         case stageSelect
@@ -25,14 +28,22 @@ struct RootView: View {
         NavigationStack(path: $path) {
             TitleView(onStart: { path.append(.stageSelect) },
                       onMyMap: { path.append(.myMap) },
-                      onCardBook: { path.append(.cardBook) })
+                      onCardBook: { path.append(.cardBook) },
+                      onSettings: { showsSettings = true })
                 .navigationDestination(for: Route.self, destination: destination)
         }
         .tint(Palette.orange)
-        .sheet(isPresented: $showsParentalGate) {
-            ParentalGateView { showsParentalGate = false }
+        .sheet(isPresented: $showsUnlock) { UnlockView() }
+        .sheet(isPresented: $showsSettings) { SettingsView() }
+        .task {
+            applyDebugRoute()
+            await app.purchases.load()
         }
-        .task { applyDebugRoute() }
+        // A refund or a purchase made elsewhere should be reflected without the
+        // app reaching out on its own (CLAUDE.md §8).
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active { Task { await app.refreshOnForeground() } }
+        }
     }
 
     /// Jump straight to a screen via `-startAt <route>`, for capturing store
@@ -59,7 +70,7 @@ struct RootView: View {
         switch route {
         case .stageSelect:
             StageSelectView(onPlay: { path.append(.quiz(stageIndex: $0.index)) },
-                            onLocked: { showsParentalGate = true })
+                            onLocked: { showsUnlock = true })
 
         case .quiz(let stageIndex):
             if let stage = Stage.stage(at: stageIndex) {

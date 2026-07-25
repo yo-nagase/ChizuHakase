@@ -89,6 +89,16 @@ struct QuizView: View {
             Button { speak(quiz) } label: { Text("🔊") }
                 .buttonStyle(CircleIconButtonStyle(diameter: 44))
                 .accessibilityLabel("もんだいを よむ")
+
+            if app.isVoiceModeAvailable {
+                Button { toggleListening(quiz) } label: {
+                    Text(app.voice.isListening ? "🎙️" : "🎤")
+                }
+                .buttonStyle(CircleIconButtonStyle(
+                    background: app.voice.isListening ? Palette.teal : .white,
+                    diameter: 44))
+                .accessibilityLabel(app.voice.isListening ? "きいています" : "こえで こたえる")
+            }
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 10)
@@ -174,6 +184,22 @@ struct QuizView: View {
         }
     }
 
+    /// Voice answering is an alternative to tapping, never a replacement:
+    /// the map stays live the whole time (CLAUDE.md §7).
+    private func toggleListening(_ quiz: QuizViewModel) {
+        guard app.isVoiceModeAvailable else { return }
+        if app.voice.isListening {
+            app.voice.stop()
+            return
+        }
+        let candidates = app.mapData.prefectures(in: Array(quiz.interactiveCodes))
+        app.voice.start { heard in
+            guard let match = PrefectureNameMatcher.match(heard, among: candidates) else { return }
+            app.voice.stop()
+            handleTap(match, quiz: quiz)
+        }
+    }
+
     private func speak(_ quiz: QuizViewModel) {
         guard app.save.data.settings.speechEnabled, let target = quiz.target else { return }
         SpeechService.shared.speak("\(target.kana)は、どこかな?")
@@ -182,6 +208,7 @@ struct QuizView: View {
     private func leave() {
         advanceTask?.cancel()
         SpeechService.shared.stop()
+        app.voice.stop()
         dismiss()
     }
 }
