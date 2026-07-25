@@ -174,6 +174,11 @@ struct QuizView: View {
         .background(Palette.seaGradient)
         .stickerCard(fill: .clear, cornerRadius: 26)
         .overlay(alignment: .topTrailing) { resetZoomButton }
+        // Reaches wider than the rest of the column. The map is limited by the
+        // screen's width, never its height, so every point of margin here is a
+        // point off how big each prefecture is drawn — and this is the one
+        // element on the screen the child has to aim at.
+        .padding(.horizontal, -10)
         // Every question starts on the whole map. Staying zoomed would let a
         // child be asked about a prefecture that is off screen — and panning to
         // it automatically would point straight at the answer.

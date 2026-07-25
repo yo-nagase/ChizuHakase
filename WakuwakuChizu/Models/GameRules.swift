@@ -31,10 +31,15 @@ nonisolated enum GameRules {
         misses < missesBeforeHint
     }
 
-    /// Fraction of the fitted map added as breathing room, plus a flat inset so
-    /// coastal prefectures never touch the bezel.
-    static let mapPaddingRatio: CGFloat = 0.09
-    static let mapPaddingPoints: CGFloat = 8
+    /// Breathing room added around the fitted map, as a fraction of its own
+    /// size on each side, plus a flat inset so coastal prefectures never touch
+    /// the bezel.
+    ///
+    /// CLAUDE.md §3 asked for 9%, which is 18% of the width spent on empty sea.
+    /// On 全国チャレンジ the whole country is scaled to fit a phone's width, so
+    /// that margin came straight out of how big Kagawa is drawn.
+    static let mapPaddingRatio: CGFloat = 0.045
+    static let mapPaddingPoints: CGFloat = 6
 
     /// Screen-space slack for taps that miss every prefecture (CLAUDE.md §3).
     static let tapTolerancePoints: CGFloat = 22

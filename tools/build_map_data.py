@@ -244,8 +244,8 @@ def main():
         dropped += before - len(kept)
         shapes[code] = {"name": feat["name"], "rings": project(kept)}
 
-    # Lay out the mainland first, then drop Okinawa into the sea to its
-    # south-west so the inset never overlaps a real prefecture.
+    # Lay out the mainland first, then drop Okinawa into empty sea so the inset
+    # never overlaps a real prefecture.
     main_pts = [p for c, s in shapes.items() if c != OKINAWA_CODE
                 for r in s["rings"] for p in r]
     mx0, my0, mx1, my1 = bbox_of(main_pts)
@@ -255,15 +255,47 @@ def main():
     ox0, oy0, ox1, oy1 = bbox_of([p for r in ok_rings for p in r])
     ok_w, ok_h = (ox1 - ox0) * OKINAWA_SCALE, (oy1 - oy0) * OKINAWA_SCALE
 
-    # Right edge sits just left of the mainland; vertically it hugs the bottom
-    # band next to Kyushu, which is where a Japanese map reader expects it.
-    gap = main_w * 0.02
-    target_x1 = mx0 - gap
-    target_y1 = my1 - main_h * 0.06
+    # The inset has to satisfy two things at once.
+    #
+    # It must sit *inside* the mainland's own box. Parked south-west of Kyushu —
+    # where Okinawa actually is — it pushed the map 14% wider than the mainland
+    # needs, and since 全国チャレンジ scales the whole country to fit a phone's
+    # width, every prefecture was drawn 14% smaller to make room for a box
+    # floating in empty water.
+    #
+    # It must also stay near Kyushu. Moving it to the empty north-west corner
+    # fixed the width and broke the 九州・沖縄 stage instead: that stage fits
+    # only its own prefectures, so Okinawa at one end and Kyushu at the other
+    # turned the map into a tall sliver with the sea in between.
+    #
+    # The Pacific south-east of Kyushu is the one place that does both. Found by
+    # scanning rather than hand-placed, so a change upstream in the
+    # simplification cannot silently drop it on top of Shikoku.
+    ipad_pre = main_h * 0.012
+    step = main_w * 0.005
+    band_y0 = my1 - ok_h - ipad_pre
+    others = {c: bbox_of([p for r in s["rings"] for p in r])
+              for c, s in shapes.items() if c != OKINAWA_CODE}
+
+    def free_at(x0: float, y0: float) -> bool:
+        rect = (x0 - ipad_pre, y0 - ipad_pre,
+                x0 + ok_w + ipad_pre, y0 + ok_h + ipad_pre)
+        if rect[0] < mx0 or rect[2] > mx1 or rect[1] < my0 or rect[3] > my1:
+            return False
+        return not any(b[0] < rect[2] and b[2] > rect[0]
+                       and b[1] < rect[3] and b[3] > rect[1]
+                       for b in others.values())
+
+    target = next((x for x in (mx0 + i * step
+                               for i in range(int((mx1 - mx0) / step)))
+                   if free_at(x, band_y0)), None)
+    if target is None:
+        raise SystemExit("no free water south-east of Kyushu for the Okinawa inset")
+
     shapes[OKINAWA_CODE]["rings"] = transform_rings(
         ok_rings, OKINAWA_SCALE, OKINAWA_SCALE,
-        target_x1 - ox1 * OKINAWA_SCALE,
-        (target_y1 - ok_h) - oy0 * OKINAWA_SCALE,
+        target - ox0 * OKINAWA_SCALE,
+        band_y0 - oy0 * OKINAWA_SCALE,
     )
 
     # The dashed inset frame is part of the map's extent, so it has to be in
@@ -273,6 +305,19 @@ def main():
     ok_bb = bbox_of([p for r in shapes[OKINAWA_CODE]["rings"] for p in r])
     inset_rect = [ok_bb[0] - ipad, ok_bb[1] - ipad,
                   ok_bb[2] + ipad, ok_bb[3] + ipad]
+
+    # The corner is only free if nothing is standing in it. Checked rather than
+    # assumed: an inset overlapping Honshu would be unreadable, and the
+    # simplification step upstream can move a coastline.
+    for code, s in shapes.items():
+        if code == OKINAWA_CODE:
+            continue
+        bx0, by0, bx1, by1 = bbox_of([p for r in s["rings"] for p in r])
+        if (bx0 < inset_rect[2] and bx1 > inset_rect[0]
+                and by0 < inset_rect[3] and by1 > inset_rect[1]):
+            raise SystemExit(
+                f"okinawa inset {inset_rect} overlaps {s['name']} "
+                f"[{bx0:.1f},{by0:.1f},{bx1:.1f},{by1:.1f}]")
 
     # Normalise the whole assembly to width OUT_WIDTH, origin at (0, 0).
     all_pts = [p for s in shapes.values() for r in s["rings"] for p in r]
