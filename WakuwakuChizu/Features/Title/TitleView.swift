@@ -75,33 +75,49 @@ struct TitleView: View {
         .allowsHitTesting(false)
     }
 
-    /// Two counts, phrased as a sticker tally rather than as statistics.
+    /// Three counts, printed on the page rather than stuck on it.
+    ///
+    /// These used to be white sticker cards with a drop shadow, which is the
+    /// same raised treatment the buttons below use — so they read as three more
+    /// things to press, and pressing them did nothing. Flat, with hairline
+    /// rules, they are legible as a tally and unmistakably not tappable.
     private var progressLine: some View {
-        HStack(spacing: 10) {
+        HStack(spacing: 0) {
             tally("🗾", app.save.data.mastery.values.filter { $0 > 0 }.count, 47,
                   mode.isKids ? "けん" : "県")
+            rule
             tally("✨", app.save.data.sparklingPrefectureCount, 47, "キラ")
-
+            rule
             tally("🃏", app.save.data.totalOwnedCards, max(app.cards.count, 1), "カード")
         }
+        .padding(.vertical, 2)
+    }
+
+    private var rule: some View {
+        Rectangle()
+            .fill(Palette.ink.opacity(0.11))
+            .frame(width: 1, height: 30)
     }
 
     private func tally(_ emoji: String, _ have: Int, _ total: Int,
                        _ label: String) -> some View {
         VStack(spacing: 1) {
-            Text(emoji).font(.system(size: 17))
-            Text("\(have)")
-                .font(AppFont.rounded(17, relativeTo: .headline))
-                .foregroundStyle(Palette.ink)
-                .monospacedDigit()
-            Text("/ \(total) \(label)")
+            HStack(spacing: 4) {
+                Text(emoji).font(.system(size: 14))
+                // Verbatim: SwiftUI's localised interpolation groups integers,
+                // and a child reading 「1,120」 has to parse a comma first.
+                Text(verbatim: "\(have)")
+                    .font(AppFont.rounded(19, relativeTo: .headline))
+                    .foregroundStyle(Palette.ink)
+                    .monospacedDigit()
+            }
+            Text(verbatim: "/ \(total) \(label)")
                 .font(AppFont.rounded(10, relativeTo: .caption2))
                 .foregroundStyle(Palette.ink.opacity(0.45))
                 .monospacedDigit()
         }
-        .padding(.vertical, 8)
         .frame(maxWidth: .infinity)
-        .stickerCard(cornerRadius: 16, edge: 2.5)
+        .accessibilityElement(children: .combine)
     }
 }
 
@@ -144,7 +160,7 @@ enum MasteryStyle {
     static func appearance(for code: Int, save: SaveData) -> PrefectureAppearance {
         let level = save.masteryLevel(of: code)
         return PrefectureAppearance(fill: fill(level: level),
-                                    stroke: Palette.emptySlot.opacity(0.7),
+                                    stroke: Palette.boundary,
                                     isSparkling: level >= GameRules.maxMastery,
                                     isStuck: false)
     }

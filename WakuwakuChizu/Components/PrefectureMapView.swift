@@ -18,7 +18,7 @@ nonisolated struct PrefectureAppearance: Equatable {
     /// The pre-printed slot: the prefecture's own colour, washed out.
     static func slot(for code: Int) -> PrefectureAppearance {
         PrefectureAppearance(fill: Palette.fill(for: code, strength: 0.22),
-                             stroke: Palette.emptySlot.opacity(0.55),
+                             stroke: Palette.boundary,
                              isStuck: false)
     }
 
@@ -172,7 +172,7 @@ private struct PrefectureLayer: View {
     /// is a grid of borders, and anything heavier reads as the lines being the
     /// subject rather than the country.
     private var boundaryWidth: CGFloat {
-        min(max(canvasSize.width * 0.0028, 0.35), 1) / max(zoom, 1)
+        min(max(canvasSize.width * 0.0019, 0.3), 0.7) / max(zoom, 1)
     }
 
     private var anchor: UnitPoint {

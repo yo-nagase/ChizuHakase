@@ -50,6 +50,11 @@ nonisolated enum Palette {
     static let page = Color(hex: 0xFFFBF2)
     /// Outline of a slot no sticker has been earned for yet.
     static let emptySlot = Color(hex: 0xD8D2C4)
+
+    /// The prefecture boundary. Darker than the slot grey it used to borrow, so
+    /// a hairline still reads as a border rather than as a smudge — the line
+    /// got thin enough that a pale colour simply disappeared.
+    static let boundary = Color(hex: 0x9B9384)
     /// Die-cut border. Every sticker in the app shares this white edge.
     static let dieCut = Color.white
 

@@ -116,8 +116,10 @@ final class QuizViewModel {
         firstTryByPrefecture[target.code] = firstTry
         answeredCodes.insert(target.code)
 
-        let draw = GameRules.drawCard(from: catalog.cards(for: target.code),
-                                      owned: ownedCards, using: &rng)
+        let draw = GameRules.earnsCard(afterMisses: attempts)
+            ? GameRules.drawCard(from: catalog.cards(for: target.code),
+                                 owned: ownedCards, using: &rng)
+            : nil
         if let draw {
             ownedCards = GameRules.applyDraw(draw, to: ownedCards)
             draws.append(draw)

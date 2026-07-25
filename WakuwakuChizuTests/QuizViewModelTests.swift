@@ -26,6 +26,60 @@ struct QuizViewModelTests {
         }
     }
 
+    /// Taps every wrong prefecture in the stage, `times` of them, then answers.
+    @discardableResult
+    private func answerAfterMissing(_ quiz: QuizViewModel, times: Int) -> GameRules.CardDraw? {
+        guard let target = quiz.target else { return nil }
+        let wrong = quiz.order.filter { $0 != target.code }.prefix(times)
+        #expect(wrong.count == times, "stage is too small to miss \(times) times")
+        for code in wrong { quiz.answer(code) }
+        quiz.answer(target.code)
+        return quiz.lastDraw
+    }
+
+    // MARK: - Earning a card
+
+    @Test func aCleanAnswerStillWinsACard() {
+        let quiz = makeQuiz()
+        #expect(answerAfterMissing(quiz, times: 0) != nil)
+    }
+
+    /// One miss is a guess, not a giveaway — the answer has not been shown yet.
+    @Test func oneMissStillWinsACard() {
+        let quiz = makeQuiz()
+        #expect(answerAfterMissing(quiz, times: 1) != nil)
+    }
+
+    /// Two misses light up the answer, so tapping it proves nothing.
+    @Test func answeringAfterTheHintWinsNoCard() {
+        let quiz = makeQuiz()
+        #expect(quiz.hintCode == nil)
+        let draw = answerAfterMissing(quiz, times: GameRules.missesBeforeHint)
+        #expect(draw == nil, "a card was handed out after the answer was shown")
+    }
+
+    /// The card is withheld, not the progress. Nothing a child has earned is
+    /// taken back (CLAUDE.md §12).
+    @Test func theHintStillScoresAndStillCountsAsAnswered() throws {
+        let quiz = makeQuiz()
+        let target = try #require(quiz.target)
+        answerAfterMissing(quiz, times: GameRules.missesBeforeHint)
+        #expect(quiz.score == 50)
+        #expect(quiz.answeredCodes.contains(target.code))
+    }
+
+    /// A stage played entirely past the hint ends with no cards at all, and
+    /// still finishes cleanly.
+    @Test func aStageAnsweredOnlyAfterHintsYieldsNoCards() {
+        let quiz = makeQuiz()
+        while quiz.phase != .finished {
+            guard quiz.target != nil else { break }
+            answerAfterMissing(quiz, times: GameRules.missesBeforeHint)
+            quiz.advance()
+        }
+        #expect(quiz.makeResult().cardDraws.isEmpty)
+    }
+
     // MARK: - Setup
 
     @Test func asksEveryPrefectureInTheStageExactlyOnce() {

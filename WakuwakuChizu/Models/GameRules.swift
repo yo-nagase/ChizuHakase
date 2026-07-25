@@ -21,6 +21,16 @@ nonisolated enum GameRules {
     /// Wrong attempts on the current question before the answer starts blinking.
     static let missesBeforeHint = 2
 
+    /// Whether a correct answer still earns a card.
+    ///
+    /// Once the hint has outlined the answer, tapping it is following a
+    /// pointer rather than knowing where the prefecture is, so there is nothing
+    /// to reward. The points and the mastery credit are untouched — this
+    /// withholds a prize, it never takes one away (CLAUDE.md §12).
+    static func earnsCard(afterMisses misses: Int) -> Bool {
+        misses < missesBeforeHint
+    }
+
     /// Fraction of the fitted map added as breathing room, plus a flat inset so
     /// coastal prefectures never touch the bezel.
     static let mapPaddingRatio: CGFloat = 0.09

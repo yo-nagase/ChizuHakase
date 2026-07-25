@@ -28,6 +28,24 @@ struct GameRulesTests {
         #expect(regional.count == 47, "a prefecture appears in two regional stages")
     }
 
+    // MARK: - Earning a card
+
+    /// Once the hint has outlined the answer, tapping it is following a pointer
+    /// rather than knowing where the prefecture is.
+    @Test func aCardIsEarnedUntilTheHintGivesItAway() {
+        #expect(GameRules.earnsCard(afterMisses: 0))
+        #expect(GameRules.earnsCard(afterMisses: 1))
+        #expect(!GameRules.earnsCard(afterMisses: GameRules.missesBeforeHint))
+        #expect(!GameRules.earnsCard(afterMisses: 9))
+    }
+
+    /// The card is the only thing withheld. Points and the mastery credit are
+    /// untouched, so nothing a child already has is taken back (CLAUDE.md §12).
+    @Test func theHintDoesNotCostPointsOrMastery() {
+        #expect(GameRules.score(firstTry: false, combo: 1) == 50)
+        #expect(GameRules.nextMastery(current: 2, firstTry: false) == 2)
+    }
+
     // MARK: - Score
 
     @Test func firstTryScoreStartsAt100() {
