@@ -22,6 +22,14 @@ WakuwakuChizu.xcodeproj/
 .swiftpm/
 Packages/
 
+## assets/ — the full-size hand-painted originals (~2.6MB each).
+## Local-only, by the same rule as the map intermediates below: what ships is
+## the 480px output under WakuwakuChizu/Resources/Assets.xcassets/CardArt/,
+## which IS committed. The originals never enter the repo or the app bundle —
+## the app target's sources are WakuwakuChizu/ only, so a build cannot pick
+## them up even by accident.
+assets/
+
 ## tools/ — large intermediates. PrefectureShapes.json itself IS committed
 ## (see CLAUDE.md §3: generated but checked in, never rebuilt at build time).
 tools/japan.geojson

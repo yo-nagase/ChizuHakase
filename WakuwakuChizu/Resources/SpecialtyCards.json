@@ -12,11 +12,12 @@
     {
       "id": "01-2",
       "prefectureCode": 1,
-      "emoji": "🥔",
-      "nameKana": "じゃがいも",
-      "nameKanji": "馬鈴薯",
+      "emoji": "🥛",
+      "nameKana": "にゅうせいひん",
+      "nameKanji": "乳製品",
       "category": "food",
-      "description": "ひろい はたけで そだつ"
+      "description": "ひろい ぼくじょうの ミルク",
+      "art": "card-01-2"
     },
     {
       "id": "01-3",
@@ -347,11 +348,12 @@
     {
       "id": "13-2",
       "prefectureCode": 13,
-      "emoji": "🍳",
-      "nameKana": "もんじゃやき",
-      "nameKanji": "もんじゃ焼き",
+      "emoji": "🍣",
+      "nameKana": "えどまえずし",
+      "nameKanji": "江戸前寿司",
       "category": "food",
-      "description": "てっぱんで とろとろ やく"
+      "description": "しんせんな さかなの おすし",
+      "art": "card-13-2"
     },
     {
       "id": "13-3",
@@ -374,11 +376,12 @@
     {
       "id": "14-2",
       "prefectureCode": 14,
-      "emoji": "🥟",
-      "nameKana": "しゅうまい",
-      "nameKanji": "焼売",
+      "emoji": "🐟",
+      "nameKana": "しらす",
+      "nameKanji": "しらす",
       "category": "food",
-      "description": "ひとくちサイズの むしもの"
+      "description": "ちいさくて しろい さかな",
+      "art": "card-14-2"
     },
     {
       "id": "14-3",
@@ -442,7 +445,8 @@
       "nameKana": "ますのすし",
       "nameKanji": "ます寿司",
       "category": "food",
-      "description": "まるい かたちの おすし"
+      "description": "まるい かたちの おすし",
+      "art": "card-16-3"
     },
     {
       "id": "17-1",
@@ -469,7 +473,8 @@
       "nameKana": "きんぱく",
       "nameKanji": "金箔",
       "category": "craft",
-      "description": "うすくて きらきらの きん"
+      "description": "うすくて きらきらの きん",
+      "art": "card-17-3"
     },
     {
       "id": "18-1",
@@ -478,7 +483,8 @@
       "nameKana": "えちぜんがに",
       "nameKanji": "越前がに",
       "category": "food",
-      "description": "ふゆの うみの ごちそう"
+      "description": "ふゆの うみの ごちそう",
+      "art": "card-18-1"
     },
     {
       "id": "18-2",
@@ -523,7 +529,8 @@
       "nameKana": "ほうとう",
       "nameKanji": "ほうとう",
       "category": "food",
-      "description": "ひらたい めんの あつい なべ"
+      "description": "ひらたい めんの あつい なべ",
+      "art": "card-19-3"
     },
     {
       "id": "20-1",
@@ -574,11 +581,12 @@
     {
       "id": "21-3",
       "prefectureCode": 21,
-      "emoji": "🐟",
-      "nameKana": "あゆ",
-      "nameKanji": "鮎",
+      "emoji": "🥩",
+      "nameKana": "ひだぎゅう",
+      "nameKanji": "飛騨牛",
       "category": "food",
-      "description": "きれいな かわに すむ さかな"
+      "description": "やわらかくて あまい おにく",
+      "art": "card-21-3"
     },
     {
       "id": "22-1",
@@ -611,11 +619,12 @@
     {
       "id": "23-1",
       "prefectureCode": 23,
-      "emoji": "🍖",
-      "nameKana": "みそかつ",
-      "nameKanji": "味噌カツ",
+      "emoji": "🍡",
+      "nameKana": "ういろう",
+      "nameKanji": "ういろう",
       "category": "food",
-      "description": "くろい みその たれを かける"
+      "description": "もちもちした あまい おかし",
+      "art": "card-23-1"
     },
     {
       "id": "23-2",
@@ -900,11 +909,12 @@
     {
       "id": "33-3",
       "prefectureCode": 33,
-      "emoji": "🍇",
-      "nameKana": "ますかっと",
-      "nameKanji": "マスカット",
+      "emoji": "🍑",
+      "nameKana": "はくとう",
+      "nameKanji": "白桃",
       "category": "food",
-      "description": "みどりで あまい ぶどう"
+      "description": "しろくて あまい もも",
+      "art": "card-33-3"
     },
     {
       "id": "34-1",
@@ -1274,11 +1284,12 @@
     {
       "id": "47-2",
       "prefectureCode": 47,
-      "emoji": "🍪",
-      "nameKana": "ちんすこう",
-      "nameKanji": "ちんすこう",
+      "emoji": "🍍",
+      "nameKana": "ぱいなっぷる",
+      "nameKanji": "パイナップル",
       "category": "food",
-      "description": "さくさくした ちいさい おかし"
+      "description": "みなみの しまの あまい み",
+      "art": "card-47-2"
     },
     {
       "id": "47-3",

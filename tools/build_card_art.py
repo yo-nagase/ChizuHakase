@@ -43,9 +43,14 @@ PALETTE_COLOURS = 192
 # where the two are reconciled. An entry only belongs here when the picture is
 # of the same thing the card names: art that says 乳製品 on a card that says 蟹
 # would be a lie told to a child who is trying to learn.
+# Five cards were rewritten to the subject that had been painted — same
+# prefecture, same category, so the ずかん filter keeps its balance. That is only
+# safe before release: after it, an id is a save key (§4) and its card must
+# stay the same card.
 ART_FOR_CARD = {
-    "iwate-wankosoba": "03-1",       # わんこそば
+    "hokkaido-dairy": "01-2",        # 乳製品
     "aomori-ringo": "02-1",          # 林檎
+    "iwate-wankosoba": "03-1",       # わんこそば
     "miyagi-zundamochi": "04-2",     # ずんだ餅
     "akita-kiritanpo": "05-1",       # きりたんぽ
     "yamagata-sakuranbo": "06-1",    # さくらんぼ
@@ -55,16 +60,28 @@ ART_FOR_CARD = {
     "gunma-konnyaku": "10-1",        # 蒟蒻
     "saitama-soka-senbei": "11-1",   # 草加せんべい
     "chiba-rakkasei": "12-1",        # 落花生
+    "tokyo-edomae-sushi": "13-2",    # 江戸前寿司
+    "kanagawa-shirasu": "14-2",      # しらす
     "niigata-koshihikari": "15-1",   # こしひかり
+    "toyama-masu-zushi": "16-3",     # ます寿司
+    "ishikawa-kinpaku": "17-3",      # 金箔
+    "fukui-echizen-gani": "18-1",    # 越前がに
+    "yamanashi-hoto": "19-3",        # ほうとう
     "nagano-shinshu-soba": "20-1",   # 蕎麦
-    # Two files exist for Shizuoka tea; -cha is the later of the pair.
-    "shizuoka-cha": "22-1",          # 茶
+    "gifu-hidagyu": "21-3",          # 飛騨牛
+    "aichi-uiro": "23-1",            # ういろう
+    # Two takes on Shizuoka tea exist. -ocha titles itself 「お茶」 and -cha
+    # 「静岡茶」; the picture's own title is what a child reads, because an
+    # illustrated chip drops the caption underneath (§4).
+    "shizuoka-ocha": "22-1",         # 茶
     "kyoto-uji-matcha": "26-2",      # 抹茶
+    "okayama-hakuto": "33-3",        # 白桃
     "hiroshima-momiji-manju": "34-1",  # もみじ饅頭
     "hiroshima-kaki": "34-3",        # 牡蠣
     "ehime-mikan": "38-1",           # 蜜柑
     "miyazaki-mango": "45-1",        # マンゴー
     "kagoshima-kurobuta": "46-2",    # 黒豚
+    "okinawa-pineapple": "47-2",     # パイナップル
 }
 
 
