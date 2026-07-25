@@ -123,6 +123,54 @@ struct PrefectureGeometryTests {
                                               among: prefs, transform: t) == nil)
     }
 
+    // MARK: - Tap allowance while zoomed
+    //
+    // Taps arrive in the map's own coordinates, so PrefectureMapView divides
+    // the allowance by the zoom to keep the slack a constant width on the
+    // glass. These pin both halves of that: a magnified map must still accept
+    // a tap on the prefecture, and must stop accepting one from far away.
+
+    @Test func everyPrefectureIsStillReachableAtTheTightestAllowance() throws {
+        let prefs = stagePrefectures(6)
+        let t = PrefectureGeometry.fitTransform(
+            bounds: PrefectureGeometry.boundingBox(of: prefs),
+            into: CGSize(width: 358, height: 500))
+        let zoomed = GameRules.tapTolerancePoints / ZoomPan.maxScale
+        for pref in prefs {
+            let point = PrefectureGeometry.screenCentroid(of: pref, transform: t)
+            let resolved = PrefectureGeometry.resolveTap(
+                at: point, target: pref, among: prefs, transform: t,
+                tolerance: zoomed, targetBias: GameRules.tapTargetBiasPoints / ZoomPan.maxScale)
+            #expect(resolved?.code == pref.code,
+                    "\(pref.name) unreachable at 4x: got \(resolved?.name ?? "sea")")
+        }
+    }
+
+    /// The reason the allowance shrinks at all. At 4x an unscaled 22-unit slack
+    /// would be 88pt on the glass, so a tap the width of a hand away from
+    /// Kagawa would still be scored as Kagawa.
+    @Test func aMissThatWouldCountUnzoomedIsRejectedWhenMagnified() throws {
+        let prefs = stagePrefectures(4)
+        let t = PrefectureGeometry.fitTransform(
+            bounds: PrefectureGeometry.boundingBox(of: prefs),
+            into: CGSize(width: 390, height: 600))
+        let kagawa = try #require(map[37])
+        var point = PrefectureGeometry.screenCentroid(of: kagawa, transform: t)
+        while PrefectureGeometry.distanceToOutline(point, of: kagawa, transform: t) == 0 {
+            point.y -= 1
+        }
+        point.y -= 12   // well outside, but inside the resting allowance
+
+        #expect(PrefectureGeometry.resolveTap(at: point, target: kagawa,
+                                              among: prefs, transform: t)?.code == kagawa.code,
+                "this miss is meant to be forgiven at rest")
+        #expect(PrefectureGeometry.resolveTap(
+            at: point, target: kagawa, among: prefs, transform: t,
+            tolerance: GameRules.tapTolerancePoints / 4,
+            targetBias: GameRules.tapTargetBiasPoints / 4)?.code != kagawa.code,
+                "the same miss is a whole thumb away once the map is at 4x")
+    }
+
     @Test func distanceToOutlineIsZeroInsideAndGrowsOutside() throws {
         let prefs = stagePrefectures(1)
         let t = PrefectureGeometry.fitTransform(

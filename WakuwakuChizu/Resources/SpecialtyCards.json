@@ -665,11 +665,12 @@
     {
       "id": "24-3",
       "prefectureCode": 24,
-      "emoji": "🥩",
-      "nameKana": "まつさかうし",
-      "nameKanji": "松阪牛",
+      "emoji": "🍜",
+      "nameKana": "いせうどん",
+      "nameKanji": "伊勢うどん",
       "category": "food",
-      "description": "しもふりの おいしい ぎゅうにく"
+      "description": "ふとくて やわらかい めん",
+      "art": "card-24-3"
     },
     {
       "id": "25-1",
@@ -692,11 +693,12 @@
     {
       "id": "25-3",
       "prefectureCode": 25,
-      "emoji": "🏺",
-      "nameKana": "しがらきやき",
-      "nameKanji": "信楽焼",
-      "category": "craft",
-      "description": "たぬきの おきものが ゆうめい"
+      "emoji": "🐟",
+      "nameKana": "ふなずし",
+      "nameKanji": "鮒ずし",
+      "category": "food",
+      "description": "むかしから つくる おすし",
+      "art": "card-25-3"
     },
     {
       "id": "26-1",
@@ -733,7 +735,8 @@
       "nameKana": "たこやき",
       "nameKanji": "たこ焼き",
       "category": "food",
-      "description": "まるくて あつあつ"
+      "description": "まるくて あつあつ",
+      "art": "card-27-1"
     },
     {
       "id": "27-2",
@@ -778,7 +781,8 @@
       "nameKana": "あかしやき",
       "nameKanji": "明石焼",
       "category": "food",
-      "description": "だしに つけて たべる たまご"
+      "description": "だしに つけて たべる たまご",
+      "art": "card-28-3"
     },
     {
       "id": "29-1",
@@ -801,11 +805,12 @@
     {
       "id": "29-3",
       "prefectureCode": 29,
-      "emoji": "🖌️",
-      "nameKana": "ならふで",
-      "nameKanji": "奈良筆",
-      "category": "craft",
-      "description": "けを そろえて つくる ふで"
+      "emoji": "🍣",
+      "nameKana": "かきのはずし",
+      "nameKanji": "柿の葉寿司",
+      "category": "food",
+      "description": "かきの はっぱで つつむ",
+      "art": "card-29-3"
     },
     {
       "id": "30-1",
@@ -814,7 +819,8 @@
       "nameKana": "うめぼし",
       "nameKanji": "梅干し",
       "category": "food",
-      "description": "すっぱくて おにぎりに あう"
+      "description": "すっぱくて おにぎりに あう",
+      "art": "card-30-1"
     },
     {
       "id": "30-2",
@@ -850,7 +856,8 @@
       "nameKana": "なし",
       "nameKanji": "梨",
       "category": "food",
-      "description": "しゃりしゃりで みずみずしい"
+      "description": "しゃりしゃりで みずみずしい",
+      "art": "card-31-2"
     },
     {
       "id": "31-3",
@@ -873,11 +880,12 @@
     {
       "id": "32-2",
       "prefectureCode": 32,
-      "emoji": "🐚",
-      "nameKana": "しじみ",
-      "nameKanji": "蜆",
+      "emoji": "🍜",
+      "nameKana": "いずもそば",
+      "nameKanji": "出雲そば",
       "category": "food",
-      "description": "みずうみに すむ ちいさい かい"
+      "description": "くろっぽい いろの おそば",
+      "art": "card-32-2"
     },
     {
       "id": "32-3",
@@ -952,7 +960,8 @@
       "nameKana": "ふぐ",
       "nameKanji": "河豚",
       "category": "food",
-      "description": "まるく ふくらむ さかな"
+      "description": "まるく ふくらむ さかな",
+      "art": "card-35-1"
     },
     {
       "id": "35-2",
@@ -988,7 +997,8 @@
       "nameKana": "すだち",
       "nameKanji": "酢橘",
       "category": "food",
-      "description": "みどりで さわやかな かおり"
+      "description": "みどりで さわやかな かおり",
+      "art": "card-36-2"
     },
     {
       "id": "36-3",
@@ -1006,7 +1016,8 @@
       "nameKana": "さぬきうどん",
       "nameKanji": "讃岐うどん",
       "category": "food",
-      "description": "こしが つよい ふとい めん"
+      "description": "こしが つよい ふとい めん",
+      "art": "card-37-1"
     },
     {
       "id": "37-2",
@@ -1061,7 +1072,8 @@
       "nameKana": "かつおのたたき",
       "nameKanji": "鰹のたたき",
       "category": "food",
-      "description": "わらの ひで さっと やく"
+      "description": "わらの ひで さっと やく",
+      "art": "card-39-1"
     },
     {
       "id": "39-2",
@@ -1088,7 +1100,8 @@
       "nameKana": "めんたいこ",
       "nameKanji": "明太子",
       "category": "food",
-      "description": "ぴりっと からい たらこ"
+      "description": "ぴりっと からい たらこ",
+      "art": "card-40-1"
     },
     {
       "id": "40-2",
@@ -1115,7 +1128,8 @@
       "nameKana": "ありたやき",
       "nameKanji": "有田焼",
       "category": "craft",
-      "description": "しろに あおの もようの うつわ"
+      "description": "しろに あおの もようの うつわ",
+      "art": "card-41-1"
     },
     {
       "id": "41-2",

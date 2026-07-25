@@ -24,17 +24,13 @@ struct CardChipView: View {
         VStack(spacing: 6) {
             face
 
-            // The painting already carries the name, so printing it again
-            // underneath just says the same word twice.
-            if shinyArt == nil {
-                Text(isOwned ? card.displayName(mode) : "？？？")
-                    .font(AppFont.rounded(15, relativeTo: .subheadline))
-                    .foregroundStyle(Palette.ink)
-                    .multilineTextAlignment(.center)
-                    .lineLimit(2)
-                    .minimumScaleFactor(0.6)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
+            Text(nameLine)
+                .font(AppFont.rounded(15, relativeTo: .subheadline))
+                .foregroundStyle(Palette.ink)
+                .multilineTextAlignment(.center)
+                .lineLimit(2)
+                .minimumScaleFactor(0.6)
+                .fixedSize(horizontal: false, vertical: true)
 
             if showsDescription, isOwned {
                 Text(card.description)
@@ -66,6 +62,18 @@ struct CardChipView: View {
         .opacity(isOwned ? 1 : 0.72)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(accessibilityText)
+    }
+
+    /// The caption under the face.
+    ///
+    /// An illustrated card always gets the reading, never the kanji. The
+    /// painting titles itself — but in kanji (「乳製品」「江戸前寿司」「飛騨牛」),
+    /// which is unreadable to the five-year-olds this app is for, so the line
+    /// underneath is the only place they can find out what they just won. It
+    /// repeats the picture for an adult; that is the cheaper mistake.
+    private var nameLine: String {
+        guard isOwned else { return "？？？" }
+        return shinyArt == nil ? card.displayName(mode) : card.nameKana
     }
 
     /// Same square for every chip whether it holds a painting or an emoji, so

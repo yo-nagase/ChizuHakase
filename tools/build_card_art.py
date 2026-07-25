@@ -63,7 +63,8 @@ ART_FOR_CARD = {
     "tokyo-edomae-sushi": "13-2",    # 江戸前寿司
     "kanagawa-shirasu": "14-2",      # しらす
     "niigata-koshihikari": "15-1",   # こしひかり
-    "toyama-masu-zushi": "16-3",     # ます寿司
+    # Two takes on ます寿司; this is the later one.
+    "toyama-masuzushi": "16-3",      # ます寿司
     "ishikawa-kinpaku": "17-3",      # 金箔
     "fukui-echizen-gani": "18-1",    # 越前がに
     "yamanashi-hoto": "19-3",        # ほうとう
@@ -74,11 +75,25 @@ ART_FOR_CARD = {
     # 「静岡茶」; the picture's own title is what a child reads, because an
     # illustrated chip drops the caption underneath (§4).
     "shizuoka-ocha": "22-1",         # 茶
+    "mie-ise-udon": "24-3",          # 伊勢うどん
+    "shiga-funazushi": "25-3",       # 鮒ずし
     "kyoto-uji-matcha": "26-2",      # 抹茶
+    "osaka-takoyaki": "27-1",        # たこ焼き
+    "hyogo-akashiyaki": "28-3",      # 明石焼
+    "nara-kakinoha-zushi": "29-3",   # 柿の葉寿司
+    "wakayama-umeboshi": "30-1",     # 梅干し
+    "tottori-nijisseiki-nashi": "31-2",  # 梨
+    "shimane-izumo-soba": "32-2",    # 出雲そば
     "okayama-hakuto": "33-3",        # 白桃
     "hiroshima-momiji-manju": "34-1",  # もみじ饅頭
     "hiroshima-kaki": "34-3",        # 牡蠣
+    "yamaguchi-fugu": "35-1",        # 河豚
+    "tokushima-sudachi": "36-2",     # 酢橘
+    "kagawa-sanuki-udon": "37-1",    # 讃岐うどん
     "ehime-mikan": "38-1",           # 蜜柑
+    "kochi-katsuo-tataki": "39-1",   # 鰹のたたき
+    "fukuoka-mentaiko": "40-1",      # 明太子
+    "saga-aritayaki": "41-1",        # 有田焼
     "miyazaki-mango": "45-1",        # マンゴー
     "kagoshima-kurobuta": "46-2",    # 黒豚
     "okinawa-pineapple": "47-2",     # パイナップル

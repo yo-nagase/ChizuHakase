@@ -149,41 +149,58 @@ final class QuizFlowUITests: XCTestCase {
     // MARK: - Zoom
 
     /// 全国チャレンジ puts all 47 prefectures in one frame, which is why the quiz
-    /// map can be pinched at all. Scoring has to survive it: the tap allowance
-    /// is divided by the zoom, and getting that backwards would either widen
-    /// the net to a thumb's width or stop taps landing entirely.
-    func testTappingScoresWhileTheMapIsZoomed() {
+    /// map can be pinched at all.
+    func testTheQuizMapZoomsAndOffersTheWayBack() {
         launch(at: "quiz:6")
         XCTAssertTrue(waitUntilQuizIsReady(questions: 47))
 
+        let reset = app.buttons["もとの おおきさ"]
+        XCTAssertFalse(reset.exists, "the reset button shows before any zoom")
         app.pinch(withScale: 2.5, velocity: 2)
-        XCTAssertTrue(app.buttons["もとの おおきさ"].waitForExistence(timeout: 5),
-                      "the quiz map did not zoom")
-
-        guard let target = currentTargetName() else {
-            return XCTFail("could not read the asked prefecture")
-        }
-        tapPrefecture(target)
-        XCTAssertTrue(app.staticTexts["100"].waitForExistence(timeout: 5),
-                      "a correct tap did not score while zoomed")
+        XCTAssertTrue(reset.waitForExistence(timeout: 5), "the quiz map did not zoom")
+        reset.tap()
+        XCTAssertFalse(reset.waitForExistence(timeout: 2))
     }
 
-    /// Each question starts on the whole map. Left zoomed, the next prefecture
-    /// could sit off screen — and panning to it would point at the answer.
-    func testTheMapReturnsToWholeCountryOnTheNextQuestion() {
-        launch(at: "quiz:6")
-        XCTAssertTrue(waitUntilQuizIsReady(questions: 47))
-
-        app.pinch(withScale: 2.5, velocity: 2)
+    /// Answering while zoomed still scores, and the next question starts back
+    /// on the whole map — staying zoomed could ask about a prefecture that is
+    /// off screen, and panning to it would point at the answer.
+    ///
+    /// Runs on a regional stage and retries across questions: a pinch is
+    /// centred on the frame, so whether the asked prefecture is still visible
+    /// depends on where the shuffle put it. Asserting on the first question
+    /// would pass or fail on the draw rather than on the behaviour.
+    func testAnsweringWhileZoomedScoresAndResetsTheView() {
+        launch(at: "quiz:0")
+        XCTAssertTrue(waitUntilQuizIsReady())
         let reset = app.buttons["もとの おおきさ"]
-        XCTAssertTrue(reset.waitForExistence(timeout: 5))
 
-        guard let target = currentTargetName() else {
-            return XCTFail("could not read the asked prefecture")
+        for question in 1...Self.tohokuNames.count {
+            guard let name = currentTargetName() else {
+                return XCTFail("could not read the asked prefecture")
+            }
+            let next = app.staticTexts["7 もんちゅう \(question + 1) もんめ"]
+            let element = app.buttons[name]
+
+            app.pinch(withScale: 1.6, velocity: 2)
+            XCTAssertTrue(reset.waitForExistence(timeout: 5), "the quiz map did not zoom")
+
+            if element.exists, element.isHittable {
+                element.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+                XCTAssertTrue(next.waitForExistence(timeout: 8),
+                              "a correct tap on \(name) did not register while zoomed")
+                XCTAssertFalse(reset.exists,
+                               "the map stayed zoomed into the next question")
+                return
+            }
+
+            // Magnified out of view: come back and answer normally to move on.
+            reset.tap()
+            XCTAssertTrue(element.waitForExistence(timeout: 3))
+            element.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+            XCTAssertTrue(next.waitForExistence(timeout: 8))
         }
-        tapPrefecture(target)
-        XCTAssertTrue(app.staticTexts["47 もんちゅう 2 もんめ"].waitForExistence(timeout: 8))
-        XCTAssertFalse(reset.exists, "the map stayed zoomed into the next question")
+        XCTFail("no question left its prefecture on screen at 1.6x")
     }
 
     // MARK: - Stage availability
