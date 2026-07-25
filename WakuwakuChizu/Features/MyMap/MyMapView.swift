@@ -94,19 +94,17 @@ struct MyMapView: View {
         MasteryStyle.appearance(for: pref.code, save: save)
     }
 
+    /// Reads its colours from the same function the map does, so a swatch
+    /// cannot promise a colour the country does not use. The 「キラキラ」 chip is
+    /// flat gold with no border, because that is exactly what a Lv3 prefecture
+    /// now looks like.
     private var legend: some View {
         HStack(spacing: 10) {
-            ForEach(0...3, id: \.self) { level in
+            ForEach(0...GameRules.maxMastery, id: \.self) { level in
                 HStack(spacing: 5) {
                     RoundedRectangle(cornerRadius: 4)
-                        .fill(MasteryStyle.fill(level: level, code: 3))
+                        .fill(MasteryStyle.fill(level: level))
                         .frame(width: 16, height: 16)
-                        .overlay {
-                            if level == 3 {
-                                RoundedRectangle(cornerRadius: 4)
-                                    .strokeBorder(Palette.gold, lineWidth: 2)
-                            }
-                        }
                     Text(mode.masteryLabel(level))
                         .font(AppFont.rounded(10, relativeTo: .caption2))
                         .foregroundStyle(Palette.ink.opacity(0.6))

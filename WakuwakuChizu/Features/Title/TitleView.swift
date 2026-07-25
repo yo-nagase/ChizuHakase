@@ -108,19 +108,31 @@ struct TitleView: View {
 /// Mastery ramp shared by the title art and the my-map screen (CLAUDE.md §5),
 /// expressed as sticker states: an empty slot fills in, then goes キラ.
 enum MasteryStyle {
+    /// One ramp, not 47.
+    ///
+    /// This used to tint each prefecture with its own hue from the §9 palette,
+    /// which made the legend a lie: it showed four greens while the map showed
+    /// a rainbow, and no swatch could stand for eight hues at once. Colour here
+    /// answers "how well do I know this one", so it carries exactly that and
+    /// nothing else. Prefecture identity is still colour-coded in the quiz and
+    /// on the stage thumbnails, where telling neighbours apart is the job.
+    ///
+    /// The legend draws from this same function, so the two cannot drift again.
+    ///
     /// CLAUDE.md §5 asked for 33% / 73% / solid. On the real map 33% sat close
     /// enough to the unlearned grey that a child could not tell at a glance
-    /// which prefectures they had answered — the one question this screen
-    /// exists to answer. The first step now lands as unmistakably coloured, and
-    /// the ramp above it still reads as three distinct stages.
-    static func fill(level: Int, code: Int) -> Color {
+    /// which prefectures they had answered.
+    static func fill(level: Int) -> Color {
         switch level {
         case ..<1: Palette.unlearned
-        case 1: Palette.fill(for: code, strength: 0.58)
-        case 2: Palette.fill(for: code, strength: 0.82)
-        default: Palette.fill(for: code)
+        case 1: Color(hex: learnedHex, mixedWithWhite: 0.42)
+        case 2: Color(hex: learnedHex, mixedWithWhite: 0.18)
+        default: Palette.gold
         }
     }
+
+    /// The green the ramp climbs through, from the §9 prefecture palette.
+    private static let learnedHex: UInt32 = 0xA5D6A7
 
     /// Only the fill moves as a prefecture is learned.
     ///
@@ -129,10 +141,9 @@ enum MasteryStyle {
     /// the sea while the rest stayed printed flat — the border between 東北 and
     /// 関東 became a seam. The outline is now the same printed edge at every
     /// level, so progress reads as colour spreading across one whole map.
-    /// Lv3 keeps the gold frame CLAUDE.md §5 promises.
     static func appearance(for code: Int, save: SaveData) -> PrefectureAppearance {
         let level = save.masteryLevel(of: code)
-        return PrefectureAppearance(fill: fill(level: level, code: code),
+        return PrefectureAppearance(fill: fill(level: level),
                                     stroke: Palette.emptySlot.opacity(0.7),
                                     isSparkling: level >= GameRules.maxMastery,
                                     isStuck: false)

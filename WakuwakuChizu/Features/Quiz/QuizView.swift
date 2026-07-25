@@ -14,6 +14,8 @@ struct QuizView: View {
 
     @State private var quiz: QuizViewModel?
     @State private var advanceTask: Task<Void, Never>?
+    @State private var zoom: CGFloat = 1
+    @State private var pan: CGSize = .zero
 
     var body: some View {
         ZStack {
@@ -150,6 +152,10 @@ struct QuizView: View {
         }
     }
 
+    /// Pinchable, so 全国チャレンジ is playable: 47 prefectures in one frame puts
+    /// Kagawa and Osaka at a few points across, and a child who cannot see a
+    /// shape cannot learn it. The tap allowance shrinks with the zoom so
+    /// magnifying never turns into a wider net.
     private func map(_ quiz: QuizViewModel) -> some View {
         PrefectureMapView(
             mapData: app.mapData,
@@ -159,11 +165,38 @@ struct QuizView: View {
             targetCode: quiz.target?.code,
             hintCode: quiz.hintCode,
             effect: quiz.effect,
+            zoom: zoom,
             onTap: { handleTap($0, quiz: quiz) })
         .aspectRatio(PrefectureGeometry.aspectRatio(
             of: app.mapData.prefectures(in: quiz.order)), contentMode: .fit)
+        .zoomPan(scale: $zoom, offset: $pan)
+        .clipShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
         .background(Palette.seaGradient)
         .stickerCard(fill: .clear, cornerRadius: 26)
+        .overlay(alignment: .topTrailing) { resetZoomButton }
+        // Every question starts on the whole map. Staying zoomed would let a
+        // child be asked about a prefecture that is off screen — and panning to
+        // it automatically would point straight at the answer.
+        .onChange(of: quiz.questionNumber) { _, _ in
+            zoom = 1
+            pan = .zero
+        }
+    }
+
+    @ViewBuilder private var resetZoomButton: some View {
+        if ZoomPan.isZoomed(zoom) {
+            Button(mode.resetZoom) {
+                let reset = { zoom = 1; pan = .zero }
+                if reduceMotion { reset() } else { withAnimation(.spring(duration: 0.3), reset) }
+            }
+            .font(AppFont.rounded(13, relativeTo: .caption))
+            .foregroundStyle(Palette.ink)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 7)
+            .background(Capsule().fill(.white.opacity(0.92)))
+            .overlay(Capsule().strokeBorder(Palette.ink.opacity(0.12)))
+            .padding(10)
+        }
     }
 
     @ViewBuilder

@@ -146,6 +146,46 @@ final class QuizFlowUITests: XCTestCase {
                        "prefectures share a centre; accessibility frames are wrong")
     }
 
+    // MARK: - Zoom
+
+    /// 全国チャレンジ puts all 47 prefectures in one frame, which is why the quiz
+    /// map can be pinched at all. Scoring has to survive it: the tap allowance
+    /// is divided by the zoom, and getting that backwards would either widen
+    /// the net to a thumb's width or stop taps landing entirely.
+    func testTappingScoresWhileTheMapIsZoomed() {
+        launch(at: "quiz:6")
+        XCTAssertTrue(waitUntilQuizIsReady(questions: 47))
+
+        app.pinch(withScale: 2.5, velocity: 2)
+        XCTAssertTrue(app.buttons["もとの おおきさ"].waitForExistence(timeout: 5),
+                      "the quiz map did not zoom")
+
+        guard let target = currentTargetName() else {
+            return XCTFail("could not read the asked prefecture")
+        }
+        tapPrefecture(target)
+        XCTAssertTrue(app.staticTexts["100"].waitForExistence(timeout: 5),
+                      "a correct tap did not score while zoomed")
+    }
+
+    /// Each question starts on the whole map. Left zoomed, the next prefecture
+    /// could sit off screen — and panning to it would point at the answer.
+    func testTheMapReturnsToWholeCountryOnTheNextQuestion() {
+        launch(at: "quiz:6")
+        XCTAssertTrue(waitUntilQuizIsReady(questions: 47))
+
+        app.pinch(withScale: 2.5, velocity: 2)
+        let reset = app.buttons["もとの おおきさ"]
+        XCTAssertTrue(reset.waitForExistence(timeout: 5))
+
+        guard let target = currentTargetName() else {
+            return XCTFail("could not read the asked prefecture")
+        }
+        tapPrefecture(target)
+        XCTAssertTrue(app.staticTexts["47 もんちゅう 2 もんめ"].waitForExistence(timeout: 8))
+        XCTAssertFalse(reset.exists, "the map stayed zoomed into the next question")
+    }
+
     // MARK: - Stage availability
 
     /// The stage sheet, found by the reading it leads with.
@@ -195,5 +235,16 @@ final class QuizFlowUITests: XCTestCase {
         "北海道", "青森県", "岩手県", "宮城県", "秋田県", "山形県", "福島県",
     ]
 
-    private static let prefectureNames = tohokuNames
+    /// All 47, because 全国チャレンジ can ask about any of them and the question
+    /// is read off the screen rather than assumed.
+    private static let prefectureNames = [
+        "北海道", "青森県", "岩手県", "宮城県", "秋田県", "山形県",
+        "福島県", "茨城県", "栃木県", "群馬県", "埼玉県", "千葉県",
+        "東京都", "神奈川県", "新潟県", "富山県", "石川県", "福井県",
+        "山梨県", "長野県", "岐阜県", "静岡県", "愛知県", "三重県",
+        "滋賀県", "京都府", "大阪府", "兵庫県", "奈良県", "和歌山県",
+        "鳥取県", "島根県", "岡山県", "広島県", "山口県", "徳島県",
+        "香川県", "愛媛県", "高知県", "福岡県", "佐賀県", "長崎県",
+        "熊本県", "大分県", "宮崎県", "鹿児島県", "沖縄県",
+    ]
 }

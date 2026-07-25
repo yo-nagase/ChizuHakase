@@ -122,12 +122,20 @@ struct PrefectureMapView: View {
     }
 
     /// Direct hit first, then the near-miss allowance for the asked prefecture.
+    ///
+    /// The allowance shrinks with the zoom for the same reason the outlines do:
+    /// taps arrive in this view's own coordinates, so a fixed 22 units becomes
+    /// 22 x zoom on the glass. Left alone, a pinched-in map would hand the
+    /// answer to a tap most of a thumb away from the prefecture.
     private func resolve(_ point: CGPoint, transform: CGAffineTransform) -> Prefecture? {
         let candidates = prefectures.filter { interactiveCodes.contains($0.code) }
         guard !candidates.isEmpty else { return nil }
         let target = targetCode.flatMap { mapData[$0] }
-        return PrefectureGeometry.resolveTap(at: point, target: target,
-                                             among: candidates, transform: transform)
+        let magnification = max(zoom, 1)
+        return PrefectureGeometry.resolveTap(
+            at: point, target: target, among: candidates, transform: transform,
+            tolerance: GameRules.tapTolerancePoints / magnification,
+            targetBias: GameRules.tapTargetBiasPoints / magnification)
     }
 }
 
@@ -223,25 +231,20 @@ private struct PrefectureLayer: View {
             }
 
             if appearance.isSparkling {
-                // Drawn at double width and masked to the shape, so the gold
-                // sits entirely *inside* the outline. A centred stroke covers
-                // Osaka, Tokyo and Kagawa completely at map scale and the
-                // prefecture colour CLAUDE.md §5 calls for disappears.
+                // No gold rim: the fill is already gold, so an outline drew a
+                // line around a colour the shape had anyway, and at map scale
+                // that line was most of Kagawa. What is left of §5's 明滅 is a
+                // sheen breathing across the shape, masked inside so it can
+                // never thicken the boundary.
                 //
-                // No holographic wash here either: at 47 small shapes it
-                // flattened every colour toward the same gold. The sheen stays
-                // on the cards, where there is room to enjoy it.
+                // Only the sheen pulses, never the gold under it — a prefecture
+                // that faded in and out would read as unfinished rather than as
+                // finished and celebrated.
                 //
-                // Outside the die-cut branch: the my-map screen draws every
-                // prefecture with the same printed edge, and Lv3 still owes the
-                // child the gold frame §5 promises.
-                // Sized against the boundary, not against the die-cut: once the
-                // borders went hair-thin a 1.6x die-cut rim was wide enough to
-                // fill Kagawa and Osaka with gold, and the prefecture colour
-                // CLAUDE.md §5 calls for vanished under the reward for having
-                // learned it.
-                path.stroke(Palette.gold, lineWidth: max(1.2 / max(zoom, 1), boundaryWidth * 2.6))
-                    .mask(path.fill(style: FillStyle(eoFill: true)))
+                // Kept faint on purpose: the legend promises one gold, and a
+                // heavier veil would make the map's キラキラ visibly paler than
+                // the swatch standing for it.
+                path.fill(.white.opacity(0.14), style: FillStyle(eoFill: true))
                     .modifier(SlowGlow(enabled: !reduceMotion))
             }
 
