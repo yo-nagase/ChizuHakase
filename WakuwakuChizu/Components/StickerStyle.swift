@@ -138,6 +138,14 @@ struct StickerCardModifier: ViewModifier {
     }
 }
 
+// MARK: - Layout helpers
+
+nonisolated extension DynamicTypeSize {
+    /// Card grids drop to two columns at accessibility sizes; three columns of
+    /// wrapped kana is unreadable once the text is that large.
+    var cardColumns: Int { isAccessibilitySize ? 2 : 3 }
+}
+
 // MARK: - The page
 
 /// The album paper every screen sits on.

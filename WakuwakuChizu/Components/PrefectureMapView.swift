@@ -166,6 +166,28 @@ private struct PrefectureLayer: View {
             .modifier(ShakeEffect(trigger: triggerID(for: .shake),
                                   enabled: !reduceMotion))
             .overlay(alignment: .topLeading) { badge }
+            // The drawing itself is decorative; the labelled element is the
+            // proxy below, which is the only one with a meaningful frame.
+            .accessibilityHidden(true)
+            .overlay(alignment: .topLeading) { accessibilityProxy }
+    }
+
+    /// A correctly-placed, correctly-sized element for each prefecture.
+    ///
+    /// A `Path` view expands to fill whatever it is offered, so putting the
+    /// accessibility element on the drawn shape gave all 47 prefectures a frame
+    /// covering the entire map — VoiceOver saw 47 identical stacked rectangles
+    /// and direct-touch exploration was useless. This sits on the centroid at
+    /// no less than the 44pt CLAUDE.md §9 asks for.
+    ///
+    /// Not hit-testable: the map has a single tap gesture that resolves the
+    /// location itself, and a second responder here would swallow taps.
+    private var accessibilityProxy: some View {
+        let box = PrefectureGeometry.bbox(of: prefecture, transform: transform)
+        return Color.clear
+            .frame(width: max(box.width, 44), height: max(box.height, 44))
+            .position(screenCentroid)
+            .allowsHitTesting(false)
             .accessibilityElement()
             .accessibilityLabel(prefecture.name)
             .accessibilityAddTraits(.isButton)

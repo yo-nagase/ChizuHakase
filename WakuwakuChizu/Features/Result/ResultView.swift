@@ -7,6 +7,7 @@ import SwiftUI
 struct ResultView: View {
     @Environment(AppState.self) private var app
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.dynamicTypeSize) private var typeSize
 
     let stage: Stage
     let result: StageResult
@@ -124,8 +125,8 @@ struct ResultView: View {
                 .font(AppFont.rounded(19, relativeTo: .headline))
                 .foregroundStyle(Palette.ink)
 
-            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: 3),
-                      spacing: 10) {
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10),
+                                     count: typeSize.cardColumns), spacing: 10) {
                 ForEach(newCards) { card in
                     CardChipView(card: card, ownedCount: 1, showsDescription: false)
                 }

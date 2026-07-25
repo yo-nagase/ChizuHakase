@@ -5,6 +5,7 @@ import SwiftUI
 /// to aim at.
 struct CardBookView: View {
     @Environment(AppState.self) private var app
+    @Environment(\.dynamicTypeSize) private var typeSize
 
     @State private var category: SpecialtyCard.Category?
 
@@ -85,7 +86,7 @@ struct CardBookView: View {
                     .monospacedDigit()
             }
             LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10),
-                                     count: 3), spacing: 10) {
+                                     count: typeSize.cardColumns), spacing: 10) {
                 ForEach(cards) { card in
                     CardChipView(card: card, ownedCount: save.ownedCount(of: card.id))
                 }

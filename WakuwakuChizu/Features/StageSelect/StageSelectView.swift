@@ -58,8 +58,11 @@ private struct StageSheet: View {
                     Text(stage.name)
                         .font(AppFont.rounded(19, relativeTo: .headline))
                         .foregroundStyle(Palette.ink)
-                        .lineLimit(1)
+                        // Wraps rather than truncating: 「ちゅうごく…」 tells a
+                        // child nothing about where they are going.
+                        .lineLimit(2)
                         .minimumScaleFactor(0.72)
+                        .fixedSize(horizontal: false, vertical: true)
 
                     if isPlayable {
                         HStack(spacing: 3) {

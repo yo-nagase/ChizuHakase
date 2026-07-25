@@ -6,6 +6,7 @@ struct QuizView: View {
     @Environment(AppState.self) private var app
     @Environment(\.dismiss) private var dismiss
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.dynamicTypeSize) private var typeSize
 
     let stage: Stage
     var onFinish: (StageResult) -> Void
@@ -72,41 +73,76 @@ struct QuizView: View {
         }
     }
 
+    /// The question is the one thing on screen that must always be fully
+    /// readable, so at accessibility sizes it gets its own line rather than
+    /// competing with the prompt and the buttons for horizontal space.
+    /// It previously truncated to 「とうき…」, which hides the entire question.
     private func question(_ quiz: QuizViewModel) -> some View {
-        HStack(spacing: 10) {
-            VStack(spacing: 1) {
-                Text(quiz.target?.kana ?? "")
-                    .font(AppFont.rounded(31, relativeTo: .title))
-                    .foregroundStyle(Palette.ink)
-                    .minimumScaleFactor(0.6)
-                    .lineLimit(1)
-                // Kanji stays secondary: the reading is what a 5-year-old uses.
-                Text(quiz.target?.name ?? "")
-                    .font(AppFont.rounded(13, relativeTo: .caption))
-                    .foregroundStyle(Palette.ink.opacity(0.5))
-            }
-            Text("は どこかな?")
-                .font(AppFont.rounded(19, relativeTo: .title3))
-                .foregroundStyle(Palette.ink)
-
-            Button { speak(quiz) } label: { Text("🔊") }
-                .buttonStyle(CircleIconButtonStyle(diameter: 44))
-                .accessibilityLabel("もんだいを よむ")
-
-            if app.isVoiceModeAvailable {
-                Button { toggleListening(quiz) } label: {
-                    Text(app.voice.isListening ? "🎙️" : "🎤")
+        Group {
+            if typeSize.isAccessibilitySize {
+                VStack(alignment: .leading, spacing: 8) {
+                    questionName(quiz)
+                    HStack(spacing: 10) {
+                        prompt
+                        Spacer(minLength: 0)
+                        speakButton(quiz)
+                        micButton(quiz)
+                    }
                 }
-                .buttonStyle(CircleIconButtonStyle(
-                    background: app.voice.isListening ? Palette.teal : .white,
-                    diameter: 44))
-                .accessibilityLabel(app.voice.isListening ? "きいています" : "こえで こたえる")
+            } else {
+                HStack(spacing: 10) {
+                    questionName(quiz)
+                    prompt
+                    speakButton(quiz)
+                    micButton(quiz)
+                }
             }
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 10)
         .padding(.horizontal, 14)
         .stickerCard()
+    }
+
+    private func questionName(_ quiz: QuizViewModel) -> some View {
+        VStack(alignment: typeSize.isAccessibilitySize ? .leading : .center, spacing: 1) {
+            Text(quiz.target?.kana ?? "")
+                .font(AppFont.rounded(31, relativeTo: .title))
+                .foregroundStyle(Palette.ink)
+                // No lineLimit: wrapping is always better than hiding the answer.
+                .minimumScaleFactor(0.7)
+                .fixedSize(horizontal: false, vertical: true)
+            // Kanji stays secondary: the reading is what a 5-year-old uses.
+            Text(quiz.target?.name ?? "")
+                .font(AppFont.rounded(13, relativeTo: .caption))
+                .foregroundStyle(Palette.ink.opacity(0.5))
+        }
+    }
+
+    private var prompt: some View {
+        Text("は どこかな?")
+            .font(AppFont.rounded(19, relativeTo: .title3))
+            .foregroundStyle(Palette.ink)
+            .fixedSize(horizontal: false, vertical: true)
+    }
+
+    private func speakButton(_ quiz: QuizViewModel) -> some View {
+        Button { speak(quiz) } label: { Text("🔊") }
+            .buttonStyle(CircleIconButtonStyle(diameter: 44))
+            .accessibilityLabel("もんだいを よむ")
+    }
+
+    @ViewBuilder
+    private func micButton(_ quiz: QuizViewModel) -> some View {
+        if app.isVoiceModeAvailable {
+            Button { toggleListening(quiz) } label: {
+                Text(app.voice.isListening ? "🎙️" : "🎤")
+            }
+            .buttonStyle(CircleIconButtonStyle(
+                background: app.voice.isListening ? Palette.teal : .white,
+                diameter: 44))
+            .accessibilityLabel(app.voice.isListening ? "きいています" : "こえで こたえる")
+        }
     }
 
     private func map(_ quiz: QuizViewModel) -> some View {

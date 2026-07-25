@@ -139,7 +139,7 @@ final class SaveStore {
 
 /// What one finished stage produced. Built by the quiz, consumed by the store,
 /// so the scoring rules stay out of the persistence layer.
-nonisolated struct StageResult: Sendable, Equatable {
+nonisolated struct StageResult: Sendable, Hashable {
     let stageIndex: Int
     let score: Int
     let stars: Int

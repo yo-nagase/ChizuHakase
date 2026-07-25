@@ -14,15 +14,15 @@ struct RootView: View {
     enum Route: Hashable {
         case stageSelect
         case quiz(stageIndex: Int)
-        case result(stageIndex: Int)
+        /// The finished result travels *in the path*, not alongside it.
+        /// Keeping it in separate @State meant NavigationStack could resolve
+        /// the destination before that state was visible to it, and finishing a
+        /// real quiz pushed a blank screen. Data a destination needs belongs in
+        /// the value that selects it.
+        case result(StageResult, sparkles: [Int])
         case myMap
         case cardBook
     }
-
-    /// Held outside `Route` because `StageResult` is not Hashable and there is
-    /// only ever one result in flight.
-    @State private var pendingResult: StageResult?
-    @State private var pendingSparkles: [Int] = []
 
     var body: some View {
         NavigationStack(path: $path) {
@@ -52,6 +52,7 @@ struct RootView: View {
     private func applyDebugRoute() {
         #if DEBUG
         let arguments = ProcessInfo.processInfo.arguments
+        if arguments.contains("-resetSave") { app.save.eraseAll() }
         guard let index = arguments.firstIndex(of: "-startAt"),
               index + 1 < arguments.count else { return }
         switch arguments[index + 1] {
@@ -63,15 +64,14 @@ struct RootView: View {
         case "result":
             // Synthetic 3-star clear so the celebration can be captured.
             let cards = Array(app.cards.all.prefix(3))
-            pendingResult = StageResult(
+            let demo = StageResult(
                 stageIndex: 1, score: 1120, stars: 3,
                 firstTryByPrefecture: Dictionary(uniqueKeysWithValues:
                     Stage.all[1].codes.map { ($0, true) }),
                 cardDraws: cards.enumerated().map { index, card in
                     index == 0 ? .shiny(card) : .new(card)
                 })
-            pendingSparkles = [13, 14]
-            path = [.stageSelect, .result(stageIndex: 1)]
+            path = [.stageSelect, .result(demo, sparkles: [13, 14])]
         default: break
         }
         #endif
@@ -91,11 +91,11 @@ struct RootView: View {
                 }
             }
 
-        case .result(let stageIndex):
-            if let stage = Stage.stage(at: stageIndex), let result = pendingResult {
+        case .result(let result, let sparkles):
+            if let stage = Stage.stage(at: result.stageIndex) {
                 ResultView(stage: stage,
                            result: result,
-                           newlySparkling: pendingSparkles,
+                           newlySparkling: sparkles,
                            onReplay: { replay(stage) },
                            onExit: { backToStageSelect() })
             }
@@ -110,25 +110,27 @@ struct RootView: View {
 
     // MARK: - Flow
 
+    // Each of these assigns the whole path rather than removing and appending.
+    //
+    // remove-then-append leaves the stack the same length, and NavigationStack
+    // resolved the destination before the swap had settled: finishing a real
+    // quiz pushed a *blank* result screen. Replacing the array outright gives
+    // SwiftUI one unambiguous change to apply. Caught by the UI test, which is
+    // the only thing that exercises this path — the debug route happened to
+    // assign the array and so never reproduced it.
+
     /// Persist once, at stage end (CLAUDE.md §6), then show the result.
     private func finish(_ result: StageResult, stage: Stage) {
-        pendingSparkles = app.save.applyStageResult(result)
-        pendingResult = result
-        path.removeLast()                       // drop the quiz
-        path.append(.result(stageIndex: stage.index))
+        let sparkles = app.save.applyStageResult(result)
+        path = [.stageSelect, .result(result, sparkles: sparkles)]
     }
 
     private func replay(_ stage: Stage) {
-        pendingResult = nil
-        pendingSparkles = []
-        path.removeLast()
-        path.append(.quiz(stageIndex: stage.index))
+        path = [.stageSelect, .quiz(stageIndex: stage.index)]
     }
 
     private func backToStageSelect() {
-        pendingResult = nil
-        pendingSparkles = []
-        path.removeLast()
+        path = [.stageSelect]
     }
 }
 

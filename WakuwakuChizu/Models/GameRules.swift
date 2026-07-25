@@ -74,7 +74,7 @@ nonisolated enum GameRules {
 
     // MARK: - Card draw
 
-    enum CardDraw: Equatable, Sendable {
+    enum CardDraw: Hashable, Sendable {
         /// First copy of a card the child did not have.
         case new(SpecialtyCard)
         /// Promoted to the shiny copy (owned count 2).

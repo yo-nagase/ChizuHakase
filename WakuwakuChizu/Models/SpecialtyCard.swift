@@ -1,7 +1,7 @@
 import Foundation
 
 /// A collectible specialty of one prefecture. 47 x 3 = 141 total.
-nonisolated struct SpecialtyCard: Identifiable, Sendable, Equatable, Codable {
+nonisolated struct SpecialtyCard: Identifiable, Sendable, Hashable, Codable {
     enum Category: String, Sendable, Codable, CaseIterable {
         case food, landmark, nature, craft
 

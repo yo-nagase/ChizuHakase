@@ -21,8 +21,10 @@ struct CardChipView: View {
             Text(isOwned ? card.nameKana : "？？？")
                 .font(AppFont.rounded(15, relativeTo: .subheadline))
                 .foregroundStyle(Palette.ink)
-                .lineLimit(1)
+                .multilineTextAlignment(.center)
+                .lineLimit(2)
                 .minimumScaleFactor(0.6)
+                .fixedSize(horizontal: false, vertical: true)
 
             if showsDescription, isOwned {
                 Text(card.description)

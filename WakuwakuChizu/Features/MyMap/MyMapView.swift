@@ -5,6 +5,7 @@ import SwiftUI
 /// owns the erase-everything control.
 struct MyMapView: View {
     @Environment(AppState.self) private var app
+    @Environment(\.dynamicTypeSize) private var typeSize
 
     @State private var selected: Prefecture?
     @State private var eraseStep = 0   // 0 = idle, 1 = asked once, 2 = confirming
@@ -125,6 +126,7 @@ struct MyMapView: View {
 
 private struct PrefectureDetailSheet: View {
     @Environment(AppState.self) private var app
+    @Environment(\.dynamicTypeSize) private var typeSize
     let prefecture: Prefecture
 
     var body: some View {
@@ -150,7 +152,7 @@ private struct PrefectureDetailSheet: View {
                     .foregroundStyle(Palette.ink.opacity(0.6))
 
                 LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10),
-                                         count: 3), spacing: 10) {
+                                         count: typeSize.cardColumns), spacing: 10) {
                     ForEach(cards) { card in
                         CardChipView(card: card,
                                      ownedCount: app.save.data.ownedCount(of: card.id))

@@ -65,15 +65,33 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.wakuwaku.chizu.tests
         GENERATE_INFOPLIST_FILE: "YES"
 
+  WakuwakuChizuUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    deploymentTarget: "17.0"
+    sources:
+      - path: WakuwakuChizuUITests
+    dependencies:
+      - target: WakuwakuChizu
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.wakuwaku.chizu.uitests
+        GENERATE_INFOPLIST_FILE: "YES"
+        # XCTestCase's overrides are nonisolated, so the app target's
+        # MainActor-by-default does not apply here.
+        SWIFT_DEFAULT_ACTOR_ISOLATION: nonisolated
+
 schemes:
   WakuwakuChizu:
     build:
       targets:
         WakuwakuChizu: all
         WakuwakuChizuTests: [test]
+        WakuwakuChizuUITests: [test]
     test:
       targets:
         - WakuwakuChizuTests
+        - WakuwakuChizuUITests
       gatherCoverageData: true
     run:
       config: Debug
