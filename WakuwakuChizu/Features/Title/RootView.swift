@@ -5,10 +5,7 @@ import SwiftUI
 struct RootView: View {
     @Environment(AppState.self) private var app
 
-    @Environment(\.scenePhase) private var scenePhase
-
     @State private var path: [Route] = []
-    @State private var showsUnlock = false
     @State private var showsSettings = false
 
     enum Route: Hashable {
@@ -36,23 +33,12 @@ struct RootView: View {
         // One injection point: every screen reads the mode from the environment
         // rather than reaching into the save store itself.
         .environment(\.textMode, app.save.data.settings.textMode)
-        // Sheets are presented outside the stack, so the mode is handed to
-        // them explicitly rather than inherited.
-        .sheet(isPresented: $showsUnlock) {
-            UnlockView().environment(\.textMode, app.save.data.settings.textMode)
-        }
+        // The sheet is presented outside the stack, so the mode is handed to
+        // it explicitly rather than inherited.
         .sheet(isPresented: $showsSettings) {
             SettingsView().environment(\.textMode, app.save.data.settings.textMode)
         }
-        .task {
-            applyDebugRoute()
-            await app.purchases.load()
-        }
-        // A refund or a purchase made elsewhere should be reflected without the
-        // app reaching out on its own (CLAUDE.md §8).
-        .onChange(of: scenePhase) { _, phase in
-            if phase == .active { Task { await app.refreshOnForeground() } }
-        }
+        .task { applyDebugRoute() }
     }
 
     /// Jump straight to a screen via `-startAt <route>`, for capturing store
@@ -90,8 +76,7 @@ struct RootView: View {
     private func destination(_ route: Route) -> some View {
         switch route {
         case .stageSelect:
-            StageSelectView(onPlay: { path.append(.quiz(stageIndex: $0.index)) },
-                            onLocked: { showsUnlock = true })
+            StageSelectView(onPlay: { path.append(.quiz(stageIndex: $0.index)) })
 
         case .quiz(let stageIndex):
             if let stage = Stage.stage(at: stageIndex) {

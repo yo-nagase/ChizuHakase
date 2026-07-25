@@ -137,7 +137,7 @@ extension TextMode {
          eraseEverything, eraseConfirm1, eraseConfirm2, eraseCancel, eraseNext,
          eraseConfirmAction,
          soundSection, soundEffects, speech, voiceSection, voiceOnDeviceNote, micDenied,
-         displaySection, forGrownUps, unlockedAlready, unlockCTA, lockedHint, lockedLabel,
+         displaySection,
          masteryLabel(0), masteryLabel(1), masteryLabel(2), masteryLabel(3)]
     }
 }

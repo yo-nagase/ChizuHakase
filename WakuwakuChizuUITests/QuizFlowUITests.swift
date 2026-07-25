@@ -146,7 +146,50 @@ final class QuizFlowUITests: XCTestCase {
                        "prefectures share a centre; accessibility frames are wrong")
     }
 
+    // MARK: - Stage availability
+
+    /// The stage sheet, found by the reading it leads with.
+    private func stageSheet(_ name: String) -> XCUIElement {
+        app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", name)).firstMatch
+    }
+
+    /// Every stage is open on a fresh install.
+    ///
+    /// Stages 2–6 used to sit behind the purchase, so the picker showed a
+    /// padlock and 「おうちのひとと いっしょに」 — a wall a child cannot get past
+    /// alone. Nothing gates a region now, and nothing should put one back.
+    func testEveryStageIsOpenOnAFreshInstall() {
+        launch(at: "stageSelect")
+        XCTAssertTrue(stageSheet(Self.stageNames[0]).waitForExistence(timeout: 10))
+
+        for name in Self.stageNames {
+            let sheet = stageSheet(name)
+            XCTAssertTrue(sheet.exists, "\(name) is missing from the picker")
+            XCTAssertFalse(sheet.label.contains("あそべない"), "\(name) is locked")
+        }
+        for phrase in ["おうちのひとと いっしょに", "保護者の方と一緒に", "まだ あそべない"] {
+            XCTAssertFalse(app.staticTexts[phrase].exists,
+                           "the picker still shows 「\(phrase)」")
+        }
+    }
+
+    /// Tapping a stage that used to be paid starts its quiz straight away,
+    /// with no parental gate or purchase sheet in between.
+    func testAFormerlyPaidStageStartsImmediately() {
+        launch(at: "stageSelect")
+        let kinki = stageSheet("きんき")
+        XCTAssertTrue(kinki.waitForExistence(timeout: 10))
+        kinki.tap()
+        XCTAssertTrue(app.staticTexts["7 もんちゅう 1 もんめ"].waitForExistence(timeout: 10),
+                      "きんき did not start")
+    }
+
     // MARK: - Fixtures
+
+    private static let stageNames = [
+        "ほっかいどう・とうほく", "かんとう", "ちゅうぶ", "きんき",
+        "ちゅうごく・しこく", "きゅうしゅう・おきなわ", "ぜんこく チャレンジ",
+    ]
 
     private static let tohokuNames = [
         "北海道", "青森県", "岩手県", "宮城県", "秋田県", "山形県", "福島県",

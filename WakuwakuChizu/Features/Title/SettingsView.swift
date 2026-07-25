@@ -1,16 +1,14 @@
 import SwiftUI
 
-/// Sound, speech and the voice-answer mode.
+/// Writing style, sound, speech and the voice-answer mode.
 ///
-/// Speech sits here as a plain toggle with no gate and no price attached: it is
+/// Every switch here is a plain toggle behind no gate: speech in particular is
 /// the accessibility floor for children who cannot read hiragana yet
-/// (CLAUDE.md §7).
+/// (CLAUDE.md §7), and nothing in the app is withheld until an adult intervenes.
 struct SettingsView: View {
     @Environment(AppState.self) private var app
     @Environment(\.dismiss) private var dismiss
     @Environment(\.textMode) private var mode
-
-    @State private var showsUnlock = false
 
     var body: some View {
         NavigationStack {
@@ -63,18 +61,6 @@ struct SettingsView: View {
                     }
                 }
 
-                Section {
-                    if app.isUnlocked {
-                        Label(mode.unlockedAlready, systemImage: "checkmark.circle.fill")
-                            .font(AppFont.rounded(15, relativeTo: .body))
-                            .foregroundStyle(Palette.teal)
-                    } else {
-                        Button(mode.unlockCTA) { showsUnlock = true }
-                            .font(AppFont.rounded(15, relativeTo: .body))
-                    }
-                } header: {
-                    Text(mode.forGrownUps).font(AppFont.rounded(12, relativeTo: .caption))
-                }
             }
             .tint(Palette.teal)
             .navigationTitle(mode.settings)
@@ -84,7 +70,6 @@ struct SettingsView: View {
                     Button(mode.close) { dismiss() }
                 }
             }
-            .sheet(isPresented: $showsUnlock) { UnlockView() }
             // Permission is requested only when the mode is switched on, and
             // only once — never on every appearance.
             .onChange(of: app.save.data.settings.voiceInputEnabled) { _, enabled in

@@ -43,8 +43,9 @@ fi
 # --- Source-level: no outbound networking ---------------------------------
 echo
 echo "networking"
-# StoreKit and AVSpeechSynthesizer talk to Apple on the app's behalf; the app
-# itself must not open sockets or fetch URLs.
+# The app must not open sockets or fetch URLs. It has no purchases and no
+# outbound links at all, so there is nothing here that legitimately needs the
+# network.
 hits=$(grep -rnE 'URLSession|URLRequest|NSURLConnection|CFStream|Network\.framework|import\s+Network|WKWebView|SFSafariViewController' "$SRC" 2>/dev/null || true)
 if [ -n "$hits" ]; then
     fail "outbound networking API referenced:"

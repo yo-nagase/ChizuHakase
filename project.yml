@@ -12,7 +12,7 @@ settings:
     SWIFT_VERSION: "6.0"
     # Everything in this app is UI-driven and touches @Observable state, so
     # MainActor-by-default removes a pile of isolation noise. The few genuinely
-    # concurrent spots (file IO, StoreKit) opt out explicitly.
+    # concurrent spots (file IO, speech recognition) opt out explicitly.
     SWIFT_DEFAULT_ACTOR_ISOLATION: MainActor
     SWIFT_STRICT_CONCURRENCY: complete
     SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY: "YES"
@@ -95,6 +95,3 @@ schemes:
       gatherCoverageData: true
     run:
       config: Debug
-      # Local product definition so the purchase and restore flows can be
-      # exercised in the simulator without App Store Connect.
-      storeKitConfiguration: Products.storekit

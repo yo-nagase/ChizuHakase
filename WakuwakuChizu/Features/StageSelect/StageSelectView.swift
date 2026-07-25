@@ -12,7 +12,6 @@ struct StageSelectView: View {
     @Environment(\.textMode) private var mode
 
     var onPlay: (Stage) -> Void
-    var onLocked: () -> Void
 
     var body: some View {
         ScrollView {
@@ -21,9 +20,8 @@ struct StageSelectView: View {
                     StageSheet(stage: stage,
                                mapData: app.mapData,
                                record: app.save.data.record(forStage: stage.index),
-                               stuckCount: stuckCount(stage),
-                               isPlayable: app.isPlayable(stage)) {
-                        app.isPlayable(stage) ? onPlay(stage) : onLocked()
+                               stuckCount: stuckCount(stage)) {
+                        onPlay(stage)
                     }
                 }
             }
@@ -47,7 +45,6 @@ private struct StageSheet: View {
     let mapData: MapData
     let record: StageRecord?
     let stuckCount: Int
-    let isPlayable: Bool
     var action: () -> Void
 
     var body: some View {
@@ -66,46 +63,33 @@ private struct StageSheet: View {
                         .minimumScaleFactor(0.72)
                         .fixedSize(horizontal: false, vertical: true)
 
-                    if isPlayable {
-                        HStack(spacing: 3) {
-                            ForEach(1...3, id: \.self) { i in
-                                StarBadge(filled: i <= (record?.stars ?? 0), size: 19)
-                            }
-                            if let record, record.score > 0 {
-                                Text(verbatim: "\(record.score)")
-                                    .font(AppFont.rounded(13, relativeTo: .caption))
-                                    .foregroundStyle(Palette.ink.opacity(0.5))
-                                    .monospacedDigit()
-                                    .padding(.leading, 4)
-                            }
+                    HStack(spacing: 3) {
+                        ForEach(1...3, id: \.self) { i in
+                            StarBadge(filled: i <= (record?.stars ?? 0), size: 19)
                         }
-                        Text("\(mode.stickerCount) \(stuckCount) / \(stage.questionCount)")
-                            .font(AppFont.rounded(12, relativeTo: .caption))
-                            .foregroundStyle(Palette.ink.opacity(0.5))
-                            .monospacedDigit()
-                    } else {
-                        Text(mode.lockedHint)
-                            .font(AppFont.rounded(12, relativeTo: .caption))
-                            .foregroundStyle(Palette.ink.opacity(0.5))
+                        if let record, record.score > 0 {
+                            Text(verbatim: "\(record.score)")
+                                .font(AppFont.rounded(13, relativeTo: .caption))
+                                .foregroundStyle(Palette.ink.opacity(0.5))
+                                .monospacedDigit()
+                                .padding(.leading, 4)
+                        }
                     }
+                    Text("\(mode.stickerCount) \(stuckCount) / \(stage.questionCount)")
+                        .font(AppFont.rounded(12, relativeTo: .caption))
+                        .foregroundStyle(Palette.ink.opacity(0.5))
+                        .monospacedDigit()
                 }
 
                 Spacer(minLength: 4)
-
-                if !isPlayable {
-                    Image(systemName: "lock.fill")
-                        .font(.system(size: 19, weight: .bold))
-                        .foregroundStyle(Palette.ink.opacity(0.28))
-                        .accessibilityLabel(mode.lockedLabel)
-                }
             }
             .padding(14)
             .frame(maxWidth: .infinity)
-            // Locked stages stay fully legible — they are something to look
-            // forward to, not something to be hidden from (CLAUDE.md §12).
-            .stickerCard(fill: isPlayable
-                         ? Palette.fill(for: stage.codes.first ?? 0, strength: 0.30)
-                         : Color(hex: 0xEDE7DA))
+            // Keyed on the stage, not on its first prefecture code: by code,
+            // 関東・近畿・九州 all land on the same pink and 中部・中国 on the
+            // same teal, so the shelf reads as three repeated cards. Seven
+            // stages into an eight-colour palette gives each its own.
+            .stickerCard(fill: Palette.fill(for: stage.index, strength: 0.30))
         }
         .buttonStyle(SheetPressStyle())
         .accessibilityLabel(accessibilityText)
@@ -122,9 +106,7 @@ private struct StageSheet: View {
     }
 
     private var accessibilityText: String {
-        let name = stage.displayName(mode)
-        guard isPlayable else { return "\(name)。\(mode.lockedLabel)" }
-        return "\(name)。\(stage.questionCount) もん。\(mode.starCount(record?.stars ?? 0))"
+        "\(stage.displayName(mode))。\(stage.questionCount) もん。\(mode.starCount(record?.stars ?? 0))"
     }
 }
 

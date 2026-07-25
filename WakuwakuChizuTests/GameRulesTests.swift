@@ -7,6 +7,27 @@ import Testing
 /// are pinned exactly.
 struct GameRulesTests {
 
+    // MARK: - Stage availability
+
+    /// Nothing in the app is withheld until an adult intervenes. Pinned as a
+    /// test because a gate is easy to reintroduce and impossible for a child to
+    /// work around: `Stage` carries no availability flag, and the picker has no
+    /// locked branch to fall into.
+    @Test func everyStageIsPlayableOnAFreshInstall() {
+        #expect(Stage.all.count == 7)
+        for stage in Stage.all {
+            #expect(Stage.stage(at: stage.index) == stage,
+                    "\(stage.name) is not reachable by index")
+            #expect(!stage.codes.isEmpty)
+        }
+    }
+
+    @Test func stagesCoverAllFortySevenPrefectures() {
+        let regional = Stage.all.dropLast().flatMap(\.codes)
+        #expect(Set(regional) == Set(1...47))
+        #expect(regional.count == 47, "a prefecture appears in two regional stages")
+    }
+
     // MARK: - Score
 
     @Test func firstTryScoreStartsAt100() {

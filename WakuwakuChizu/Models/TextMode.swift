@@ -113,11 +113,6 @@ nonisolated extension TextMode {
                : "マイクを使用できません。iOS の設定から許可してください。"
     }
     var displaySection: String { isKids ? "もじ" : "文字表示" }
-    var forGrownUps: String { isKids ? "おうちのかたへ" : "保護者の方へ" }
-    var unlockedAlready: String { isKids ? "ぜんぶ あそべます" : "すべて解放済みです" }
-    var unlockCTA: String { isKids ? "ぜんぶ あそべるようにする" : "すべてのステージを解放" }
-    var lockedHint: String { isKids ? "おうちのひとと いっしょに" : "保護者の方と一緒に" }
-    var lockedLabel: String { isKids ? "まだ あそべない" : "未解放" }
 }
 
 // MARK: - Data display
