@@ -292,7 +292,16 @@ private struct CardWinBanner: View {
 
     var body: some View {
         HStack(spacing: 10) {
-            Text(draw.card.emoji).font(.system(size: 30))
+            // A キラ card shows its painting here too, so the moment it is won
+            // looks like what the card book will show afterwards.
+            if isShiny, let art = draw.card.art {
+                Image(art)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 44, height: 44)
+            } else {
+                Text(draw.card.emoji).font(.system(size: 30))
+            }
             VStack(alignment: .leading, spacing: 1) {
                 Text(headline)
                     .font(AppFont.rounded(13, relativeTo: .caption))

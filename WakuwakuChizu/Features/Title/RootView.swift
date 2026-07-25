@@ -58,14 +58,18 @@ struct RootView: View {
             if let i = Int(value.dropFirst(5)) { path = [.stageSelect, .quiz(stageIndex: i)] }
         case "result":
             // Synthetic 3-star clear so the celebration can be captured.
-            let cards = Array(app.cards.all.prefix(3))
+            //
+            // The キラ slot deliberately takes an illustrated card: picking the
+            // first card in the catalog gave a shiny with no art, so the one
+            // state worth looking at never appeared in a screenshot.
+            let illustrated = app.cards.all.first { $0.art != nil }
+            let plain = app.cards.all.filter { $0.id != illustrated?.id }.prefix(2)
             let demo = StageResult(
                 stageIndex: 1, score: 1120, stars: 3,
                 firstTryByPrefecture: Dictionary(uniqueKeysWithValues:
                     Stage.all[1].codes.map { ($0, true) }),
-                cardDraws: cards.enumerated().map { index, card in
-                    index == 0 ? .shiny(card) : .new(card)
-                })
+                cardDraws: plain.map { .new($0) }
+                    + (illustrated.map { [GameRules.CardDraw.shiny($0)] } ?? []))
             path = [.stageSelect, .result(demo, sparkles: [13, 14])]
         default: break
         }

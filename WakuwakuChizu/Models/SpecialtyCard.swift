@@ -34,6 +34,13 @@ nonisolated struct SpecialtyCard: Identifiable, Sendable, Hashable, Codable {
     let nameKanji: String
     let category: Category
     let description: String
+    /// Asset name of the painted card, for the ones that have been drawn.
+    ///
+    /// Only キラカード show it (CLAUDE.md §5): the plain card stays an emoji, so
+    /// promoting one to キラ turns it into a picture. Optional because 20 of the
+    /// 141 are illustrated so far — a card without art simply stays an emoji
+    /// rather than showing a placeholder.
+    var art: String?
 }
 
 /// All cards, indexed for lookup by prefecture and by id.

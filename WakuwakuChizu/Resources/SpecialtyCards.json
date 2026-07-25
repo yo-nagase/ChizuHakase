@@ -1,1273 +1,1293 @@
 {
- "cards": [
-  {
-   "id": "01-1",
-   "prefectureCode": 1,
-   "emoji": "🦀",
-   "nameKana": "かに",
-   "nameKanji": "蟹",
-   "category": "food",
-   "description": "つめたい うみで そだつよ"
-  },
-  {
-   "id": "01-2",
-   "prefectureCode": 1,
-   "emoji": "🥔",
-   "nameKana": "じゃがいも",
-   "nameKanji": "馬鈴薯",
-   "category": "food",
-   "description": "ひろい はたけで そだつ"
-  },
-  {
-   "id": "01-3",
-   "prefectureCode": 1,
-   "emoji": "💐",
-   "nameKana": "らべんだー",
-   "nameKanji": "ラベンダー",
-   "category": "nature",
-   "description": "むらさきの はなの うみ"
-  },
-  {
-   "id": "02-1",
-   "prefectureCode": 2,
-   "emoji": "🍎",
-   "nameKana": "りんご",
-   "nameKanji": "林檎",
-   "category": "food",
-   "description": "あかくて しゃりしゃり"
-  },
-  {
-   "id": "02-2",
-   "prefectureCode": 2,
-   "emoji": "🏮",
-   "nameKana": "ねぶた",
-   "nameKanji": "ねぶた",
-   "category": "landmark",
-   "description": "ひかる おおきな にんぎょう"
-  },
-  {
-   "id": "02-3",
-   "prefectureCode": 2,
-   "emoji": "🐚",
-   "nameKana": "ほたて",
-   "nameKanji": "帆立",
-   "category": "food",
-   "description": "うみの なかで そだつ かい"
-  },
-  {
-   "id": "03-1",
-   "prefectureCode": 3,
-   "emoji": "🍜",
-   "nameKana": "わんこそば",
-   "nameKanji": "わんこそば",
-   "category": "food",
-   "description": "なんばい たべられるかな"
-  },
-  {
-   "id": "03-2",
-   "prefectureCode": 3,
-   "emoji": "🫖",
-   "nameKana": "なんぶてっき",
-   "nameKanji": "南部鉄器",
-   "category": "craft",
-   "description": "くろくて おもい てつの うつわ"
-  },
-  {
-   "id": "03-3",
-   "prefectureCode": 3,
-   "emoji": "💧",
-   "nameKana": "りゅうせんどう",
-   "nameKanji": "龍泉洞",
-   "category": "nature",
-   "description": "あおい みずの どうくつ"
-  },
-  {
-   "id": "04-1",
-   "prefectureCode": 4,
-   "emoji": "🐄",
-   "nameKana": "ぎゅうたん",
-   "nameKanji": "牛タン",
-   "category": "food",
-   "description": "やいて たべると おいしい"
-  },
-  {
-   "id": "04-2",
-   "prefectureCode": 4,
-   "emoji": "🍡",
-   "nameKana": "ずんだもち",
-   "nameKanji": "ずんだ餅",
-   "category": "food",
-   "description": "みどりの まめの おもち"
-  },
-  {
-   "id": "04-3",
-   "prefectureCode": 4,
-   "emoji": "🏝️",
-   "nameKana": "まつしま",
-   "nameKanji": "松島",
-   "category": "landmark",
-   "description": "しまが たくさん うかぶ うみ"
-  },
-  {
-   "id": "05-1",
-   "prefectureCode": 5,
-   "emoji": "🍢",
-   "nameKana": "きりたんぽ",
-   "nameKanji": "きりたんぽ",
-   "category": "food",
-   "description": "おこめを ぼうに まいた たべもの"
-  },
-  {
-   "id": "05-2",
-   "prefectureCode": 5,
-   "emoji": "👹",
-   "nameKana": "なまはげ",
-   "nameKanji": "なまはげ",
-   "category": "landmark",
-   "description": "おおごえで やってくる おに"
-  },
-  {
-   "id": "05-3",
-   "prefectureCode": 5,
-   "emoji": "🐕",
-   "nameKana": "あきたいぬ",
-   "nameKanji": "秋田犬",
-   "category": "nature",
-   "description": "もふもふの おおきな いぬ"
-  },
-  {
-   "id": "06-1",
-   "prefectureCode": 6,
-   "emoji": "🍒",
-   "nameKana": "さくらんぼ",
-   "nameKanji": "さくらんぼ",
-   "category": "food",
-   "description": "あかい つぶが ふたごに なる"
-  },
-  {
-   "id": "06-2",
-   "prefectureCode": 6,
-   "emoji": "🍲",
-   "nameKana": "いもに",
-   "nameKanji": "芋煮",
-   "category": "food",
-   "description": "かわらで みんなで つくる なべ"
-  },
-  {
-   "id": "06-3",
-   "prefectureCode": 6,
-   "emoji": "🌺",
-   "nameKana": "べにばな",
-   "nameKanji": "紅花",
-   "category": "nature",
-   "description": "きいろから あかに かわる はな"
-  },
-  {
-   "id": "07-1",
-   "prefectureCode": 7,
-   "emoji": "🍑",
-   "nameKana": "もも",
-   "nameKanji": "桃",
-   "category": "food",
-   "description": "あまくて やわらかい"
-  },
-  {
-   "id": "07-2",
-   "prefectureCode": 7,
-   "emoji": "🐮",
-   "nameKana": "あかべこ",
-   "nameKanji": "赤べこ",
-   "category": "craft",
-   "description": "くびが ゆらゆら ゆれる うし"
-  },
-  {
-   "id": "07-3",
-   "prefectureCode": 7,
-   "emoji": "🏯",
-   "nameKana": "つるがじょう",
-   "nameKanji": "鶴ヶ城",
-   "category": "landmark",
-   "description": "しろい かべの おしろ"
-  },
-  {
-   "id": "08-1",
-   "prefectureCode": 8,
-   "emoji": "🫘",
-   "nameKana": "なっとう",
-   "nameKanji": "納豆",
-   "category": "food",
-   "description": "ねばねばする まめ"
-  },
-  {
-   "id": "08-2",
-   "prefectureCode": 8,
-   "emoji": "🍈",
-   "nameKana": "めろん",
-   "nameKanji": "メロン",
-   "category": "food",
-   "description": "あみめの もようが ある"
-  },
-  {
-   "id": "08-3",
-   "prefectureCode": 8,
-   "emoji": "⛰️",
-   "nameKana": "つくばさん",
-   "nameKanji": "筑波山",
-   "category": "nature",
-   "description": "ふたつの みねが ならぶ やま"
-  },
-  {
-   "id": "09-1",
-   "prefectureCode": 9,
-   "emoji": "🍓",
-   "nameKana": "いちご",
-   "nameKanji": "苺",
-   "category": "food",
-   "description": "ふゆに あまくなる あかい み"
-  },
-  {
-   "id": "09-2",
-   "prefectureCode": 9,
-   "emoji": "⛩️",
-   "nameKana": "にっこうとうしょうぐう",
-   "nameKanji": "日光東照宮",
-   "category": "landmark",
-   "description": "きんいろに かがやく おみや"
-  },
-  {
-   "id": "09-3",
-   "prefectureCode": 9,
-   "emoji": "🥟",
-   "nameKana": "ぎょうざ",
-   "nameKanji": "餃子",
-   "category": "food",
-   "description": "やいて ぱりぱり"
-  },
-  {
-   "id": "10-1",
-   "prefectureCode": 10,
-   "emoji": "🍢",
-   "nameKana": "こんにゃく",
-   "nameKanji": "蒟蒻",
-   "category": "food",
-   "description": "ぷるぷるした たべもの"
-  },
-  {
-   "id": "10-2",
-   "prefectureCode": 10,
-   "emoji": "🎎",
-   "nameKana": "だるま",
-   "nameKanji": "だるま",
-   "category": "craft",
-   "description": "ねがいを こめて めを かく"
-  },
-  {
-   "id": "10-3",
-   "prefectureCode": 10,
-   "emoji": "♨️",
-   "nameKana": "くさつおんせん",
-   "nameKanji": "草津温泉",
-   "category": "landmark",
-   "description": "あつい おゆが わきでる"
-  },
-  {
-   "id": "11-1",
-   "prefectureCode": 11,
-   "emoji": "🍘",
-   "nameKana": "そうかせんべい",
-   "nameKanji": "草加せんべい",
-   "category": "food",
-   "description": "かたくて ぱりっと なる"
-  },
-  {
-   "id": "11-2",
-   "prefectureCode": 11,
-   "emoji": "🌱",
-   "nameKana": "ふかやねぎ",
-   "nameKanji": "深谷ねぎ",
-   "category": "food",
-   "description": "しろい ところが あまい"
-  },
-  {
-   "id": "11-3",
-   "prefectureCode": 11,
-   "emoji": "🎎",
-   "nameKana": "ひなにんぎょう",
-   "nameKanji": "雛人形",
-   "category": "craft",
-   "description": "はるに かざる にんぎょう"
-  },
-  {
-   "id": "12-1",
-   "prefectureCode": 12,
-   "emoji": "🥜",
-   "nameKana": "らっかせい",
-   "nameKanji": "落花生",
-   "category": "food",
-   "description": "つちの なかで みが できる"
-  },
-  {
-   "id": "12-2",
-   "prefectureCode": 12,
-   "emoji": "🌅",
-   "nameKana": "いぬぼうさき",
-   "nameKanji": "犬吠埼",
-   "category": "landmark",
-   "description": "あさひが はやく みえる みさき"
-  },
-  {
-   "id": "12-3",
-   "prefectureCode": 12,
-   "emoji": "🍶",
-   "nameKana": "しょうゆ",
-   "nameKanji": "醤油",
-   "category": "food",
-   "description": "まめから つくる くろい あじ"
-  },
-  {
-   "id": "13-1",
-   "prefectureCode": 13,
-   "emoji": "🗼",
-   "nameKana": "とうきょうたわー",
-   "nameKanji": "東京タワー",
-   "category": "landmark",
-   "description": "あかと しろの たかい とう"
-  },
-  {
-   "id": "13-2",
-   "prefectureCode": 13,
-   "emoji": "🍳",
-   "nameKana": "もんじゃやき",
-   "nameKanji": "もんじゃ焼き",
-   "category": "food",
-   "description": "てっぱんで とろとろ やく"
-  },
-  {
-   "id": "13-3",
-   "prefectureCode": 13,
-   "emoji": "🥂",
-   "nameKana": "えどきりこ",
-   "nameKanji": "江戸切子",
-   "category": "craft",
-   "description": "もようを ほった ガラス"
-  },
-  {
-   "id": "14-1",
-   "prefectureCode": 14,
-   "emoji": "🗿",
-   "nameKana": "かまくらだいぶつ",
-   "nameKanji": "鎌倉大仏",
-   "category": "landmark",
-   "description": "そとに すわる おおきな ほとけ"
-  },
-  {
-   "id": "14-2",
-   "prefectureCode": 14,
-   "emoji": "🥟",
-   "nameKana": "しゅうまい",
-   "nameKanji": "焼売",
-   "category": "food",
-   "description": "ひとくちサイズの むしもの"
-  },
-  {
-   "id": "14-3",
-   "prefectureCode": 14,
-   "emoji": "🧩",
-   "nameKana": "よせぎざいく",
-   "nameKanji": "寄木細工",
-   "category": "craft",
-   "description": "きの いろで もようを つくる"
-  },
-  {
-   "id": "15-1",
-   "prefectureCode": 15,
-   "emoji": "🍚",
-   "nameKana": "こしひかり",
-   "nameKanji": "こしひかり",
-   "category": "food",
-   "description": "つやつやの おいしい おこめ"
-  },
-  {
-   "id": "15-2",
-   "prefectureCode": 15,
-   "emoji": "🐠",
-   "nameKana": "にしきごい",
-   "nameKanji": "錦鯉",
-   "category": "nature",
-   "description": "もようが きれいな こい"
-  },
-  {
-   "id": "15-3",
-   "prefectureCode": 15,
-   "emoji": "🍡",
-   "nameKana": "ささだんご",
-   "nameKanji": "笹団子",
-   "category": "food",
-   "description": "ささの はで つつんだ おもち"
-  },
-  {
-   "id": "16-1",
-   "prefectureCode": 16,
-   "emoji": "🦑",
-   "nameKana": "ほたるいか",
-   "nameKanji": "ホタルイカ",
-   "category": "food",
-   "description": "うみで あおく ひかる"
-  },
-  {
-   "id": "16-2",
-   "prefectureCode": 16,
-   "emoji": "🏔️",
-   "nameKana": "くろべだむ",
-   "nameKanji": "黒部ダム",
-   "category": "landmark",
-   "description": "やまの なかの おおきな ダム"
-  },
-  {
-   "id": "16-3",
-   "prefectureCode": 16,
-   "emoji": "🍣",
-   "nameKana": "ますのすし",
-   "nameKanji": "ます寿司",
-   "category": "food",
-   "description": "まるい かたちの おすし"
-  },
-  {
-   "id": "17-1",
-   "prefectureCode": 17,
-   "emoji": "🌳",
-   "nameKana": "けんろくえん",
-   "nameKanji": "兼六園",
-   "category": "landmark",
-   "description": "ゆきに そなえる にわの きぎ"
-  },
-  {
-   "id": "17-2",
-   "prefectureCode": 17,
-   "emoji": "🏺",
-   "nameKana": "くたにやき",
-   "nameKanji": "九谷焼",
-   "category": "craft",
-   "description": "あざやかな いろの やきもの"
-  },
-  {
-   "id": "17-3",
-   "prefectureCode": 17,
-   "emoji": "✨",
-   "nameKana": "きんぱく",
-   "nameKanji": "金箔",
-   "category": "craft",
-   "description": "うすくて きらきらの きん"
-  },
-  {
-   "id": "18-1",
-   "prefectureCode": 18,
-   "emoji": "🦀",
-   "nameKana": "えちぜんがに",
-   "nameKanji": "越前がに",
-   "category": "food",
-   "description": "ふゆの うみの ごちそう"
-  },
-  {
-   "id": "18-2",
-   "prefectureCode": 18,
-   "emoji": "🦕",
-   "nameKana": "きょうりゅう",
-   "nameKanji": "恐竜",
-   "category": "nature",
-   "description": "ほねが たくさん みつかった"
-  },
-  {
-   "id": "18-3",
-   "prefectureCode": 18,
-   "emoji": "👓",
-   "nameKana": "めがね",
-   "nameKanji": "眼鏡",
-   "category": "craft",
-   "description": "にほんいちの めがねの まち"
-  },
-  {
-   "id": "19-1",
-   "prefectureCode": 19,
-   "emoji": "🍇",
-   "nameKana": "ぶどう",
-   "nameKanji": "葡萄",
-   "category": "food",
-   "description": "つぶが ふさに なって みのる"
-  },
-  {
-   "id": "19-2",
-   "prefectureCode": 19,
-   "emoji": "🗻",
-   "nameKana": "ふじさん",
-   "nameKanji": "富士山",
-   "category": "nature",
-   "description": "にほんで いちばん たかい やま"
-  },
-  {
-   "id": "19-3",
-   "prefectureCode": 19,
-   "emoji": "🍜",
-   "nameKana": "ほうとう",
-   "nameKanji": "ほうとう",
-   "category": "food",
-   "description": "ひらたい めんの あつい なべ"
-  },
-  {
-   "id": "20-1",
-   "prefectureCode": 20,
-   "emoji": "🍜",
-   "nameKana": "そば",
-   "nameKanji": "蕎麦",
-   "category": "food",
-   "description": "すずしい ちで そだつ"
-  },
-  {
-   "id": "20-2",
-   "prefectureCode": 20,
-   "emoji": "🏯",
-   "nameKana": "まつもとじょう",
-   "nameKanji": "松本城",
-   "category": "landmark",
-   "description": "くろい かべの かっこいい しろ"
-  },
-  {
-   "id": "20-3",
-   "prefectureCode": 20,
-   "emoji": "🏞️",
-   "nameKana": "かみこうち",
-   "nameKanji": "上高地",
-   "category": "nature",
-   "description": "やまに かこまれた きれいな かわ"
-  },
-  {
-   "id": "21-1",
-   "prefectureCode": 21,
-   "emoji": "🏠",
-   "nameKana": "しらかわごう",
-   "nameKanji": "白川郷",
-   "category": "landmark",
-   "description": "ゆきに つよい さんかくの やね"
-  },
-  {
-   "id": "21-2",
-   "prefectureCode": 21,
-   "emoji": "📄",
-   "nameKana": "みのわし",
-   "nameKanji": "美濃和紙",
-   "category": "craft",
-   "description": "うすくて つよい かみ"
-  },
-  {
-   "id": "21-3",
-   "prefectureCode": 21,
-   "emoji": "🐟",
-   "nameKana": "あゆ",
-   "nameKanji": "鮎",
-   "category": "food",
-   "description": "きれいな かわに すむ さかな"
-  },
-  {
-   "id": "22-1",
-   "prefectureCode": 22,
-   "emoji": "🍵",
-   "nameKana": "おちゃ",
-   "nameKanji": "茶",
-   "category": "food",
-   "description": "みどりの はたけが ひろがる"
-  },
-  {
-   "id": "22-2",
-   "prefectureCode": 22,
-   "emoji": "🐟",
-   "nameKana": "うなぎ",
-   "nameKanji": "鰻",
-   "category": "food",
-   "description": "たれを つけて やくと おいしい"
-  },
-  {
-   "id": "22-3",
-   "prefectureCode": 22,
-   "emoji": "🌊",
-   "nameKana": "みほのまつばら",
-   "nameKanji": "三保松原",
-   "category": "landmark",
-   "description": "まつと ふじさんが みえる はま"
-  },
-  {
-   "id": "23-1",
-   "prefectureCode": 23,
-   "emoji": "🍖",
-   "nameKana": "みそかつ",
-   "nameKanji": "味噌カツ",
-   "category": "food",
-   "description": "くろい みその たれを かける"
-  },
-  {
-   "id": "23-2",
-   "prefectureCode": 23,
-   "emoji": "🏯",
-   "nameKana": "なごやじょう",
-   "nameKanji": "名古屋城",
-   "category": "landmark",
-   "description": "やねに きんの しゃちほこ"
-  },
-  {
-   "id": "23-3",
-   "prefectureCode": 23,
-   "emoji": "👘",
-   "nameKana": "ありまつしぼり",
-   "nameKanji": "有松絞り",
-   "category": "craft",
-   "description": "ぬのを しばって そめる"
-  },
-  {
-   "id": "24-1",
-   "prefectureCode": 24,
-   "emoji": "⛩️",
-   "nameKana": "いせじんぐう",
-   "nameKanji": "伊勢神宮",
-   "category": "landmark",
-   "description": "もりの なかの ふるい おみや"
-  },
-  {
-   "id": "24-2",
-   "prefectureCode": 24,
-   "emoji": "🦪",
-   "nameKana": "しんじゅ",
-   "nameKanji": "真珠",
-   "category": "craft",
-   "description": "かいの なかで そだつ たま"
-  },
-  {
-   "id": "24-3",
-   "prefectureCode": 24,
-   "emoji": "🥩",
-   "nameKana": "まつさかうし",
-   "nameKanji": "松阪牛",
-   "category": "food",
-   "description": "しもふりの おいしい ぎゅうにく"
-  },
-  {
-   "id": "25-1",
-   "prefectureCode": 25,
-   "emoji": "🌊",
-   "nameKana": "びわこ",
-   "nameKanji": "琵琶湖",
-   "category": "nature",
-   "description": "にほんで いちばん おおきい みずうみ"
-  },
-  {
-   "id": "25-2",
-   "prefectureCode": 25,
-   "emoji": "🏯",
-   "nameKana": "ひこねじょう",
-   "nameKanji": "彦根城",
-   "category": "landmark",
-   "description": "むかしの ままの てんしゅ"
-  },
-  {
-   "id": "25-3",
-   "prefectureCode": 25,
-   "emoji": "🏺",
-   "nameKana": "しがらきやき",
-   "nameKanji": "信楽焼",
-   "category": "craft",
-   "description": "たぬきの おきものが ゆうめい"
-  },
-  {
-   "id": "26-1",
-   "prefectureCode": 26,
-   "emoji": "🏯",
-   "nameKana": "きよみずでら",
-   "nameKanji": "清水寺",
-   "category": "landmark",
-   "description": "がけに たつ おおきな ぶたい"
-  },
-  {
-   "id": "26-2",
-   "prefectureCode": 26,
-   "emoji": "🍵",
-   "nameKana": "まっちゃ",
-   "nameKanji": "抹茶",
-   "category": "food",
-   "description": "こなに した みどりの おちゃ"
-  },
-  {
-   "id": "26-3",
-   "prefectureCode": 26,
-   "emoji": "👘",
-   "nameKana": "にしじんおり",
-   "nameKanji": "西陣織",
-   "category": "craft",
-   "description": "いとで もようを おりこむ"
-  },
-  {
-   "id": "27-1",
-   "prefectureCode": 27,
-   "emoji": "🐙",
-   "nameKana": "たこやき",
-   "nameKanji": "たこ焼き",
-   "category": "food",
-   "description": "まるくて あつあつ"
-  },
-  {
-   "id": "27-2",
-   "prefectureCode": 27,
-   "emoji": "🏯",
-   "nameKana": "おおさかじょう",
-   "nameKanji": "大阪城",
-   "category": "landmark",
-   "description": "きんいろの かざりの おしろ"
-  },
-  {
-   "id": "27-3",
-   "prefectureCode": 27,
-   "emoji": "🍢",
-   "nameKana": "くしかつ",
-   "nameKanji": "串カツ",
-   "category": "food",
-   "description": "くしに さして あげる"
-  },
-  {
-   "id": "28-1",
-   "prefectureCode": 28,
-   "emoji": "🥩",
-   "nameKana": "こうべびーふ",
-   "nameKanji": "神戸ビーフ",
-   "category": "food",
-   "description": "せかいで しられる ぎゅうにく"
-  },
-  {
-   "id": "28-2",
-   "prefectureCode": 28,
-   "emoji": "🏯",
-   "nameKana": "ひめじじょう",
-   "nameKanji": "姫路城",
-   "category": "landmark",
-   "description": "しろさぎの ような しろい しろ"
-  },
-  {
-   "id": "28-3",
-   "prefectureCode": 28,
-   "emoji": "🍳",
-   "nameKana": "あかしやき",
-   "nameKanji": "明石焼",
-   "category": "food",
-   "description": "だしに つけて たべる たまご"
-  },
-  {
-   "id": "29-1",
-   "prefectureCode": 29,
-   "emoji": "🦌",
-   "nameKana": "しか",
-   "nameKanji": "鹿",
-   "category": "nature",
-   "description": "こうえんを あるく やさしい しか"
-  },
-  {
-   "id": "29-2",
-   "prefectureCode": 29,
-   "emoji": "🗿",
-   "nameKana": "とうだいじ",
-   "nameKanji": "東大寺",
-   "category": "landmark",
-   "description": "とても おおきな だいぶつ"
-  },
-  {
-   "id": "29-3",
-   "prefectureCode": 29,
-   "emoji": "🖌️",
-   "nameKana": "ならふで",
-   "nameKanji": "奈良筆",
-   "category": "craft",
-   "description": "けを そろえて つくる ふで"
-  },
-  {
-   "id": "30-1",
-   "prefectureCode": 30,
-   "emoji": "🍙",
-   "nameKana": "うめぼし",
-   "nameKanji": "梅干し",
-   "category": "food",
-   "description": "すっぱくて おにぎりに あう"
-  },
-  {
-   "id": "30-2",
-   "prefectureCode": 30,
-   "emoji": "🥾",
-   "nameKana": "くまのこどう",
-   "nameKanji": "熊野古道",
-   "category": "landmark",
-   "description": "もりの なかの ふるい みち"
-  },
-  {
-   "id": "30-3",
-   "prefectureCode": 30,
-   "emoji": "🐼",
-   "nameKana": "ぱんだ",
-   "nameKanji": "パンダ",
-   "category": "nature",
-   "description": "しろと くろの にんきもの"
-  },
-  {
-   "id": "31-1",
-   "prefectureCode": 31,
-   "emoji": "🏜️",
-   "nameKana": "とっとりさきゅう",
-   "nameKanji": "鳥取砂丘",
-   "category": "nature",
-   "description": "すなが やまのように つづく"
-  },
-  {
-   "id": "31-2",
-   "prefectureCode": 31,
-   "emoji": "🍐",
-   "nameKana": "なし",
-   "nameKanji": "梨",
-   "category": "food",
-   "description": "しゃりしゃりで みずみずしい"
-  },
-  {
-   "id": "31-3",
-   "prefectureCode": 31,
-   "emoji": "🦀",
-   "nameKana": "ずわいがに",
-   "nameKanji": "ズワイガニ",
-   "category": "food",
-   "description": "あしが ながい かに"
-  },
-  {
-   "id": "32-1",
-   "prefectureCode": 32,
-   "emoji": "⛩️",
-   "nameKana": "いずもたいしゃ",
-   "nameKanji": "出雲大社",
-   "category": "landmark",
-   "description": "ふとい しめなわが ある おみや"
-  },
-  {
-   "id": "32-2",
-   "prefectureCode": 32,
-   "emoji": "🐚",
-   "nameKana": "しじみ",
-   "nameKanji": "蜆",
-   "category": "food",
-   "description": "みずうみに すむ ちいさい かい"
-  },
-  {
-   "id": "32-3",
-   "prefectureCode": 32,
-   "emoji": "⛏️",
-   "nameKana": "いわみぎんざん",
-   "nameKanji": "石見銀山",
-   "category": "landmark",
-   "description": "ぎんを ほっていた やま"
-  },
-  {
-   "id": "33-1",
-   "prefectureCode": 33,
-   "emoji": "🍡",
-   "nameKana": "きびだんご",
-   "nameKanji": "きび団子",
-   "category": "food",
-   "description": "ももたろうの おはなしの だんご"
-  },
-  {
-   "id": "33-2",
-   "prefectureCode": 33,
-   "emoji": "🏘️",
-   "nameKana": "くらしき",
-   "nameKanji": "倉敷",
-   "category": "landmark",
-   "description": "しろい かべと やなぎの かわ"
-  },
-  {
-   "id": "33-3",
-   "prefectureCode": 33,
-   "emoji": "🍇",
-   "nameKana": "ますかっと",
-   "nameKanji": "マスカット",
-   "category": "food",
-   "description": "みどりで あまい ぶどう"
-  },
-  {
-   "id": "34-1",
-   "prefectureCode": 34,
-   "emoji": "🍁",
-   "nameKana": "もみじまんじゅう",
-   "nameKanji": "もみじ饅頭",
-   "category": "food",
-   "description": "はっぱの かたちの おかし"
-  },
-  {
-   "id": "34-2",
-   "prefectureCode": 34,
-   "emoji": "⛩️",
-   "nameKana": "いつくしまじんじゃ",
-   "nameKanji": "厳島神社",
-   "category": "landmark",
-   "description": "うみに たつ あかい とりい"
-  },
-  {
-   "id": "34-3",
-   "prefectureCode": 34,
-   "emoji": "🦪",
-   "nameKana": "かき",
-   "nameKanji": "牡蠣",
-   "category": "food",
-   "description": "ふゆの うみの ごちそう"
-  },
-  {
-   "id": "35-1",
-   "prefectureCode": 35,
-   "emoji": "🐡",
-   "nameKana": "ふぐ",
-   "nameKanji": "河豚",
-   "category": "food",
-   "description": "まるく ふくらむ さかな"
-  },
-  {
-   "id": "35-2",
-   "prefectureCode": 35,
-   "emoji": "🌉",
-   "nameKana": "きんたいきょう",
-   "nameKanji": "錦帯橋",
-   "category": "landmark",
-   "description": "アーチが つづく きの はし"
-  },
-  {
-   "id": "35-3",
-   "prefectureCode": 35,
-   "emoji": "🏺",
-   "nameKana": "はぎやき",
-   "nameKanji": "萩焼",
-   "category": "craft",
-   "description": "つかうほど いろが かわる"
-  },
-  {
-   "id": "36-1",
-   "prefectureCode": 36,
-   "emoji": "💃",
-   "nameKana": "あわおどり",
-   "nameKanji": "阿波踊り",
-   "category": "landmark",
-   "description": "まちじゅうで おどる まつり"
-  },
-  {
-   "id": "36-2",
-   "prefectureCode": 36,
-   "emoji": "🍋",
-   "nameKana": "すだち",
-   "nameKanji": "酢橘",
-   "category": "food",
-   "description": "みどりで さわやかな かおり"
-  },
-  {
-   "id": "36-3",
-   "prefectureCode": 36,
-   "emoji": "🌀",
-   "nameKana": "なるとのうずしお",
-   "nameKanji": "鳴門の渦潮",
-   "category": "nature",
-   "description": "うみに できる おおきな うず"
-  },
-  {
-   "id": "37-1",
-   "prefectureCode": 37,
-   "emoji": "🍜",
-   "nameKana": "さぬきうどん",
-   "nameKanji": "讃岐うどん",
-   "category": "food",
-   "description": "こしが つよい ふとい めん"
-  },
-  {
-   "id": "37-2",
-   "prefectureCode": 37,
-   "emoji": "⛩️",
-   "nameKana": "こんぴらさん",
-   "nameKanji": "金刀比羅宮",
-   "category": "landmark",
-   "description": "ながい かいだんを のぼる"
-  },
-  {
-   "id": "37-3",
-   "prefectureCode": 37,
-   "emoji": "🫒",
-   "nameKana": "おりーぶ",
-   "nameKanji": "オリーブ",
-   "category": "nature",
-   "description": "しまで そだつ みどりの み"
-  },
-  {
-   "id": "38-1",
-   "prefectureCode": 38,
-   "emoji": "🍊",
-   "nameKana": "みかん",
-   "nameKanji": "蜜柑",
-   "category": "food",
-   "description": "あまくて てで むける"
-  },
-  {
-   "id": "38-2",
-   "prefectureCode": 38,
-   "emoji": "♨️",
-   "nameKana": "どうごおんせん",
-   "nameKanji": "道後温泉",
-   "category": "landmark",
-   "description": "とても ふるい おんせん"
-  },
-  {
-   "id": "38-3",
-   "prefectureCode": 38,
-   "emoji": "👘",
-   "nameKana": "いよかすり",
-   "nameKanji": "伊予絣",
-   "category": "craft",
-   "description": "あいいろの もようの ぬの"
-  },
-  {
-   "id": "39-1",
-   "prefectureCode": 39,
-   "emoji": "🐟",
-   "nameKana": "かつおのたたき",
-   "nameKanji": "鰹のたたき",
-   "category": "food",
-   "description": "わらの ひで さっと やく"
-  },
-  {
-   "id": "39-2",
-   "prefectureCode": 39,
-   "emoji": "💃",
-   "nameKana": "よさこい",
-   "nameKanji": "よさこい",
-   "category": "landmark",
-   "description": "なるこを ならして おどる"
-  },
-  {
-   "id": "39-3",
-   "prefectureCode": 39,
-   "emoji": "🏞️",
-   "nameKana": "しまんとがわ",
-   "nameKanji": "四万十川",
-   "category": "nature",
-   "description": "とても きれいな ながい かわ"
-  },
-  {
-   "id": "40-1",
-   "prefectureCode": 40,
-   "emoji": "🌶️",
-   "nameKana": "めんたいこ",
-   "nameKanji": "明太子",
-   "category": "food",
-   "description": "ぴりっと からい たらこ"
-  },
-  {
-   "id": "40-2",
-   "prefectureCode": 40,
-   "emoji": "🍜",
-   "nameKana": "とんこつらーめん",
-   "nameKanji": "豚骨ラーメン",
-   "category": "food",
-   "description": "しろい スープの ラーメン"
-  },
-  {
-   "id": "40-3",
-   "prefectureCode": 40,
-   "emoji": "⛩️",
-   "nameKana": "だざいふてんまんぐう",
-   "nameKanji": "太宰府天満宮",
-   "category": "landmark",
-   "description": "べんきょうの かみさま"
-  },
-  {
-   "id": "41-1",
-   "prefectureCode": 41,
-   "emoji": "🏺",
-   "nameKana": "ありたやき",
-   "nameKanji": "有田焼",
-   "category": "craft",
-   "description": "しろに あおの もようの うつわ"
-  },
-  {
-   "id": "41-2",
-   "prefectureCode": 41,
-   "emoji": "🦑",
-   "nameKana": "いか",
-   "nameKanji": "烏賊",
-   "category": "food",
-   "description": "すきとおって みえる いか"
-  },
-  {
-   "id": "41-3",
-   "prefectureCode": 41,
-   "emoji": "🐟",
-   "nameKana": "むつごろう",
-   "nameKanji": "ムツゴロウ",
-   "category": "nature",
-   "description": "どろの うえを はねる さかな"
-  },
-  {
-   "id": "42-1",
-   "prefectureCode": 42,
-   "emoji": "🍰",
-   "nameKana": "かすてら",
-   "nameKanji": "カステラ",
-   "category": "food",
-   "description": "ふんわり あまい きいろの ケーキ"
-  },
-  {
-   "id": "42-2",
-   "prefectureCode": 42,
-   "emoji": "🏛️",
-   "nameKana": "ぐらばーえん",
-   "nameKanji": "グラバー園",
-   "category": "landmark",
-   "description": "うみが みえる ふるい おうち"
-  },
-  {
-   "id": "42-3",
-   "prefectureCode": 42,
-   "emoji": "🍜",
-   "nameKana": "ちゃんぽん",
-   "nameKanji": "ちゃんぽん",
-   "category": "food",
-   "description": "やさいが たっぷりの めん"
-  },
-  {
-   "id": "43-1",
-   "prefectureCode": 43,
-   "emoji": "🏯",
-   "nameKana": "くまもとじょう",
-   "nameKanji": "熊本城",
-   "category": "landmark",
-   "description": "そりかえった いしがきの しろ"
-  },
-  {
-   "id": "43-2",
-   "prefectureCode": 43,
-   "emoji": "🌋",
-   "nameKana": "あそさん",
-   "nameKanji": "阿蘇山",
-   "category": "nature",
-   "description": "おおきな くぼみが ある やま"
-  },
-  {
-   "id": "43-3",
-   "prefectureCode": 43,
-   "emoji": "🥢",
-   "nameKana": "からしれんこん",
-   "nameKanji": "辛子蓮根",
-   "category": "food",
-   "description": "あなに からしを つめる"
-  },
-  {
-   "id": "44-1",
-   "prefectureCode": 44,
-   "emoji": "♨️",
-   "nameKana": "べっぷおんせん",
-   "nameKanji": "別府温泉",
-   "category": "landmark",
-   "description": "ゆげが まちじゅうに あがる"
-  },
-  {
-   "id": "44-2",
-   "prefectureCode": 44,
-   "emoji": "🍗",
-   "nameKana": "とりてん",
-   "nameKanji": "とり天",
-   "category": "food",
-   "description": "とりにくの てんぷら"
-  },
-  {
-   "id": "44-3",
-   "prefectureCode": 44,
-   "emoji": "🍋",
-   "nameKana": "かぼす",
-   "nameKanji": "かぼす",
-   "category": "food",
-   "description": "りょうりに かけると おいしい"
-  },
-  {
-   "id": "45-1",
-   "prefectureCode": 45,
-   "emoji": "🥭",
-   "nameKana": "まんごー",
-   "nameKanji": "マンゴー",
-   "category": "food",
-   "description": "あまくて とろける みなみの み"
-  },
-  {
-   "id": "45-2",
-   "prefectureCode": 45,
-   "emoji": "🍗",
-   "nameKana": "ちきんなんばん",
-   "nameKanji": "チキン南蛮",
-   "category": "food",
-   "description": "しろい ソースを かける"
-  },
-  {
-   "id": "45-3",
-   "prefectureCode": 45,
-   "emoji": "🏞️",
-   "nameKana": "たかちほきょう",
-   "nameKanji": "高千穂峡",
-   "category": "nature",
-   "description": "たかい いわに はさまれた かわ"
-  },
-  {
-   "id": "46-1",
-   "prefectureCode": 46,
-   "emoji": "🌋",
-   "nameKana": "さくらじま",
-   "nameKanji": "桜島",
-   "category": "nature",
-   "description": "けむりを あげる しまの やま"
-  },
-  {
-   "id": "46-2",
-   "prefectureCode": 46,
-   "emoji": "🐷",
-   "nameKana": "くろぶた",
-   "nameKanji": "黒豚",
-   "category": "food",
-   "description": "やわらかくて あまい ぶたにく"
-  },
-  {
-   "id": "46-3",
-   "prefectureCode": 46,
-   "emoji": "🍠",
-   "nameKana": "さつまいも",
-   "nameKanji": "薩摩芋",
-   "category": "food",
-   "description": "やくと ほくほく あまい"
-  },
-  {
-   "id": "47-1",
-   "prefectureCode": 47,
-   "emoji": "🦁",
-   "nameKana": "しーさー",
-   "nameKanji": "シーサー",
-   "category": "craft",
-   "description": "やねの うえで まもる いきもの"
-  },
-  {
-   "id": "47-2",
-   "prefectureCode": 47,
-   "emoji": "🍪",
-   "nameKana": "ちんすこう",
-   "nameKanji": "ちんすこう",
-   "category": "food",
-   "description": "さくさくした ちいさい おかし"
-  },
-  {
-   "id": "47-3",
-   "prefectureCode": 47,
-   "emoji": "🐠",
-   "nameKana": "さんごしょう",
-   "nameKanji": "珊瑚礁",
-   "category": "nature",
-   "description": "あおい うみの いろとりどりの いえ"
-  }
- ]
+  "cards": [
+    {
+      "id": "01-1",
+      "prefectureCode": 1,
+      "emoji": "🦀",
+      "nameKana": "かに",
+      "nameKanji": "蟹",
+      "category": "food",
+      "description": "つめたい うみで そだつよ"
+    },
+    {
+      "id": "01-2",
+      "prefectureCode": 1,
+      "emoji": "🥔",
+      "nameKana": "じゃがいも",
+      "nameKanji": "馬鈴薯",
+      "category": "food",
+      "description": "ひろい はたけで そだつ"
+    },
+    {
+      "id": "01-3",
+      "prefectureCode": 1,
+      "emoji": "💐",
+      "nameKana": "らべんだー",
+      "nameKanji": "ラベンダー",
+      "category": "nature",
+      "description": "むらさきの はなの うみ"
+    },
+    {
+      "id": "02-1",
+      "prefectureCode": 2,
+      "emoji": "🍎",
+      "nameKana": "りんご",
+      "nameKanji": "林檎",
+      "category": "food",
+      "description": "あかくて しゃりしゃり",
+      "art": "card-02-1"
+    },
+    {
+      "id": "02-2",
+      "prefectureCode": 2,
+      "emoji": "🏮",
+      "nameKana": "ねぶた",
+      "nameKanji": "ねぶた",
+      "category": "landmark",
+      "description": "ひかる おおきな にんぎょう"
+    },
+    {
+      "id": "02-3",
+      "prefectureCode": 2,
+      "emoji": "🐚",
+      "nameKana": "ほたて",
+      "nameKanji": "帆立",
+      "category": "food",
+      "description": "うみの なかで そだつ かい"
+    },
+    {
+      "id": "03-1",
+      "prefectureCode": 3,
+      "emoji": "🍜",
+      "nameKana": "わんこそば",
+      "nameKanji": "わんこそば",
+      "category": "food",
+      "description": "なんばい たべられるかな",
+      "art": "card-03-1"
+    },
+    {
+      "id": "03-2",
+      "prefectureCode": 3,
+      "emoji": "🫖",
+      "nameKana": "なんぶてっき",
+      "nameKanji": "南部鉄器",
+      "category": "craft",
+      "description": "くろくて おもい てつの うつわ"
+    },
+    {
+      "id": "03-3",
+      "prefectureCode": 3,
+      "emoji": "💧",
+      "nameKana": "りゅうせんどう",
+      "nameKanji": "龍泉洞",
+      "category": "nature",
+      "description": "あおい みずの どうくつ"
+    },
+    {
+      "id": "04-1",
+      "prefectureCode": 4,
+      "emoji": "🐄",
+      "nameKana": "ぎゅうたん",
+      "nameKanji": "牛タン",
+      "category": "food",
+      "description": "やいて たべると おいしい"
+    },
+    {
+      "id": "04-2",
+      "prefectureCode": 4,
+      "emoji": "🍡",
+      "nameKana": "ずんだもち",
+      "nameKanji": "ずんだ餅",
+      "category": "food",
+      "description": "みどりの まめの おもち",
+      "art": "card-04-2"
+    },
+    {
+      "id": "04-3",
+      "prefectureCode": 4,
+      "emoji": "🏝️",
+      "nameKana": "まつしま",
+      "nameKanji": "松島",
+      "category": "landmark",
+      "description": "しまが たくさん うかぶ うみ"
+    },
+    {
+      "id": "05-1",
+      "prefectureCode": 5,
+      "emoji": "🍢",
+      "nameKana": "きりたんぽ",
+      "nameKanji": "きりたんぽ",
+      "category": "food",
+      "description": "おこめを ぼうに まいた たべもの",
+      "art": "card-05-1"
+    },
+    {
+      "id": "05-2",
+      "prefectureCode": 5,
+      "emoji": "👹",
+      "nameKana": "なまはげ",
+      "nameKanji": "なまはげ",
+      "category": "landmark",
+      "description": "おおごえで やってくる おに"
+    },
+    {
+      "id": "05-3",
+      "prefectureCode": 5,
+      "emoji": "🐕",
+      "nameKana": "あきたいぬ",
+      "nameKanji": "秋田犬",
+      "category": "nature",
+      "description": "もふもふの おおきな いぬ"
+    },
+    {
+      "id": "06-1",
+      "prefectureCode": 6,
+      "emoji": "🍒",
+      "nameKana": "さくらんぼ",
+      "nameKanji": "さくらんぼ",
+      "category": "food",
+      "description": "あかい つぶが ふたごに なる",
+      "art": "card-06-1"
+    },
+    {
+      "id": "06-2",
+      "prefectureCode": 6,
+      "emoji": "🍲",
+      "nameKana": "いもに",
+      "nameKanji": "芋煮",
+      "category": "food",
+      "description": "かわらで みんなで つくる なべ"
+    },
+    {
+      "id": "06-3",
+      "prefectureCode": 6,
+      "emoji": "🌺",
+      "nameKana": "べにばな",
+      "nameKanji": "紅花",
+      "category": "nature",
+      "description": "きいろから あかに かわる はな"
+    },
+    {
+      "id": "07-1",
+      "prefectureCode": 7,
+      "emoji": "🍑",
+      "nameKana": "もも",
+      "nameKanji": "桃",
+      "category": "food",
+      "description": "あまくて やわらかい",
+      "art": "card-07-1"
+    },
+    {
+      "id": "07-2",
+      "prefectureCode": 7,
+      "emoji": "🐮",
+      "nameKana": "あかべこ",
+      "nameKanji": "赤べこ",
+      "category": "craft",
+      "description": "くびが ゆらゆら ゆれる うし"
+    },
+    {
+      "id": "07-3",
+      "prefectureCode": 7,
+      "emoji": "🏯",
+      "nameKana": "つるがじょう",
+      "nameKanji": "鶴ヶ城",
+      "category": "landmark",
+      "description": "しろい かべの おしろ"
+    },
+    {
+      "id": "08-1",
+      "prefectureCode": 8,
+      "emoji": "🫘",
+      "nameKana": "なっとう",
+      "nameKanji": "納豆",
+      "category": "food",
+      "description": "ねばねばする まめ",
+      "art": "card-08-1"
+    },
+    {
+      "id": "08-2",
+      "prefectureCode": 8,
+      "emoji": "🍈",
+      "nameKana": "めろん",
+      "nameKanji": "メロン",
+      "category": "food",
+      "description": "あみめの もようが ある"
+    },
+    {
+      "id": "08-3",
+      "prefectureCode": 8,
+      "emoji": "⛰️",
+      "nameKana": "つくばさん",
+      "nameKanji": "筑波山",
+      "category": "nature",
+      "description": "ふたつの みねが ならぶ やま"
+    },
+    {
+      "id": "09-1",
+      "prefectureCode": 9,
+      "emoji": "🍓",
+      "nameKana": "いちご",
+      "nameKanji": "苺",
+      "category": "food",
+      "description": "ふゆに あまくなる あかい み",
+      "art": "card-09-1"
+    },
+    {
+      "id": "09-2",
+      "prefectureCode": 9,
+      "emoji": "⛩️",
+      "nameKana": "にっこうとうしょうぐう",
+      "nameKanji": "日光東照宮",
+      "category": "landmark",
+      "description": "きんいろに かがやく おみや"
+    },
+    {
+      "id": "09-3",
+      "prefectureCode": 9,
+      "emoji": "🥟",
+      "nameKana": "ぎょうざ",
+      "nameKanji": "餃子",
+      "category": "food",
+      "description": "やいて ぱりぱり"
+    },
+    {
+      "id": "10-1",
+      "prefectureCode": 10,
+      "emoji": "🍢",
+      "nameKana": "こんにゃく",
+      "nameKanji": "蒟蒻",
+      "category": "food",
+      "description": "ぷるぷるした たべもの",
+      "art": "card-10-1"
+    },
+    {
+      "id": "10-2",
+      "prefectureCode": 10,
+      "emoji": "🎎",
+      "nameKana": "だるま",
+      "nameKanji": "だるま",
+      "category": "craft",
+      "description": "ねがいを こめて めを かく"
+    },
+    {
+      "id": "10-3",
+      "prefectureCode": 10,
+      "emoji": "♨️",
+      "nameKana": "くさつおんせん",
+      "nameKanji": "草津温泉",
+      "category": "landmark",
+      "description": "あつい おゆが わきでる"
+    },
+    {
+      "id": "11-1",
+      "prefectureCode": 11,
+      "emoji": "🍘",
+      "nameKana": "そうかせんべい",
+      "nameKanji": "草加せんべい",
+      "category": "food",
+      "description": "かたくて ぱりっと なる",
+      "art": "card-11-1"
+    },
+    {
+      "id": "11-2",
+      "prefectureCode": 11,
+      "emoji": "🌱",
+      "nameKana": "ふかやねぎ",
+      "nameKanji": "深谷ねぎ",
+      "category": "food",
+      "description": "しろい ところが あまい"
+    },
+    {
+      "id": "11-3",
+      "prefectureCode": 11,
+      "emoji": "🎎",
+      "nameKana": "ひなにんぎょう",
+      "nameKanji": "雛人形",
+      "category": "craft",
+      "description": "はるに かざる にんぎょう"
+    },
+    {
+      "id": "12-1",
+      "prefectureCode": 12,
+      "emoji": "🥜",
+      "nameKana": "らっかせい",
+      "nameKanji": "落花生",
+      "category": "food",
+      "description": "つちの なかで みが できる",
+      "art": "card-12-1"
+    },
+    {
+      "id": "12-2",
+      "prefectureCode": 12,
+      "emoji": "🌅",
+      "nameKana": "いぬぼうさき",
+      "nameKanji": "犬吠埼",
+      "category": "landmark",
+      "description": "あさひが はやく みえる みさき"
+    },
+    {
+      "id": "12-3",
+      "prefectureCode": 12,
+      "emoji": "🍶",
+      "nameKana": "しょうゆ",
+      "nameKanji": "醤油",
+      "category": "food",
+      "description": "まめから つくる くろい あじ"
+    },
+    {
+      "id": "13-1",
+      "prefectureCode": 13,
+      "emoji": "🗼",
+      "nameKana": "とうきょうたわー",
+      "nameKanji": "東京タワー",
+      "category": "landmark",
+      "description": "あかと しろの たかい とう"
+    },
+    {
+      "id": "13-2",
+      "prefectureCode": 13,
+      "emoji": "🍳",
+      "nameKana": "もんじゃやき",
+      "nameKanji": "もんじゃ焼き",
+      "category": "food",
+      "description": "てっぱんで とろとろ やく"
+    },
+    {
+      "id": "13-3",
+      "prefectureCode": 13,
+      "emoji": "🥂",
+      "nameKana": "えどきりこ",
+      "nameKanji": "江戸切子",
+      "category": "craft",
+      "description": "もようを ほった ガラス"
+    },
+    {
+      "id": "14-1",
+      "prefectureCode": 14,
+      "emoji": "🗿",
+      "nameKana": "かまくらだいぶつ",
+      "nameKanji": "鎌倉大仏",
+      "category": "landmark",
+      "description": "そとに すわる おおきな ほとけ"
+    },
+    {
+      "id": "14-2",
+      "prefectureCode": 14,
+      "emoji": "🥟",
+      "nameKana": "しゅうまい",
+      "nameKanji": "焼売",
+      "category": "food",
+      "description": "ひとくちサイズの むしもの"
+    },
+    {
+      "id": "14-3",
+      "prefectureCode": 14,
+      "emoji": "🧩",
+      "nameKana": "よせぎざいく",
+      "nameKanji": "寄木細工",
+      "category": "craft",
+      "description": "きの いろで もようを つくる"
+    },
+    {
+      "id": "15-1",
+      "prefectureCode": 15,
+      "emoji": "🍚",
+      "nameKana": "こしひかり",
+      "nameKanji": "こしひかり",
+      "category": "food",
+      "description": "つやつやの おいしい おこめ",
+      "art": "card-15-1"
+    },
+    {
+      "id": "15-2",
+      "prefectureCode": 15,
+      "emoji": "🐠",
+      "nameKana": "にしきごい",
+      "nameKanji": "錦鯉",
+      "category": "nature",
+      "description": "もようが きれいな こい"
+    },
+    {
+      "id": "15-3",
+      "prefectureCode": 15,
+      "emoji": "🍡",
+      "nameKana": "ささだんご",
+      "nameKanji": "笹団子",
+      "category": "food",
+      "description": "ささの はで つつんだ おもち"
+    },
+    {
+      "id": "16-1",
+      "prefectureCode": 16,
+      "emoji": "🦑",
+      "nameKana": "ほたるいか",
+      "nameKanji": "ホタルイカ",
+      "category": "food",
+      "description": "うみで あおく ひかる"
+    },
+    {
+      "id": "16-2",
+      "prefectureCode": 16,
+      "emoji": "🏔️",
+      "nameKana": "くろべだむ",
+      "nameKanji": "黒部ダム",
+      "category": "landmark",
+      "description": "やまの なかの おおきな ダム"
+    },
+    {
+      "id": "16-3",
+      "prefectureCode": 16,
+      "emoji": "🍣",
+      "nameKana": "ますのすし",
+      "nameKanji": "ます寿司",
+      "category": "food",
+      "description": "まるい かたちの おすし"
+    },
+    {
+      "id": "17-1",
+      "prefectureCode": 17,
+      "emoji": "🌳",
+      "nameKana": "けんろくえん",
+      "nameKanji": "兼六園",
+      "category": "landmark",
+      "description": "ゆきに そなえる にわの きぎ"
+    },
+    {
+      "id": "17-2",
+      "prefectureCode": 17,
+      "emoji": "🏺",
+      "nameKana": "くたにやき",
+      "nameKanji": "九谷焼",
+      "category": "craft",
+      "description": "あざやかな いろの やきもの"
+    },
+    {
+      "id": "17-3",
+      "prefectureCode": 17,
+      "emoji": "✨",
+      "nameKana": "きんぱく",
+      "nameKanji": "金箔",
+      "category": "craft",
+      "description": "うすくて きらきらの きん"
+    },
+    {
+      "id": "18-1",
+      "prefectureCode": 18,
+      "emoji": "🦀",
+      "nameKana": "えちぜんがに",
+      "nameKanji": "越前がに",
+      "category": "food",
+      "description": "ふゆの うみの ごちそう"
+    },
+    {
+      "id": "18-2",
+      "prefectureCode": 18,
+      "emoji": "🦕",
+      "nameKana": "きょうりゅう",
+      "nameKanji": "恐竜",
+      "category": "nature",
+      "description": "ほねが たくさん みつかった"
+    },
+    {
+      "id": "18-3",
+      "prefectureCode": 18,
+      "emoji": "👓",
+      "nameKana": "めがね",
+      "nameKanji": "眼鏡",
+      "category": "craft",
+      "description": "にほんいちの めがねの まち"
+    },
+    {
+      "id": "19-1",
+      "prefectureCode": 19,
+      "emoji": "🍇",
+      "nameKana": "ぶどう",
+      "nameKanji": "葡萄",
+      "category": "food",
+      "description": "つぶが ふさに なって みのる"
+    },
+    {
+      "id": "19-2",
+      "prefectureCode": 19,
+      "emoji": "🗻",
+      "nameKana": "ふじさん",
+      "nameKanji": "富士山",
+      "category": "nature",
+      "description": "にほんで いちばん たかい やま"
+    },
+    {
+      "id": "19-3",
+      "prefectureCode": 19,
+      "emoji": "🍜",
+      "nameKana": "ほうとう",
+      "nameKanji": "ほうとう",
+      "category": "food",
+      "description": "ひらたい めんの あつい なべ"
+    },
+    {
+      "id": "20-1",
+      "prefectureCode": 20,
+      "emoji": "🍜",
+      "nameKana": "そば",
+      "nameKanji": "蕎麦",
+      "category": "food",
+      "description": "すずしい ちで そだつ",
+      "art": "card-20-1"
+    },
+    {
+      "id": "20-2",
+      "prefectureCode": 20,
+      "emoji": "🏯",
+      "nameKana": "まつもとじょう",
+      "nameKanji": "松本城",
+      "category": "landmark",
+      "description": "くろい かべの かっこいい しろ"
+    },
+    {
+      "id": "20-3",
+      "prefectureCode": 20,
+      "emoji": "🏞️",
+      "nameKana": "かみこうち",
+      "nameKanji": "上高地",
+      "category": "nature",
+      "description": "やまに かこまれた きれいな かわ"
+    },
+    {
+      "id": "21-1",
+      "prefectureCode": 21,
+      "emoji": "🏠",
+      "nameKana": "しらかわごう",
+      "nameKanji": "白川郷",
+      "category": "landmark",
+      "description": "ゆきに つよい さんかくの やね"
+    },
+    {
+      "id": "21-2",
+      "prefectureCode": 21,
+      "emoji": "📄",
+      "nameKana": "みのわし",
+      "nameKanji": "美濃和紙",
+      "category": "craft",
+      "description": "うすくて つよい かみ"
+    },
+    {
+      "id": "21-3",
+      "prefectureCode": 21,
+      "emoji": "🐟",
+      "nameKana": "あゆ",
+      "nameKanji": "鮎",
+      "category": "food",
+      "description": "きれいな かわに すむ さかな"
+    },
+    {
+      "id": "22-1",
+      "prefectureCode": 22,
+      "emoji": "🍵",
+      "nameKana": "おちゃ",
+      "nameKanji": "茶",
+      "category": "food",
+      "description": "みどりの はたけが ひろがる",
+      "art": "card-22-1"
+    },
+    {
+      "id": "22-2",
+      "prefectureCode": 22,
+      "emoji": "🐟",
+      "nameKana": "うなぎ",
+      "nameKanji": "鰻",
+      "category": "food",
+      "description": "たれを つけて やくと おいしい"
+    },
+    {
+      "id": "22-3",
+      "prefectureCode": 22,
+      "emoji": "🌊",
+      "nameKana": "みほのまつばら",
+      "nameKanji": "三保松原",
+      "category": "landmark",
+      "description": "まつと ふじさんが みえる はま"
+    },
+    {
+      "id": "23-1",
+      "prefectureCode": 23,
+      "emoji": "🍖",
+      "nameKana": "みそかつ",
+      "nameKanji": "味噌カツ",
+      "category": "food",
+      "description": "くろい みその たれを かける"
+    },
+    {
+      "id": "23-2",
+      "prefectureCode": 23,
+      "emoji": "🏯",
+      "nameKana": "なごやじょう",
+      "nameKanji": "名古屋城",
+      "category": "landmark",
+      "description": "やねに きんの しゃちほこ"
+    },
+    {
+      "id": "23-3",
+      "prefectureCode": 23,
+      "emoji": "👘",
+      "nameKana": "ありまつしぼり",
+      "nameKanji": "有松絞り",
+      "category": "craft",
+      "description": "ぬのを しばって そめる"
+    },
+    {
+      "id": "24-1",
+      "prefectureCode": 24,
+      "emoji": "⛩️",
+      "nameKana": "いせじんぐう",
+      "nameKanji": "伊勢神宮",
+      "category": "landmark",
+      "description": "もりの なかの ふるい おみや"
+    },
+    {
+      "id": "24-2",
+      "prefectureCode": 24,
+      "emoji": "🦪",
+      "nameKana": "しんじゅ",
+      "nameKanji": "真珠",
+      "category": "craft",
+      "description": "かいの なかで そだつ たま"
+    },
+    {
+      "id": "24-3",
+      "prefectureCode": 24,
+      "emoji": "🥩",
+      "nameKana": "まつさかうし",
+      "nameKanji": "松阪牛",
+      "category": "food",
+      "description": "しもふりの おいしい ぎゅうにく"
+    },
+    {
+      "id": "25-1",
+      "prefectureCode": 25,
+      "emoji": "🌊",
+      "nameKana": "びわこ",
+      "nameKanji": "琵琶湖",
+      "category": "nature",
+      "description": "にほんで いちばん おおきい みずうみ"
+    },
+    {
+      "id": "25-2",
+      "prefectureCode": 25,
+      "emoji": "🏯",
+      "nameKana": "ひこねじょう",
+      "nameKanji": "彦根城",
+      "category": "landmark",
+      "description": "むかしの ままの てんしゅ"
+    },
+    {
+      "id": "25-3",
+      "prefectureCode": 25,
+      "emoji": "🏺",
+      "nameKana": "しがらきやき",
+      "nameKanji": "信楽焼",
+      "category": "craft",
+      "description": "たぬきの おきものが ゆうめい"
+    },
+    {
+      "id": "26-1",
+      "prefectureCode": 26,
+      "emoji": "🏯",
+      "nameKana": "きよみずでら",
+      "nameKanji": "清水寺",
+      "category": "landmark",
+      "description": "がけに たつ おおきな ぶたい"
+    },
+    {
+      "id": "26-2",
+      "prefectureCode": 26,
+      "emoji": "🍵",
+      "nameKana": "まっちゃ",
+      "nameKanji": "抹茶",
+      "category": "food",
+      "description": "こなに した みどりの おちゃ",
+      "art": "card-26-2"
+    },
+    {
+      "id": "26-3",
+      "prefectureCode": 26,
+      "emoji": "👘",
+      "nameKana": "にしじんおり",
+      "nameKanji": "西陣織",
+      "category": "craft",
+      "description": "いとで もようを おりこむ"
+    },
+    {
+      "id": "27-1",
+      "prefectureCode": 27,
+      "emoji": "🐙",
+      "nameKana": "たこやき",
+      "nameKanji": "たこ焼き",
+      "category": "food",
+      "description": "まるくて あつあつ"
+    },
+    {
+      "id": "27-2",
+      "prefectureCode": 27,
+      "emoji": "🏯",
+      "nameKana": "おおさかじょう",
+      "nameKanji": "大阪城",
+      "category": "landmark",
+      "description": "きんいろの かざりの おしろ"
+    },
+    {
+      "id": "27-3",
+      "prefectureCode": 27,
+      "emoji": "🍢",
+      "nameKana": "くしかつ",
+      "nameKanji": "串カツ",
+      "category": "food",
+      "description": "くしに さして あげる"
+    },
+    {
+      "id": "28-1",
+      "prefectureCode": 28,
+      "emoji": "🥩",
+      "nameKana": "こうべびーふ",
+      "nameKanji": "神戸ビーフ",
+      "category": "food",
+      "description": "せかいで しられる ぎゅうにく"
+    },
+    {
+      "id": "28-2",
+      "prefectureCode": 28,
+      "emoji": "🏯",
+      "nameKana": "ひめじじょう",
+      "nameKanji": "姫路城",
+      "category": "landmark",
+      "description": "しろさぎの ような しろい しろ"
+    },
+    {
+      "id": "28-3",
+      "prefectureCode": 28,
+      "emoji": "🍳",
+      "nameKana": "あかしやき",
+      "nameKanji": "明石焼",
+      "category": "food",
+      "description": "だしに つけて たべる たまご"
+    },
+    {
+      "id": "29-1",
+      "prefectureCode": 29,
+      "emoji": "🦌",
+      "nameKana": "しか",
+      "nameKanji": "鹿",
+      "category": "nature",
+      "description": "こうえんを あるく やさしい しか"
+    },
+    {
+      "id": "29-2",
+      "prefectureCode": 29,
+      "emoji": "🗿",
+      "nameKana": "とうだいじ",
+      "nameKanji": "東大寺",
+      "category": "landmark",
+      "description": "とても おおきな だいぶつ"
+    },
+    {
+      "id": "29-3",
+      "prefectureCode": 29,
+      "emoji": "🖌️",
+      "nameKana": "ならふで",
+      "nameKanji": "奈良筆",
+      "category": "craft",
+      "description": "けを そろえて つくる ふで"
+    },
+    {
+      "id": "30-1",
+      "prefectureCode": 30,
+      "emoji": "🍙",
+      "nameKana": "うめぼし",
+      "nameKanji": "梅干し",
+      "category": "food",
+      "description": "すっぱくて おにぎりに あう"
+    },
+    {
+      "id": "30-2",
+      "prefectureCode": 30,
+      "emoji": "🥾",
+      "nameKana": "くまのこどう",
+      "nameKanji": "熊野古道",
+      "category": "landmark",
+      "description": "もりの なかの ふるい みち"
+    },
+    {
+      "id": "30-3",
+      "prefectureCode": 30,
+      "emoji": "🐼",
+      "nameKana": "ぱんだ",
+      "nameKanji": "パンダ",
+      "category": "nature",
+      "description": "しろと くろの にんきもの"
+    },
+    {
+      "id": "31-1",
+      "prefectureCode": 31,
+      "emoji": "🏜️",
+      "nameKana": "とっとりさきゅう",
+      "nameKanji": "鳥取砂丘",
+      "category": "nature",
+      "description": "すなが やまのように つづく"
+    },
+    {
+      "id": "31-2",
+      "prefectureCode": 31,
+      "emoji": "🍐",
+      "nameKana": "なし",
+      "nameKanji": "梨",
+      "category": "food",
+      "description": "しゃりしゃりで みずみずしい"
+    },
+    {
+      "id": "31-3",
+      "prefectureCode": 31,
+      "emoji": "🦀",
+      "nameKana": "ずわいがに",
+      "nameKanji": "ズワイガニ",
+      "category": "food",
+      "description": "あしが ながい かに"
+    },
+    {
+      "id": "32-1",
+      "prefectureCode": 32,
+      "emoji": "⛩️",
+      "nameKana": "いずもたいしゃ",
+      "nameKanji": "出雲大社",
+      "category": "landmark",
+      "description": "ふとい しめなわが ある おみや"
+    },
+    {
+      "id": "32-2",
+      "prefectureCode": 32,
+      "emoji": "🐚",
+      "nameKana": "しじみ",
+      "nameKanji": "蜆",
+      "category": "food",
+      "description": "みずうみに すむ ちいさい かい"
+    },
+    {
+      "id": "32-3",
+      "prefectureCode": 32,
+      "emoji": "⛏️",
+      "nameKana": "いわみぎんざん",
+      "nameKanji": "石見銀山",
+      "category": "landmark",
+      "description": "ぎんを ほっていた やま"
+    },
+    {
+      "id": "33-1",
+      "prefectureCode": 33,
+      "emoji": "🍡",
+      "nameKana": "きびだんご",
+      "nameKanji": "きび団子",
+      "category": "food",
+      "description": "ももたろうの おはなしの だんご"
+    },
+    {
+      "id": "33-2",
+      "prefectureCode": 33,
+      "emoji": "🏘️",
+      "nameKana": "くらしき",
+      "nameKanji": "倉敷",
+      "category": "landmark",
+      "description": "しろい かべと やなぎの かわ"
+    },
+    {
+      "id": "33-3",
+      "prefectureCode": 33,
+      "emoji": "🍇",
+      "nameKana": "ますかっと",
+      "nameKanji": "マスカット",
+      "category": "food",
+      "description": "みどりで あまい ぶどう"
+    },
+    {
+      "id": "34-1",
+      "prefectureCode": 34,
+      "emoji": "🍁",
+      "nameKana": "もみじまんじゅう",
+      "nameKanji": "もみじ饅頭",
+      "category": "food",
+      "description": "はっぱの かたちの おかし",
+      "art": "card-34-1"
+    },
+    {
+      "id": "34-2",
+      "prefectureCode": 34,
+      "emoji": "⛩️",
+      "nameKana": "いつくしまじんじゃ",
+      "nameKanji": "厳島神社",
+      "category": "landmark",
+      "description": "うみに たつ あかい とりい"
+    },
+    {
+      "id": "34-3",
+      "prefectureCode": 34,
+      "emoji": "🦪",
+      "nameKana": "かき",
+      "nameKanji": "牡蠣",
+      "category": "food",
+      "description": "ふゆの うみの ごちそう",
+      "art": "card-34-3"
+    },
+    {
+      "id": "35-1",
+      "prefectureCode": 35,
+      "emoji": "🐡",
+      "nameKana": "ふぐ",
+      "nameKanji": "河豚",
+      "category": "food",
+      "description": "まるく ふくらむ さかな"
+    },
+    {
+      "id": "35-2",
+      "prefectureCode": 35,
+      "emoji": "🌉",
+      "nameKana": "きんたいきょう",
+      "nameKanji": "錦帯橋",
+      "category": "landmark",
+      "description": "アーチが つづく きの はし"
+    },
+    {
+      "id": "35-3",
+      "prefectureCode": 35,
+      "emoji": "🏺",
+      "nameKana": "はぎやき",
+      "nameKanji": "萩焼",
+      "category": "craft",
+      "description": "つかうほど いろが かわる"
+    },
+    {
+      "id": "36-1",
+      "prefectureCode": 36,
+      "emoji": "💃",
+      "nameKana": "あわおどり",
+      "nameKanji": "阿波踊り",
+      "category": "landmark",
+      "description": "まちじゅうで おどる まつり"
+    },
+    {
+      "id": "36-2",
+      "prefectureCode": 36,
+      "emoji": "🍋",
+      "nameKana": "すだち",
+      "nameKanji": "酢橘",
+      "category": "food",
+      "description": "みどりで さわやかな かおり"
+    },
+    {
+      "id": "36-3",
+      "prefectureCode": 36,
+      "emoji": "🌀",
+      "nameKana": "なるとのうずしお",
+      "nameKanji": "鳴門の渦潮",
+      "category": "nature",
+      "description": "うみに できる おおきな うず"
+    },
+    {
+      "id": "37-1",
+      "prefectureCode": 37,
+      "emoji": "🍜",
+      "nameKana": "さぬきうどん",
+      "nameKanji": "讃岐うどん",
+      "category": "food",
+      "description": "こしが つよい ふとい めん"
+    },
+    {
+      "id": "37-2",
+      "prefectureCode": 37,
+      "emoji": "⛩️",
+      "nameKana": "こんぴらさん",
+      "nameKanji": "金刀比羅宮",
+      "category": "landmark",
+      "description": "ながい かいだんを のぼる"
+    },
+    {
+      "id": "37-3",
+      "prefectureCode": 37,
+      "emoji": "🫒",
+      "nameKana": "おりーぶ",
+      "nameKanji": "オリーブ",
+      "category": "nature",
+      "description": "しまで そだつ みどりの み"
+    },
+    {
+      "id": "38-1",
+      "prefectureCode": 38,
+      "emoji": "🍊",
+      "nameKana": "みかん",
+      "nameKanji": "蜜柑",
+      "category": "food",
+      "description": "あまくて てで むける",
+      "art": "card-38-1"
+    },
+    {
+      "id": "38-2",
+      "prefectureCode": 38,
+      "emoji": "♨️",
+      "nameKana": "どうごおんせん",
+      "nameKanji": "道後温泉",
+      "category": "landmark",
+      "description": "とても ふるい おんせん"
+    },
+    {
+      "id": "38-3",
+      "prefectureCode": 38,
+      "emoji": "👘",
+      "nameKana": "いよかすり",
+      "nameKanji": "伊予絣",
+      "category": "craft",
+      "description": "あいいろの もようの ぬの"
+    },
+    {
+      "id": "39-1",
+      "prefectureCode": 39,
+      "emoji": "🐟",
+      "nameKana": "かつおのたたき",
+      "nameKanji": "鰹のたたき",
+      "category": "food",
+      "description": "わらの ひで さっと やく"
+    },
+    {
+      "id": "39-2",
+      "prefectureCode": 39,
+      "emoji": "💃",
+      "nameKana": "よさこい",
+      "nameKanji": "よさこい",
+      "category": "landmark",
+      "description": "なるこを ならして おどる"
+    },
+    {
+      "id": "39-3",
+      "prefectureCode": 39,
+      "emoji": "🏞️",
+      "nameKana": "しまんとがわ",
+      "nameKanji": "四万十川",
+      "category": "nature",
+      "description": "とても きれいな ながい かわ"
+    },
+    {
+      "id": "40-1",
+      "prefectureCode": 40,
+      "emoji": "🌶️",
+      "nameKana": "めんたいこ",
+      "nameKanji": "明太子",
+      "category": "food",
+      "description": "ぴりっと からい たらこ"
+    },
+    {
+      "id": "40-2",
+      "prefectureCode": 40,
+      "emoji": "🍜",
+      "nameKana": "とんこつらーめん",
+      "nameKanji": "豚骨ラーメン",
+      "category": "food",
+      "description": "しろい スープの ラーメン"
+    },
+    {
+      "id": "40-3",
+      "prefectureCode": 40,
+      "emoji": "⛩️",
+      "nameKana": "だざいふてんまんぐう",
+      "nameKanji": "太宰府天満宮",
+      "category": "landmark",
+      "description": "べんきょうの かみさま"
+    },
+    {
+      "id": "41-1",
+      "prefectureCode": 41,
+      "emoji": "🏺",
+      "nameKana": "ありたやき",
+      "nameKanji": "有田焼",
+      "category": "craft",
+      "description": "しろに あおの もようの うつわ"
+    },
+    {
+      "id": "41-2",
+      "prefectureCode": 41,
+      "emoji": "🦑",
+      "nameKana": "いか",
+      "nameKanji": "烏賊",
+      "category": "food",
+      "description": "すきとおって みえる いか"
+    },
+    {
+      "id": "41-3",
+      "prefectureCode": 41,
+      "emoji": "🐟",
+      "nameKana": "むつごろう",
+      "nameKanji": "ムツゴロウ",
+      "category": "nature",
+      "description": "どろの うえを はねる さかな"
+    },
+    {
+      "id": "42-1",
+      "prefectureCode": 42,
+      "emoji": "🍰",
+      "nameKana": "かすてら",
+      "nameKanji": "カステラ",
+      "category": "food",
+      "description": "ふんわり あまい きいろの ケーキ"
+    },
+    {
+      "id": "42-2",
+      "prefectureCode": 42,
+      "emoji": "🏛️",
+      "nameKana": "ぐらばーえん",
+      "nameKanji": "グラバー園",
+      "category": "landmark",
+      "description": "うみが みえる ふるい おうち"
+    },
+    {
+      "id": "42-3",
+      "prefectureCode": 42,
+      "emoji": "🍜",
+      "nameKana": "ちゃんぽん",
+      "nameKanji": "ちゃんぽん",
+      "category": "food",
+      "description": "やさいが たっぷりの めん"
+    },
+    {
+      "id": "43-1",
+      "prefectureCode": 43,
+      "emoji": "🏯",
+      "nameKana": "くまもとじょう",
+      "nameKanji": "熊本城",
+      "category": "landmark",
+      "description": "そりかえった いしがきの しろ"
+    },
+    {
+      "id": "43-2",
+      "prefectureCode": 43,
+      "emoji": "🌋",
+      "nameKana": "あそさん",
+      "nameKanji": "阿蘇山",
+      "category": "nature",
+      "description": "おおきな くぼみが ある やま"
+    },
+    {
+      "id": "43-3",
+      "prefectureCode": 43,
+      "emoji": "🥢",
+      "nameKana": "からしれんこん",
+      "nameKanji": "辛子蓮根",
+      "category": "food",
+      "description": "あなに からしを つめる"
+    },
+    {
+      "id": "44-1",
+      "prefectureCode": 44,
+      "emoji": "♨️",
+      "nameKana": "べっぷおんせん",
+      "nameKanji": "別府温泉",
+      "category": "landmark",
+      "description": "ゆげが まちじゅうに あがる"
+    },
+    {
+      "id": "44-2",
+      "prefectureCode": 44,
+      "emoji": "🍗",
+      "nameKana": "とりてん",
+      "nameKanji": "とり天",
+      "category": "food",
+      "description": "とりにくの てんぷら"
+    },
+    {
+      "id": "44-3",
+      "prefectureCode": 44,
+      "emoji": "🍋",
+      "nameKana": "かぼす",
+      "nameKanji": "かぼす",
+      "category": "food",
+      "description": "りょうりに かけると おいしい"
+    },
+    {
+      "id": "45-1",
+      "prefectureCode": 45,
+      "emoji": "🥭",
+      "nameKana": "まんごー",
+      "nameKanji": "マンゴー",
+      "category": "food",
+      "description": "あまくて とろける みなみの み",
+      "art": "card-45-1"
+    },
+    {
+      "id": "45-2",
+      "prefectureCode": 45,
+      "emoji": "🍗",
+      "nameKana": "ちきんなんばん",
+      "nameKanji": "チキン南蛮",
+      "category": "food",
+      "description": "しろい ソースを かける"
+    },
+    {
+      "id": "45-3",
+      "prefectureCode": 45,
+      "emoji": "🏞️",
+      "nameKana": "たかちほきょう",
+      "nameKanji": "高千穂峡",
+      "category": "nature",
+      "description": "たかい いわに はさまれた かわ"
+    },
+    {
+      "id": "46-1",
+      "prefectureCode": 46,
+      "emoji": "🌋",
+      "nameKana": "さくらじま",
+      "nameKanji": "桜島",
+      "category": "nature",
+      "description": "けむりを あげる しまの やま"
+    },
+    {
+      "id": "46-2",
+      "prefectureCode": 46,
+      "emoji": "🐷",
+      "nameKana": "くろぶた",
+      "nameKanji": "黒豚",
+      "category": "food",
+      "description": "やわらかくて あまい ぶたにく",
+      "art": "card-46-2"
+    },
+    {
+      "id": "46-3",
+      "prefectureCode": 46,
+      "emoji": "🍠",
+      "nameKana": "さつまいも",
+      "nameKanji": "薩摩芋",
+      "category": "food",
+      "description": "やくと ほくほく あまい"
+    },
+    {
+      "id": "47-1",
+      "prefectureCode": 47,
+      "emoji": "🦁",
+      "nameKana": "しーさー",
+      "nameKanji": "シーサー",
+      "category": "craft",
+      "description": "やねの うえで まもる いきもの"
+    },
+    {
+      "id": "47-2",
+      "prefectureCode": 47,
+      "emoji": "🍪",
+      "nameKana": "ちんすこう",
+      "nameKanji": "ちんすこう",
+      "category": "food",
+      "description": "さくさくした ちいさい おかし"
+    },
+    {
+      "id": "47-3",
+      "prefectureCode": 47,
+      "emoji": "🐠",
+      "nameKana": "さんごしょう",
+      "nameKanji": "珊瑚礁",
+      "category": "nature",
+      "description": "あおい うみの いろとりどりの いえ"
+    }
+  ]
 }

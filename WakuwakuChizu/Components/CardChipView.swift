@@ -13,19 +13,28 @@ struct CardChipView: View {
     private var isOwned: Bool { ownedCount > 0 }
     private var isShiny: Bool { ownedCount >= GameRules.maxCardCopies }
 
+    /// The painted card, shown only once this one has gone キラ.
+    ///
+    /// Holding the picture back until then is what makes a duplicate draw feel
+    /// like a win instead of a consolation: the emoji card the child already
+    /// has turns into the real thing. Cards without art keep the emoji.
+    private var shinyArt: String? { isShiny ? card.art : nil }
+
     var body: some View {
         VStack(spacing: 6) {
-            Text(isOwned ? card.emoji : "❓")
-                .font(.system(size: 40))
-                .frame(height: 46)
+            face
 
-            Text(isOwned ? card.displayName(mode) : "？？？")
-                .font(AppFont.rounded(15, relativeTo: .subheadline))
-                .foregroundStyle(Palette.ink)
-                .multilineTextAlignment(.center)
-                .lineLimit(2)
-                .minimumScaleFactor(0.6)
-                .fixedSize(horizontal: false, vertical: true)
+            // The painting already carries the name, so printing it again
+            // underneath just says the same word twice.
+            if shinyArt == nil {
+                Text(isOwned ? card.displayName(mode) : "？？？")
+                    .font(AppFont.rounded(15, relativeTo: .subheadline))
+                    .foregroundStyle(Palette.ink)
+                    .multilineTextAlignment(.center)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.6)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
 
             if showsDescription, isOwned {
                 Text(card.description)
@@ -35,10 +44,14 @@ struct CardChipView: View {
                     .lineLimit(2)
                     .frame(maxWidth: .infinity)
             }
+
+            Spacer(minLength: 0)
         }
         .padding(.vertical, 12)
         .padding(.horizontal, 8)
-        .frame(maxWidth: .infinity)
+        // Fills the row height the grid hands out, so a painted card and an
+        // emoji card sitting side by side are the same size.
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .stickerCard(fill: chipFill, cornerRadius: 18,
                      edge: isOwned ? 3 : 1.5, isHolographic: isShiny)
         .overlay(alignment: .topTrailing) {
@@ -53,6 +66,27 @@ struct CardChipView: View {
         .opacity(isOwned ? 1 : 0.72)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(accessibilityText)
+    }
+
+    /// Same square for every chip whether it holds a painting or an emoji, so
+    /// one キラ card in a row does not shove its neighbours out of line.
+    private var face: some View {
+        // The square comes from a clear spacer rather than from the content:
+        // an Image grows to fill a proposal but a Text does not, so putting
+        // aspectRatio on the content left emoji chips short and painted ones
+        // tall, and every mixed row went ragged.
+        Color.clear
+            .aspectRatio(1, contentMode: .fit)
+            .overlay {
+                if let shinyArt {
+                    Image(shinyArt)
+                        .resizable()
+                        .scaledToFit()
+                } else {
+                    Text(isOwned ? card.emoji : "❓")
+                        .font(.system(size: 40))
+                }
+            }
     }
 
     private var chipFill: Color {

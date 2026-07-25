@@ -175,7 +175,8 @@ func makePath(rings: [[CGPoint]], transform: CGAffineTransform) -> Path {
       "nameKana": "かに",
       "nameKanji": "蟹",
       "category": "food",        // food | landmark | nature | craft
-      "description": "つめたい うみで そだつよ"
+      "description": "つめたい うみで そだつよ",
+      "art": "card-01-1"         // 任意。カード絵がある札だけ持つ
     }
   ]
 }
@@ -183,6 +184,24 @@ func makePath(rings: [[CGPoint]], transform: CGAffineTransform) -> Path {
 
 起動時に読み込み、`prefectureCode` で辞書化する。
 `id` はセーブデータのキーになるので **一度公開したら変更しない**。
+
+### カード絵
+
+手描きのカード絵を `assets/meisanhin-cards/*-transparent.png` に置き、
+以下で asset catalog へ書き出す。出力（imageset と `art` フィールド）はコミットする。
+
+```bash
+python3 tools/build_card_art.py
+```
+
+- 480px・192 色に落とす。原画は 1254px / 2.6MB あり、そのまま入れると
+  オフライン前提のアプリに 50MB 乗る
+- 絵とカードの対応は `tools/build_card_art.py` の `ART_FOR_CARD` に**明示的に書く**。
+  ファイル名からの推測はしない。「乳製品」の絵を「蟹」の札に出すのは
+  覚えようとしている子どもに嘘をつくことになる
+- **絵は キラカードでのみ表示する。** 通常の札は絵文字のまま。
+  重複ドローが「はずれ」ではなく「絵になる」に変わるのがキラの価値
+- 絵が無い札は絵文字のまま。プレースホルダを出さない
 
 ---
 
