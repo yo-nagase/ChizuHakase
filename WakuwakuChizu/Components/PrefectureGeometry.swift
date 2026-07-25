@@ -82,6 +82,16 @@ nonisolated enum PrefectureGeometry {
         }
     }
 
+    /// Width/height of a stage once padded. Callers hand this to
+    /// `.aspectRatio` so the sea panel hugs the map instead of leaving a tall
+    /// empty box around it — the fit is uniform either way, this just stops the
+    /// letterboxing from being visible.
+    static func aspectRatio(of prefectures: [Prefecture]) -> CGFloat {
+        let bounds = boundingBox(of: prefectures)
+        guard bounds.width > 0, bounds.height > 0 else { return 1 }
+        return bounds.width / bounds.height
+    }
+
     /// Aspect-fit `bounds` into `size`, padded. Uniform scale on both axes —
     /// stretching would distort shapes children are learning to recognise.
     static func fitTransform(
