@@ -31,6 +31,9 @@ final class VoiceInputService {
     private let engine = AVAudioEngine()
     private var request: SFSpeechAudioBufferRecognitionRequest?
     private var task: SFSpeechRecognitionTask?
+    /// Held here rather than captured by the recognition handler, which has to
+    /// stay non-isolated and so cannot carry a main-actor closure across.
+    private var onResult: ((String) -> Void)?
 
     /// Contextual vocabulary: the answer is always one of 47 fixed words.
     private var vocabulary: [String] = []
@@ -48,20 +51,33 @@ final class VoiceInputService {
         return recognizer.supportsOnDeviceRecognition
     }
 
+    /// Asks for the two permissions the mode needs, in order.
+    ///
+    /// Every handler here is `@Sendable` on purpose. This type is MainActor
+    /// isolated, and the project compiles with MainActor-by-default, so a bare
+    /// closure literal inherits that isolation — but TCC calls these back on its
+    /// own queue, and Swift 6 checks the executor before running the body. The
+    /// result was a hard crash in `dispatch_assert_queue` the first time a child
+    /// switched the mode on. `@Sendable` makes the closure non-isolated, which
+    /// is the truth: it runs wherever the system calls it.
     func requestAccess() async {
         guard isPossibleOnThisDevice else {
             availability = .unsupported
             return
         }
         let speech = await withCheckedContinuation { continuation in
-            SFSpeechRecognizer.requestAuthorization { continuation.resume(returning: $0) }
+            SFSpeechRecognizer.requestAuthorization { @Sendable status in
+                continuation.resume(returning: status)
+            }
         }
         guard speech == .authorized else {
             availability = .denied
             return
         }
         let mic = await withCheckedContinuation { continuation in
-            AVAudioApplication.requestRecordPermission { continuation.resume(returning: $0) }
+            AVAudioApplication.requestRecordPermission { @Sendable granted in
+                continuation.resume(returning: granted)
+            }
         }
         availability = mic ? .available : .denied
     }
@@ -78,6 +94,7 @@ final class VoiceInputService {
         request.shouldReportPartialResults = true
         request.contextualStrings = vocabulary
         self.request = request
+        self.onResult = onResult
 
         do {
             try AVAudioSession.sharedInstance().setCategory(.record, mode: .measurement,
@@ -86,28 +103,43 @@ final class VoiceInputService {
 
             let input = engine.inputNode
             input.removeTap(onBus: 0)
+            // The tap runs on the audio render thread, which is the one place
+            // that must never wait for the main actor. Handing the buffer
+            // straight to the request is what the API is designed for; the
+            // unsafe annotation is the acknowledgement that this reference
+            // crosses threads deliberately.
+            nonisolated(unsafe) let sink = request
             input.installTap(onBus: 0, bufferSize: 1024, format: input.outputFormat(forBus: 0)) {
-                buffer, _ in
-                request.append(buffer)
+                @Sendable buffer, _ in
+                sink.append(buffer)
             }
             engine.prepare()
             try engine.start()
             isListening = true
 
-            task = recognizer.recognitionTask(with: request) { [weak self] result, error in
-                guard let self else { return }
-                if let result {
-                    self.transcript = result.bestTranscription.formattedString
-                    onResult(self.transcript)
-                }
-                if error != nil || result?.isFinal == true {
-                    self.stop()
+            task = recognizer.recognitionTask(with: request) { @Sendable [weak self] result, error in
+                // Called on Speech's own queue. Nothing here may touch self
+                // directly — only Sendable values cross, and the state change
+                // hops back to the main actor.
+                let heard = result?.bestTranscription.formattedString
+                let finished = error != nil || result?.isFinal == true
+                Task { @MainActor in
+                    self?.receive(heard: heard, finished: finished)
                 }
             }
         } catch {
             Self.log.error("could not start listening: \(error.localizedDescription, privacy: .public)")
             stop()
         }
+    }
+
+    /// Main-actor landing point for whatever the recogniser heard.
+    private func receive(heard: String?, finished: Bool) {
+        if let heard {
+            transcript = heard
+            onResult?(heard)
+        }
+        if finished { stop() }
     }
 
     func stop() {
@@ -119,6 +151,7 @@ final class VoiceInputService {
         task?.cancel()
         request = nil
         task = nil
+        onResult = nil
         isListening = false
         try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
     }
