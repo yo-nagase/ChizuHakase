@@ -30,10 +30,14 @@ struct CardFaceView: View {
 
     @Environment(\.textMode) private var mode
 
-    /// How far the enlarged card leans. Lives here because the highlight is
-    /// positioned as a fraction of it, so the angle and the reflection cannot
-    /// drift apart.
-    static let maxTilt: CGFloat = 14
+    /// How far the enlarged card leans. Lives here because the highlight and the
+    /// visible edge are both positioned from it, so the angle, the reflection and
+    /// the thickness cannot drift apart.
+    ///
+    /// 26° is steep enough to look at the card side-on. It was 14°, which kept
+    /// the face undistorted but also kept it looking like a printed rectangle
+    /// rather than an object being turned over.
+    static let maxTilt: CGFloat = 26
 
     /// Trading-card proportions, at every size.
     static let aspectRatio: CGFloat = 0.7
@@ -64,6 +68,11 @@ struct CardFaceView: View {
         var emojiSize: CGFloat
         var windowRadius: CGFloat
         var plateVerticalPadding: CGFloat
+        /// How thick the card is, in points. Exaggerated — a real trading card at
+        /// 300pt wide would be under 2pt, which reads as paper rather than as an
+        /// object you can turn over. Zero on a chip: a card lying on the album
+        /// page shows its thickness as the sticker shadow already.
+        var thickness: CGFloat
         /// The description and the collector number.
         var showsSmallPrint: Bool
         var shadowColor: Color
@@ -74,7 +83,7 @@ struct CardFaceView: View {
         static let full = Metrics(
             border: 11, outerRadius: 12, panelRadius: 7, panelPadding: 12,
             spacing: 8, categorySize: 15, prefectureSize: 16, nameSize: 21,
-            emojiSize: 88, windowRadius: 5, plateVerticalPadding: 7,
+            emojiSize: 88, windowRadius: 5, plateVerticalPadding: 7, thickness: 9,
             showsSmallPrint: true,
             shadowColor: .black.opacity(0.35), shadowRadius: 20, shadowY: 12)
 
@@ -84,7 +93,7 @@ struct CardFaceView: View {
         static let chip = Metrics(
             border: 5, outerRadius: 9, panelRadius: 5, panelPadding: 6,
             spacing: 3, categorySize: 12, prefectureSize: 10, nameSize: 14,
-            emojiSize: 40, windowRadius: 3, plateVerticalPadding: 4,
+            emojiSize: 40, windowRadius: 3, plateVerticalPadding: 4, thickness: 0,
             showsSmallPrint: false,
             shadowColor: Palette.stickerShadow, shadowRadius: 0, shadowY: 2)
     }
@@ -125,7 +134,34 @@ struct CardFaceView: View {
                     .strokeBorder(Palette.foilEdge, lineWidth: 1)
             }
         }
+        .background { edge }
         .shadow(color: metrics.shadowColor, radius: metrics.shadowRadius, y: metrics.shadowY)
+    }
+
+    // MARK: - Thickness
+
+    /// The card as a slab rather than a plane.
+    ///
+    /// One shape behind the face rather than a stack of layers: the face covers
+    /// all of it except the strip along whichever side has turned away, and that
+    /// strip is what an edge is. The offset is `tan` of the angle, not `sin`,
+    /// because it is applied in the card's own plane — the rotation the caller
+    /// applies then foreshortens it back to the right width on screen.
+    @ViewBuilder private var edge: some View {
+        if metrics.thickness > 0 {
+            RoundedRectangle(cornerRadius: metrics.outerRadius, style: .continuous)
+                .fill(Palette.cardCore)
+                .offset(edgeOffset)
+        }
+    }
+
+    private var edgeOffset: CGSize {
+        let t = metrics.thickness
+        func lean(_ degrees: CGFloat) -> CGFloat { tan(degrees * .pi / 180) * t }
+        // Even at rest a little of the bottom edge shows, the way it does on a
+        // card lying face up on a table. Without it the card is a plane until
+        // someone thinks to turn it.
+        return CGSize(width: -lean(tilt.width), height: lean(tilt.height) + t * 0.3)
     }
 
     // MARK: - Stock

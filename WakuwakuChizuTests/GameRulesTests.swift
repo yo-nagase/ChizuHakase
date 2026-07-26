@@ -197,7 +197,7 @@ struct GameRulesTests {
     @Test func fullSetPromotesToShiny() {
         var rng = SeededGenerator(seed: 7)
         let owned = ["01-1": 1, "01-2": 1, "01-3": 1]
-        let draw = try? #require(GameRules.drawCard(from: Self.sample, owned: owned, using: &rng))
+        let draw = GameRules.drawCard(from: Self.sample, owned: owned, using: &rng)
         if case .shiny = draw {} else {
             Issue.record("expected a shiny promotion, got \(String(describing: draw))")
         }

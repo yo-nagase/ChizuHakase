@@ -18,13 +18,11 @@ struct CardDetailView: View {
 
     /// Live tilt, in degrees. x is pitch, y is yaw.
     @State private var tilt: CGSize = .zero
-    /// Pinch magnification, 1...3.
+    /// Pinch zoom and where the zoomed card has been dragged to, driven by the
+    /// same `ZoomPan` the map uses.
     @State private var zoom: CGFloat = 1
-    @GestureState private var pinch: CGFloat = 1
+    @State private var pan: CGSize = .zero
     @State private var appeared = false
-
-    private static let maxZoom: CGFloat = 3
-    private var liveZoom: CGFloat { min(max(zoom * pinch, 1), Self.maxZoom) }
 
     /// Debug builds can start the card already leaning, so the tilted state can
     /// be looked at in a screenshot. A gesture-driven pose is otherwise
@@ -60,7 +58,11 @@ struct CardDetailView: View {
                 CardFaceView(card: card, prefecture: prefecture,
                              ownedCount: ownedCount, tilt: tilt)
                     .frame(maxWidth: 300)
-                    .scaleEffect(liveZoom)
+                    // Pinch to look closer and drag to choose what you are
+                    // looking closer at, on the same terms as the map: the zoom
+                    // holds the point between the fingers, and the pan cannot
+                    // push the card out of its own frame.
+                    .zoomPan(scale: $zoom, offset: $pan)
                     .rotation3DEffect(.degrees(tilt.height), axis: (x: 1, y: 0, z: 0),
                                       perspective: 0.6)
                     .rotation3DEffect(.degrees(tilt.width), axis: (x: 0, y: 1, z: 0),
@@ -71,8 +73,12 @@ struct CardDetailView: View {
                     .scaleEffect(appeared ? 1 : 0.62)
                     .blur(radius: appeared ? 0 : 14)
                     .opacity(appeared ? 1 : 0)
-                    .gesture(magnifyGesture)
-                    .simultaneousGesture(tiltGesture)
+                    // Turning and panning are both one-finger drags, so only one
+                    // of them can be live. Zoomed in, the drag moves the card:
+                    // having asked to look closer at something, the child's next
+                    // move is to say at what — and a card leaning at 26° while
+                    // magnified three times is not a view of anything.
+                    .simultaneousGesture(ZoomPan.isZoomed(zoom) ? nil : tiltGesture)
 
                 Spacer(minLength: 18)
 
@@ -101,10 +107,12 @@ struct CardDetailView: View {
             .onChanged { value in
                 guard !reduceMotion else { return }
                 tilt = CGSize(
-                    width: clamp(value.translation.width / 8),
+                    // /6 rather than /8: the limit went up to 26°, and at the
+                    // old rate reaching it took most of the screen width.
+                    width: clamp(value.translation.width / 6),
                     // Dragging down should lean the top away, like pushing the
                     // far edge of a card flat on a table.
-                    height: clamp(-value.translation.height / 8))
+                    height: clamp(-value.translation.height / 6))
             }
             .onEnded { _ in
                 guard !reduceMotion else { return }
@@ -117,15 +125,6 @@ struct CardDetailView: View {
     /// its highlight as a fraction of it.
     private func clamp(_ value: CGFloat) -> CGFloat {
         min(max(value, -CardFaceView.maxTilt), CardFaceView.maxTilt)
-    }
-
-    /// Pinch to look closer. The magnification is kept rather than sprung back:
-    /// this is a viewer, and something zoomed into on purpose should stay that
-    /// way until it is put down.
-    private var magnifyGesture: some Gesture {
-        MagnifyGesture()
-            .updating($pinch) { value, state, _ in state = value.magnification }
-            .onEnded { value in zoom = min(max(zoom * value.magnification, 1), Self.maxZoom) }
     }
 
     /// Reverses the arrival, then dismisses. Without it the card vanishes on

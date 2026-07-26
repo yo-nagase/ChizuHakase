@@ -111,6 +111,44 @@ final class CardBookUITests: XCTestCase {
         XCTAssertTrue(grew, "pinching did not enlarge the card")
     }
 
+    /// Zoomed in, a drag moves the card instead of turning it. Having asked to
+    /// look closer, the next thing a child says is *at what* — and the turn
+    /// gesture is the same one finger, so only one of them can be live.
+    func testTheZoomedCardCanBeMoved() {
+        launch(at: "cardBook", withCards: true)
+        let card = app.buttons["かに"]
+        XCTAssertTrue(card.waitForExistence(timeout: 10))
+        card.tap()
+
+        let caption = app.staticTexts["かに"].firstMatch
+        XCTAssertTrue(caption.waitForExistence(timeout: 3))
+        let before = caption.frame.width
+
+        // The pan is deliberately not attached at rest, so it can only be
+        // exercised after the zoom has actually taken.
+        var zoomed = false
+        for _ in 0..<2 where !zoomed {
+            app.pinch(withScale: 2.5, velocity: 2)
+            for _ in 0..<15 where !zoomed {
+                zoomed = app.staticTexts["かに"].firstMatch.frame.width > before * 1.2
+                if !zoomed { Thread.sleep(forTimeInterval: 0.2) }
+            }
+        }
+        XCTAssertTrue(zoomed, "could not zoom in, so the pan cannot be tested")
+
+        let start = app.staticTexts["かに"].firstMatch.frame.midY
+        app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+            .press(forDuration: 0.1,
+                   thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.22)))
+
+        var moved = false
+        for _ in 0..<15 where !moved {
+            moved = abs(app.staticTexts["かに"].firstMatch.frame.midY - start) > 40
+            if !moved { Thread.sleep(forTimeInterval: 0.2) }
+        }
+        XCTAssertTrue(moved, "dragging the zoomed card did not move it")
+    }
+
     /// An unowned slot must not open. There is nothing behind a 「？」, and a
     /// tap that produces an empty card is a small lie.
     func testAnUnownedSlotDoesNotOpen() {

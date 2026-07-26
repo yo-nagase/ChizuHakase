@@ -109,6 +109,14 @@ nonisolated enum Palette {
     /// The lit edge of cut foil.
     static let foilEdge = Color(hex: 0xFFF6D2)
 
+    /// The cut edge of the card — its thickness, seen when it is turned.
+    ///
+    /// Paper, not stock: what is printed on the face does not run through the
+    /// board, and a cut edge shows the core. One colour for all three stocks for
+    /// the same reason. It reads as thickness where a darker shade of the stock
+    /// itself only read as a shadow.
+    static let cardCore = Color(hex: 0xE3D9C6)
+
     static let stickerEdgeWidth: CGFloat = 3.5
     static let stickerShadow = Color(hex: 0x6B5B4A).opacity(0.28)
 
