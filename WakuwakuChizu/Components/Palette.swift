@@ -76,6 +76,13 @@ nonisolated enum Palette {
         AngularGradient(colors: prefectureFills + [prefectureFills[0]],
                         center: .center)
     }
+
+    /// The same shine as a straight band, for a surface that tilts: an angular
+    /// gradient pinned to the centre would spin rather than slide, which is not
+    /// how light moves across a card.
+    static var holographicBand: [Color] {
+        [.clear] + prefectureFills.map { $0.opacity(0.9) } + [.clear]
+    }
 }
 
 nonisolated extension Color {

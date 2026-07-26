@@ -6,6 +6,10 @@ struct CardChipView: View {
     /// 0 = not collected yet, 1 = owned, 2 = shiny.
     var ownedCount: Int = 1
     var showsDescription = true
+    /// Set to open the card on its own. Nil leaves the chip inert, which is
+    /// what the result screen wants — nothing there should lead away from the
+    /// celebration mid-flow.
+    var onOpen: (() -> Void)?
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.textMode) private var mode
@@ -62,6 +66,9 @@ struct CardChipView: View {
         .opacity(isOwned ? 1 : 0.72)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(accessibilityText)
+        // Only a card you own opens: there is nothing to look at behind a 「？」,
+        // and a slot that responds to a tap by showing nothing is a small lie.
+        .modifier(OpenOnTap(action: isOwned ? onOpen : nil))
     }
 
     /// The caption under the face.
@@ -137,4 +144,22 @@ private struct ShinyTwinkle: ViewModifier {
     }
     .padding()
     .background(Palette.background)
+}
+
+
+/// Makes a chip openable without turning it into a Button, which would inherit
+/// button styling the chip already draws for itself.
+private struct OpenOnTap: ViewModifier {
+    let action: (() -> Void)?
+
+    func body(content: Content) -> some View {
+        if let action {
+            content
+                .contentShape(Rectangle())
+                .onTapGesture(perform: action)
+                .accessibilityAddTraits(.isButton)
+        } else {
+            content
+        }
+    }
 }

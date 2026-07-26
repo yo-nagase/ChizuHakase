@@ -13,9 +13,13 @@ struct CardBookView: View {
     var initialFilter: CardFilter = .all
 
     @State private var filter: CardFilter?
+    @State private var opened: SpecialtyCard?
 
     private var save: SaveData { app.save.data }
     private var active: CardFilter { filter ?? initialFilter }
+    private var isOpeningOneCard: Bool {
+        if case .card = active { true } else { false }
+    }
 
     private var groups: [(prefecture: Prefecture, cards: [SpecialtyCard])] {
         app.mapData.prefectures.compactMap { pref in
@@ -26,7 +30,7 @@ struct CardBookView: View {
 
     private func matches(_ card: SpecialtyCard) -> Bool {
         switch active {
-        case .all: true
+        case .all, .card: true
         case .category(let c): card.category == c
         case .shiny: save.isShiny(card.id)
         }
@@ -49,6 +53,16 @@ struct CardBookView: View {
         .background(AlbumPage())
         .navigationTitle(mode.cardBook)
         .navigationBarTitleDisplayMode(.inline)
+        .task {
+            if case .card(let id) = initialFilter { opened = app.cards[id] }
+        }
+        .fullScreenCover(item: $opened) { card in
+            CardDetailView(card: card,
+                           prefecture: app.mapData[card.prefectureCode],
+                           ownedCount: save.ownedCount(of: card.id))
+                .environment(\.textMode, mode)
+                .presentationBackground(.clear)
+        }
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Text("\(save.totalOwnedCards) / \(app.cards.count)")
@@ -62,7 +76,8 @@ struct CardBookView: View {
     private var filterBar: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
-                chip(title: mode.allCategories, isOn: active == .all) { filter = .all }
+                chip(title: mode.allCategories,
+                     isOn: active == .all || isOpeningOneCard) { filter = .all }
                 // Ahead of the categories: it is the one a child arrives here
                 // looking for, and the one they will want to switch back to.
                 chip(title: "✨ \(mode.sparklingCount)", isOn: active == .shiny) {
@@ -121,7 +136,9 @@ struct CardBookView: View {
             LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10),
                                      count: typeSize.cardColumns), spacing: 10) {
                 ForEach(cards) { card in
-                    CardChipView(card: card, ownedCount: save.ownedCount(of: card.id))
+                    CardChipView(card: card,
+                                 ownedCount: save.ownedCount(of: card.id),
+                                 onOpen: { opened = card })
                 }
             }
         }
@@ -136,4 +153,7 @@ nonisolated enum CardFilter: Hashable, Sendable {
     /// The ones already turned キラ — the payoff, and what the title screen's
     /// ✨ count is counting.
     case shiny
+    /// Everything, opened straight onto one card. Debug only, for looking at
+    /// the detail view without tapping through the book to find it.
+    case card(String)
 }

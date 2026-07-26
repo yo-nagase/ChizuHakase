@@ -51,6 +51,16 @@ struct RootView: View {
         #if DEBUG
         let arguments = ProcessInfo.processInfo.arguments
         if arguments.contains("-resetSave") { app.save.eraseAll() }
+        // Enough of a collection to exercise the book: one plain card and one
+        // キラ. Owning nothing hides every name behind 「？」, which is correct
+        // but leaves nothing to open.
+        if arguments.contains("-grantCards") {
+            app.save.applyStageResult(StageResult(
+                mode: .findOnMap, stageIndex: 0, score: 0, stars: 3,
+                firstTryByPrefecture: [:],
+                cardDraws: app.cards["01-1"].map { [.new($0)] } ?? []
+                    + (app.cards["04-2"].map { [GameRules.CardDraw.shiny($0)] } ?? [])))
+        }
         guard let index = arguments.firstIndex(of: "-startAt"),
               index + 1 < arguments.count else { return }
         switch arguments[index + 1] {
@@ -58,6 +68,10 @@ struct RootView: View {
         case "myMap": path = [.myMap]
         case "cardBook": path = [.cardBook(filter: .all)]
         case "cardBook:shiny": path = [.cardBook(filter: .shiny)]
+        // Opens straight onto one card, so the detail view can be looked
+        // at without tapping through the book to reach it.
+        case let value where value.hasPrefix("card:"):
+            path = [.cardBook(filter: .card(String(value.dropFirst(5))))]
         case let value where value.hasPrefix("quiz:"):
             if let i = Int(value.dropFirst(5)) {
                 let mode: QuizMode = arguments.contains("-nameIt") ? .nameIt : .findOnMap
