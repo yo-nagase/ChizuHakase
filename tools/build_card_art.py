@@ -94,6 +94,9 @@ ART_FOR_CARD = {
     "kochi-katsuo-tataki": "39-1",   # 鰹のたたき
     "fukuoka-mentaiko": "40-1",      # 明太子
     "saga-aritayaki": "41-1",        # 有田焼
+    "nagasaki-castella": "42-1",     # カステラ
+    "kumamoto-karashi-renkon": "43-3",  # 辛子蓮根
+    "oita-kabosu": "44-3",           # かぼす
     "miyazaki-mango": "45-1",        # マンゴー
     "kagoshima-kurobuta": "46-2",    # 黒豚
     "okinawa-pineapple": "47-2",     # パイナップル

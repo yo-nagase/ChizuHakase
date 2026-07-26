@@ -1156,7 +1156,8 @@
       "nameKana": "かすてら",
       "nameKanji": "カステラ",
       "category": "food",
-      "description": "ふんわり あまい きいろの ケーキ"
+      "description": "ふんわり あまい きいろの ケーキ",
+      "art": "card-42-1"
     },
     {
       "id": "42-2",
@@ -1201,7 +1202,8 @@
       "nameKana": "からしれんこん",
       "nameKanji": "辛子蓮根",
       "category": "food",
-      "description": "あなに からしを つめる"
+      "description": "あなに からしを つめる",
+      "art": "card-43-3"
     },
     {
       "id": "44-1",
@@ -1228,7 +1230,8 @@
       "nameKana": "かぼす",
       "nameKanji": "かぼす",
       "category": "food",
-      "description": "りょうりに かけると おいしい"
+      "description": "りょうりに かけると おいしい",
+      "art": "card-44-3"
     },
     {
       "id": "45-1",
