@@ -159,21 +159,58 @@ struct CardDetailView: View {
         }
         .aspectRatio(0.7, contentMode: .fit)
         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .overlay {
+            // Cut foil is lit along its whole edge. Printed board is not, so
+            // only キラ gets the rim.
+            if isShiny {
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .strokeBorder(Palette.foilEdge, lineWidth: 1)
+            }
+        }
         .shadow(color: .black.opacity(0.35), radius: 20, y: 12)
     }
 
-    /// The card stock. Gold for キラ, the prefecture's colour otherwise, darker
-    /// toward the bottom so the border reads as a printed edge and not a flat
-    /// rectangle behind the panel.
-    private var stock: some View {
-        let base = isShiny ? Palette.gold : Palette.fill(for: card.prefectureCode)
-        return LinearGradient(colors: [base, base.opacity(0.72)],
-                              startPoint: .topLeading, endPoint: .bottomTrailing)
-            .overlay(alignment: .topLeading) {
-                // A gloss on the corner, as printed card stock has.
-                RadialGradient(colors: [.white.opacity(0.55), .clear],
-                               center: .topLeading, startRadius: 0, endRadius: 190)
-            }
+    /// The card stock — the border the panel sits on, and the one place the
+    /// difference between a plain card and a キラ has to be obvious at a glance.
+    ///
+    /// キラ is foil: an opaque gold ramp with a highlight that slides across as
+    /// the card turns. Plain cards are matte board, and nothing on them moves.
+    ///
+    /// Both halves had to change together. The plain stock used to be the
+    /// prefecture's own colour, and the warm end of that palette is gold enough
+    /// to blur the distinction however bright the foil gets. The prefecture's
+    /// colour is still on the mat and the name plate inside, where it is
+    /// identifying the card rather than competing with its rarity.
+    @ViewBuilder private var stock: some View {
+        if isShiny {
+            LinearGradient(stops: Palette.foilRamp,
+                           startPoint: .topLeading, endPoint: .bottomTrailing)
+                .overlay { glint }
+        } else {
+            LinearGradient(colors: [Palette.cardBoard, Palette.cardBoardDeep],
+                           startPoint: .top, endPoint: .bottom)
+        }
+    }
+
+    /// The specular streak on foil.
+    ///
+    /// Bound to the yaw rather than animating on its own: a card that shines by
+    /// itself is a screen effect, while one that shines when it is turned is a
+    /// surface. It also means Reduce Motion needs no special case — the tilt
+    /// never leaves zero there, so the highlight simply sits still.
+    private var glint: some View {
+        // Clamped away from the edges so the band always has room for its full
+        // width, and the streak never degenerates into a hard line at a corner.
+        let centre = min(max(0.5 + tilt.width / Self.maxTilt * 0.4, 0.16), 0.84)
+        return LinearGradient(
+            // Not brighter: plusLighter over the ramp's own light stops clips to
+            // white, and a white streak on gold is chrome, not gold.
+            stops: [.init(color: .clear, location: centre - 0.16),
+                    .init(color: .white.opacity(0.45), location: centre),
+                    .init(color: .clear, location: centre + 0.16)],
+            startPoint: .topTrailing, endPoint: .bottomLeading)
+            .blendMode(.plusLighter)
+            .allowsHitTesting(false)
     }
 
     private var topRow: some View {
@@ -245,21 +282,27 @@ struct CardDetailView: View {
         }
     }
 
-    /// The shine, and the reason tilting is worth doing at all.
+    /// The shine over the picture, and the reason tilting is worth doing at all.
     ///
-    /// It slides across as the card turns, so the highlight belongs to the
-    /// angle rather than being a decal printed on the face. Plain cards get a
-    /// faint white version of the same thing — glass catches light too.
+    /// It slides across as the card turns, so the highlight belongs to the angle
+    /// rather than being a decal printed on the face.
+    ///
+    /// キラ only. A plain card used to carry a faint white version of this on the
+    /// theory that glass catches light too, but the two cards then differed by
+    /// how much they shone rather than by whether they shone — and "less shiny"
+    /// is a comparison a child can only make with both cards side by side.
     @ViewBuilder private var sheen: some View {
-        let shift = tilt.width / Self.maxTilt
-        LinearGradient(
-            colors: isShiny ? Palette.holographicBand : [.white.opacity(0.35), .clear],
-            startPoint: UnitPoint(x: 0.1 + shift * 0.5, y: 0),
-            endPoint: UnitPoint(x: 0.9 + shift * 0.5, y: 1))
-        // Enough to read as foil while it slides, not so much that the
-        // illustration underneath changes colour at rest.
-        .opacity(isShiny ? 0.24 : 0.14)
-        .blendMode(.plusLighter)
-        .allowsHitTesting(false)
+        if isShiny {
+            let shift = tilt.width / Self.maxTilt
+            LinearGradient(
+                colors: Palette.holographicBand,
+                startPoint: UnitPoint(x: 0.1 + shift * 0.5, y: 0),
+                endPoint: UnitPoint(x: 0.9 + shift * 0.5, y: 1))
+            // Enough to read as foil while it slides, not so much that the
+            // illustration underneath changes colour at rest.
+            .opacity(0.24)
+            .blendMode(.plusLighter)
+            .allowsHitTesting(false)
+        }
     }
 }

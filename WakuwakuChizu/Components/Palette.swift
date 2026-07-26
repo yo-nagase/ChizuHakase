@@ -66,6 +66,38 @@ nonisolated enum Palette {
     /// Die-cut border. Every sticker in the app shares this white edge.
     static let dieCut = Color.white
 
+    // MARK: - Card stock
+
+    /// A plain card's board, and the deeper shade at its bottom edge.
+    ///
+    /// Cool on purpose. キラ is gold foil, and the warm half of the §9
+    /// prefecture palette (0xFFCC80, 0xFFF176) passes for gold at card size —
+    /// a plain 北海道 card sat beside a キラ and read as the same thing. Taken
+    /// from the sea the map already floats in, so no new hue enters the app.
+    static let cardBoard     = Color(hex: 0x8AC8E0)
+    static let cardBoardDeep = Color(hex: 0x5F9DBE)
+
+    /// Gold foil, as metal rather than as a yellow rectangle: dark where the
+    /// stock turns away from the light, blown out where it faces it. Every stop
+    /// is opaque — the ramp used to end on a translucent gold and the black
+    /// backdrop showed through, which is what made the bottom of a キラ card
+    /// look brown instead of bright.
+    /// The dark stops stay amber rather than going to true shadow: at 11pt of
+    /// border a stop near 0x8A5A10 landed as one brown corner, and brown is not
+    /// a shade of gold to a six-year-old.
+    static let foilRamp: [Gradient.Stop] = [
+        .init(color: Color(hex: 0xA97318), location: 0.00),
+        .init(color: Color(hex: 0xF2CE63), location: 0.16),
+        .init(color: Color(hex: 0xFFF6D2), location: 0.30),
+        .init(color: Color(hex: 0xD9A32B), location: 0.48),
+        .init(color: Color(hex: 0xFFEDB0), location: 0.68),
+        .init(color: Color(hex: 0xC8871B), location: 0.86),
+        .init(color: Color(hex: 0x996612), location: 1.00),
+    ]
+
+    /// The lit edge of cut foil.
+    static let foilEdge = Color(hex: 0xFFF6D2)
+
     static let stickerEdgeWidth: CGFloat = 3.5
     static let stickerShadow = Color(hex: 0x6B5B4A).opacity(0.28)
 
