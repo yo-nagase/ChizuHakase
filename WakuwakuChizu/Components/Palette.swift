@@ -56,6 +56,11 @@ nonisolated enum Palette {
     /// got thin enough that a pale colour simply disappeared.
     static let boundary = Color(hex: 0x9B9384)
 
+    /// 朱. The colour of a stamped seal, and the only new ink the card design
+    /// needed. Deliberately not `red`, which means "hint" everywhere else and
+    /// would make a mark of provenance read as a warning.
+    static let seal = Color(hex: 0xC8402F)
+
     /// The two progress hues that are not already tokens, both taken from the
     /// §9 prefecture palette so the title screen introduces no new colours.
     /// Green is the same one the mastery ramp climbs through, so a filling bar

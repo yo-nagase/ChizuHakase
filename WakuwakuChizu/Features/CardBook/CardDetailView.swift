@@ -51,6 +51,7 @@ struct CardDetailView: View {
             VStack(spacing: 18) {
                 cardFace
                     .frame(maxWidth: 300)
+                    .aspectRatio(0.72, contentMode: .fit)
                     .rotation3DEffect(.degrees(tilt.height), axis: (x: 1, y: 0, z: 0),
                                       perspective: 0.6)
                     .rotation3DEffect(.degrees(tilt.width), axis: (x: 0, y: 1, z: 0),
@@ -96,120 +97,150 @@ struct CardDetailView: View {
 
     // MARK: - The card itself
 
-    /// Built the way a printed card is: coloured stock, an inset panel, a matted
-    /// window for the picture, a name plate under it, and a number in the
-    /// corner. The chips in the book are tiles — this is the object they stand
-    /// for, so it is worth the layers.
+    /// A 掛け紙 rather than a trading-card template.
+    ///
+    /// The previous face was the dictionary definition of a card — coloured
+    /// border, title bar, matted window, name plate, star rating, numbered
+    /// footer — every element a centred box stacked on the last. It also said
+    /// everything twice: the painting already prints 「宮城県 ずんだ餅」 inside its
+    /// own frame, and the card repeated both around it.
+    ///
+    /// This is the printed paper the subject actually comes wrapped in: a
+    /// vertical title strip, the picture running to the edges, a seal, and a
+    /// double rule. The frame now supplies only what the painting lacks — the
+    /// *reading*, in kana, for a child who cannot read the kanji in the art.
     private var cardFace: some View {
-        ZStack {
-            stock
-            VStack(spacing: 8) {
-                topRow
-                artWindow
-                namePlate
-                Text(card.description)
-                    .font(AppFont.rounded(13, relativeTo: .caption))
-                    .foregroundStyle(Palette.ink.opacity(0.7))
-                    .multilineTextAlignment(.center)
-                    .lineLimit(2)
-                    .frame(maxWidth: .infinity)
-                footer
+        HStack(spacing: 0) {
+            titleStrip
+            VStack(alignment: .leading, spacing: 0) {
+                picture
+                nameBlock
             }
-            .padding(12)
-            .background(
-                RoundedRectangle(cornerRadius: 7, style: .continuous)
-                    .fill(Palette.page)
-            )
-            // The inset is what turns the outer colour into a border rather
-            // than a background.
-            .padding(11)
         }
-        .aspectRatio(0.7, contentMode: .fit)
-        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-        .shadow(color: .black.opacity(0.35), radius: 20, y: 12)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .background(Palette.page)
+        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+        .overlay { doubleRule }
+        .shadow(color: .black.opacity(0.3), radius: 14, y: 8)
     }
 
-    /// The card stock. Gold for キラ, the prefecture's colour otherwise, darker
-    /// toward the bottom so the border reads as a printed edge and not a flat
-    /// rectangle behind the panel.
-    private var stock: some View {
-        let base = isShiny ? Palette.gold : Palette.fill(for: card.prefectureCode)
-        return LinearGradient(colors: [base, base.opacity(0.72)],
-                              startPoint: .topLeading, endPoint: .bottomTrailing)
-            .overlay(alignment: .topLeading) {
-                // A gloss on the corner, as printed card stock has.
-                RadialGradient(colors: [.white.opacity(0.55), .clear],
-                               center: .topLeading, startRadius: 0, endRadius: 190)
+    /// The prefecture, set vertically down the spine.
+    ///
+    /// In kana on purpose: the painting says 宮城県 in kanji, so this adds the
+    /// reading instead of repeating the word. Vertical because that is how a
+    /// label on Japanese packaging runs, and because it puts the one piece of
+    /// text a child scans for on an axis nothing else uses.
+    private var titleStrip: some View {
+        VStack(spacing: 2) {
+            ForEach(Array((prefecture?.kana ?? "").enumerated()), id: \.offset) { _, ch in
+                Text(String(ch))
+                    .font(AppFont.heading(15, relativeTo: .subheadline))
+                    // Ink, not white: the palette is eight pastels and white on
+                    // a pastel is white on white.
+                    .foregroundStyle(Palette.ink)
             }
-    }
-
-    private var topRow: some View {
-        HStack(spacing: 6) {
-            Text(card.category.emoji)
-                .font(.system(size: 15))
-            Text(prefecture?.displayName(mode) ?? "")
-                .font(AppFont.heading(16, relativeTo: .subheadline))
-                .foregroundStyle(Palette.ink)
-                .lineLimit(1)
-                .minimumScaleFactor(0.6)
-                .tracking(0.5)
             Spacer(minLength: 0)
-            // Rarity, in the corner where a card keeps it.
-            Text(isShiny ? "★★" : "★")
-                .font(AppFont.rounded(13, relativeTo: .caption))
-                .foregroundStyle(isShiny ? Palette.gold : Palette.ink.opacity(0.28))
         }
+        .padding(.top, 16)
+        .padding(.horizontal, 7)
+        .frame(maxHeight: .infinity)
+        .background(Palette.fill(for: card.prefectureCode))
     }
 
-    /// The picture, matted and ruled like a window cut in the card.
-    private var artWindow: some View {
+    /// Runs to the top and right edges. A picture inset evenly on all four
+    /// sides is a thumbnail; one that reaches the edge is the face of the thing.
+    @ViewBuilder private var picture: some View {
         ZStack {
-            Palette.fill(for: card.prefectureCode, strength: 0.14)
+            Palette.fill(for: card.prefectureCode, strength: 0.12)
             if let art = card.art {
-                Image(art).resizable().scaledToFit().padding(4)
+                Image(art).resizable().scaledToFit()
             } else {
-                Text(card.emoji).font(.system(size: 88))
+                // Bigger than the painted cards need, because an emoji has
+                // no frame of its own to fill the window with.
+                Text(card.emoji).font(.system(size: 128))
             }
         }
-        .aspectRatio(1, contentMode: .fit)
+        // Takes whatever height is left rather than a fixed square. The square
+        // version left a band of blank paper at the foot of every card; here
+        // the tint above and below the painting reads as the mat it is.
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .clipped()
         .overlay { sheen }
-        .clipShape(RoundedRectangle(cornerRadius: 5, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: 5, style: .continuous)
-                .strokeBorder(Palette.ink.opacity(0.18), lineWidth: 1)
-        }
-        .padding(.horizontal, 2)
     }
 
-    /// The name, on a plate rather than loose on the panel — it is the card's
-    /// title, and a title on a card sits on something.
-    private var namePlate: some View {
-        Text(card.nameKana)
-            .font(AppFont.rounded(21, relativeTo: .title3))
-            .foregroundStyle(Palette.ink)
-            .lineLimit(1)
-            .minimumScaleFactor(0.5)
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 7)
-            .background(
-                RoundedRectangle(cornerRadius: 5, style: .continuous)
-                    .fill(Palette.fill(for: card.prefectureCode, strength: 0.34))
-            )
-    }
-
-    private var footer: some View {
-        HStack {
-            Text(card.category.label(mode))
-                .font(AppFont.rounded(10, relativeTo: .caption2))
-                .foregroundStyle(Palette.ink.opacity(0.45))
+    /// Left-aligned, hanging off the strip. Centred text under a centred
+    /// picture inside a centred border was most of what made the old face read
+    /// as a template.
+    /// Caption and seal side by side rather than stacked with a gap between
+    /// them. Stacking left a band of empty paper in the middle of the card,
+    /// which is the layout admitting it had run out of things to say.
+    private var nameBlock: some View {
+        HStack(alignment: .top, spacing: 10) {
+            VStack(alignment: .leading, spacing: 3) {
+                Text(card.nameKana)
+                    .font(AppFont.heading(24, relativeTo: .title2))
+                    .foregroundStyle(Palette.ink)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.5)
+                Text(card.description)
+                    .font(AppFont.rounded(12, relativeTo: .caption))
+                    .foregroundStyle(Palette.ink.opacity(0.62))
+                    .lineLimit(3)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
             Spacer(minLength: 0)
-            // A collector number. It means nothing mechanically and that is
-            // fine — it is one of the things that makes a card feel like a card.
-            Text(verbatim: "No.\(card.id)")
-                .font(AppFont.rounded(10, relativeTo: .caption2))
-                .foregroundStyle(Palette.ink.opacity(0.35))
+            seal
+        }
+        // Sized to its content, not flexible: with both this and the picture
+        // asking for the leftover height they split it, and the caption's half
+        // came out as a band of blank paper under two lines of text.
+        .frame(maxWidth: .infinity, alignment: .topLeading)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 11)
+    }
+
+    /// A seal, where a stamped mark of provenance goes. It replaces the star
+    /// rating, which was the generic videogame signifier for the same idea, and
+    /// it carries the card's number so the footer can go away entirely.
+    private var seal: some View {
+        VStack(spacing: 0) {
+            Text(card.category.label(mode))
+                .font(AppFont.heading(11, relativeTo: .caption2))
+            Text(verbatim: card.id)
+                .font(AppFont.heading(10, relativeTo: .caption2))
                 .monospacedDigit()
         }
+        .foregroundStyle(isShiny ? Palette.ink : .white)
+        .frame(width: 52, height: 52)
+        .background {
+            RoundedRectangle(cornerRadius: 7, style: .continuous)
+                .fill(isShiny ? foilFill : AnyShapeStyle(Palette.seal))
+        }
+        .rotationEffect(.degrees(-6))
+    }
+
+    /// Foil, not rainbow. Stamped gold shifts with the angle and stays one
+    /// colour; a spectrum smeared across the face is the literal reading of
+    /// "holo" and looks it.
+    private var foilFill: AnyShapeStyle {
+        let shift = tilt.width / Self.maxTilt
+        return AnyShapeStyle(LinearGradient(
+            colors: [Palette.gold, .white, Palette.gold],
+            startPoint: UnitPoint(x: 0.5 - shift, y: 0),
+            endPoint: UnitPoint(x: 1.5 - shift, y: 1)))
+    }
+
+    /// Thick-then-thin, inset from the trim. A printing convention, and the
+    /// thing a plain rounded border was standing in for.
+    private var doubleRule: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .strokeBorder(Palette.ink, lineWidth: 3.5)
+            RoundedRectangle(cornerRadius: 4, style: .continuous)
+                .strokeBorder(Palette.ink.opacity(0.8), lineWidth: 1)
+                .padding(6)
+        }
+        .allowsHitTesting(false)
     }
 
     /// The shine, and the reason tilting is worth doing at all.
@@ -219,14 +250,13 @@ struct CardDetailView: View {
     /// faint white version of the same thing — glass catches light too.
     @ViewBuilder private var sheen: some View {
         let shift = tilt.width / Self.maxTilt
-        LinearGradient(
-            colors: isShiny ? Palette.holographicBand : [.white.opacity(0.35), .clear],
-            startPoint: UnitPoint(x: 0.1 + shift * 0.5, y: 0),
-            endPoint: UnitPoint(x: 0.9 + shift * 0.5, y: 1))
-        // Enough to read as foil while it slides, not so much that the
-        // illustration underneath changes colour at rest.
-        .opacity(isShiny ? 0.24 : 0.14)
-        .blendMode(.plusLighter)
-        .allowsHitTesting(false)
+        LinearGradient(colors: [.clear, .white, .clear],
+                       startPoint: UnitPoint(x: 0.0 + shift, y: 0),
+                       endPoint: UnitPoint(x: 1.0 + shift, y: 1))
+            // A moving highlight, not a tint. The old rainbow wash turned the
+            // watercolours yellow whether or not anyone was tilting the card.
+            .opacity(isShiny ? 0.22 : 0.08)
+            .blendMode(.plusLighter)
+            .allowsHitTesting(false)
     }
 }
