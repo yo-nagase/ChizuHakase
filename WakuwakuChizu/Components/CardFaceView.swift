@@ -1,0 +1,311 @@
+import SwiftUI
+
+/// A card, at whatever size it is being shown.
+///
+/// One design, two densities. The book, the my-map sheet and the result screen
+/// used to show a sticker chip — a square of art with a caption under it — while
+/// tapping one opened a printed card with stock, a matted window and a name
+/// plate. Two objects for one thing, and the wall of stickers gave no hint that
+/// what it was collecting was cards.
+///
+/// Structure, colours and rules are shared. The densities differ only in type
+/// size and in whether the small print appears at all: at chip size a
+/// description would render around 5pt, which is texture rather than text.
+struct CardFaceView: View {
+    let card: SpecialtyCard
+    /// Printed across the top when given.
+    ///
+    /// Nil where the screen already says it: the book groups by prefecture and
+    /// the my-map sheet is about one, so naming it on the card would put the
+    /// same word three times in a row under a heading that already carries it.
+    /// The result screen and the enlarged card do name it — there, nothing else
+    /// does.
+    let prefecture: Prefecture?
+    /// 0 = not collected yet, 1 = owned, 2 = キラ.
+    let ownedCount: Int
+    var metrics: Metrics = .full
+    /// Live yaw in degrees, which the foil highlight follows. Only the enlarged
+    /// card has a gesture behind it; every other caller leaves this at zero.
+    var tilt: CGSize = .zero
+
+    @Environment(\.textMode) private var mode
+
+    /// How far the enlarged card leans. Lives here because the highlight is
+    /// positioned as a fraction of it, so the angle and the reflection cannot
+    /// drift apart.
+    static let maxTilt: CGFloat = 14
+
+    /// Trading-card proportions, at every size.
+    static let aspectRatio: CGFloat = 0.7
+
+    private var isOwned: Bool { ownedCount > 0 }
+    private var isShiny: Bool { ownedCount >= GameRules.maxCardCopies }
+
+    /// The painted card, shown only once this one has gone キラ (CLAUDE.md §4).
+    ///
+    /// Holding the picture back until then is what makes a duplicate draw feel
+    /// like a win instead of a consolation: the emoji card the child already has
+    /// turns into the real thing. Cards without art keep the emoji.
+    private var shinyArt: String? { isShiny ? card.art : nil }
+
+    struct Metrics {
+        /// How much stock shows around the panel — the border, in other words.
+        var border: CGFloat
+        var outerRadius: CGFloat
+        var panelRadius: CGFloat
+        var panelPadding: CGFloat
+        var spacing: CGFloat
+        /// The category mark. Held at a readable size rather than scaled with the
+        /// rest: at chip density it is the only thing in the top-left corner, and
+        /// a 9pt emoji there reads as a smudge.
+        var categorySize: CGFloat
+        var prefectureSize: CGFloat
+        var nameSize: CGFloat
+        var emojiSize: CGFloat
+        var windowRadius: CGFloat
+        var plateVerticalPadding: CGFloat
+        /// The description and the collector number.
+        var showsSmallPrint: Bool
+        var shadowColor: Color
+        var shadowRadius: CGFloat
+        var shadowY: CGFloat
+
+        /// Held up on its own.
+        static let full = Metrics(
+            border: 11, outerRadius: 12, panelRadius: 7, panelPadding: 12,
+            spacing: 8, categorySize: 15, prefectureSize: 16, nameSize: 21,
+            emojiSize: 88, windowRadius: 5, plateVerticalPadding: 7,
+            showsSmallPrint: true,
+            shadowColor: .black.opacity(0.35), shadowRadius: 20, shadowY: 12)
+
+        /// One of three across a grid. Keeps the app's solid sticker shadow
+        /// rather than the enlarged card's soft one: a card lying on the page is
+        /// not a card being held up in front of it.
+        static let chip = Metrics(
+            border: 5, outerRadius: 9, panelRadius: 5, panelPadding: 6,
+            spacing: 3, categorySize: 12, prefectureSize: 10, nameSize: 14,
+            emojiSize: 40, windowRadius: 3, plateVerticalPadding: 4,
+            showsSmallPrint: false,
+            shadowColor: Palette.stickerShadow, shadowRadius: 0, shadowY: 2)
+    }
+
+    var body: some View {
+        ZStack {
+            stock
+            VStack(spacing: metrics.spacing) {
+                topRow
+                artWindow
+                namePlate
+                if metrics.showsSmallPrint, isOwned {
+                    Text(card.description)
+                        .font(AppFont.rounded(13, relativeTo: .caption))
+                        .foregroundStyle(Palette.ink.opacity(0.7))
+                        .multilineTextAlignment(.center)
+                        .lineLimit(2)
+                        .frame(maxWidth: .infinity)
+                    footer
+                }
+            }
+            .padding(metrics.panelPadding)
+            .background(
+                RoundedRectangle(cornerRadius: metrics.panelRadius, style: .continuous)
+                    .fill(Palette.page)
+            )
+            // The inset is what turns the outer colour into a border rather
+            // than a background.
+            .padding(metrics.border)
+        }
+        .aspectRatio(Self.aspectRatio, contentMode: .fit)
+        .clipShape(RoundedRectangle(cornerRadius: metrics.outerRadius, style: .continuous))
+        .overlay {
+            // Cut foil is lit along its whole edge. Printed board is not, so
+            // only キラ gets the rim.
+            if isShiny {
+                RoundedRectangle(cornerRadius: metrics.outerRadius, style: .continuous)
+                    .strokeBorder(Palette.foilEdge, lineWidth: 1)
+            }
+        }
+        .shadow(color: metrics.shadowColor, radius: metrics.shadowRadius, y: metrics.shadowY)
+    }
+
+    // MARK: - Stock
+
+    /// The border the panel sits on, and the one place the difference between a
+    /// plain card and a キラ has to be obvious at a glance.
+    ///
+    /// キラ is foil: an opaque gold ramp with a highlight that slides across as
+    /// the card turns. Plain cards are matte board, and nothing on them moves.
+    ///
+    /// Both halves had to change together. The plain stock used to be the
+    /// prefecture's own colour, and the warm end of that palette is gold enough
+    /// to blur the distinction however bright the foil gets. The prefecture's
+    /// colour is still on the mat and the name plate inside, where it is
+    /// identifying the card rather than competing with its rarity.
+    @ViewBuilder private var stock: some View {
+        if isShiny {
+            LinearGradient(stops: Palette.foilRamp,
+                           startPoint: .topLeading, endPoint: .bottomTrailing)
+                .overlay { glint }
+        } else if isOwned {
+            LinearGradient(colors: [Palette.cardBoard, Palette.cardBoardDeep],
+                           startPoint: .top, endPoint: .bottom)
+        } else {
+            LinearGradient(colors: [Palette.emptyBoard, Palette.emptyBoardDeep],
+                           startPoint: .top, endPoint: .bottom)
+        }
+    }
+
+    /// The specular streak on foil.
+    ///
+    /// Bound to the yaw rather than animating on its own: a card that shines by
+    /// itself is a screen effect, while one that shines when it is turned is a
+    /// surface. It also means Reduce Motion needs no special case — the tilt
+    /// never leaves zero there, so the highlight simply sits still.
+    private var glint: some View {
+        // Clamped away from the edges so the band always has room for its full
+        // width, and the streak never degenerates into a hard line at a corner.
+        let centre = min(max(0.5 + tilt.width / Self.maxTilt * 0.4, 0.16), 0.84)
+        return LinearGradient(
+            // Not brighter: plusLighter over the ramp's own light stops clips to
+            // white, and a white streak on gold is chrome, not gold.
+            stops: [.init(color: .clear, location: centre - 0.16),
+                    .init(color: .white.opacity(0.45), location: centre),
+                    .init(color: .clear, location: centre + 0.16)],
+            startPoint: .topTrailing, endPoint: .bottomLeading)
+            .blendMode(.plusLighter)
+            .allowsHitTesting(false)
+    }
+
+    // MARK: - Panel
+
+    private var topRow: some View {
+        HStack(spacing: metrics.spacing * 0.75) {
+            Text(card.category.emoji)
+                .font(.system(size: metrics.categorySize))
+            if let prefecture {
+                Text(prefecture.displayName(mode))
+                    .font(AppFont.heading(metrics.prefectureSize, relativeTo: .subheadline))
+                    .foregroundStyle(Palette.ink)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.5)
+                    .tracking(0.5)
+            }
+            Spacer(minLength: 0)
+            // Rarity, in the corner where a card keeps it. A slot with nothing
+            // in it has no rarity to state yet.
+            if isOwned {
+                Text(isShiny ? "★★" : "★")
+                    .font(AppFont.rounded(metrics.prefectureSize * 0.82,
+                                          relativeTo: .caption))
+                    .foregroundStyle(isShiny ? Palette.gold : Palette.ink.opacity(0.28))
+            }
+        }
+    }
+
+    /// The picture, matted and ruled like a window cut in the card.
+    private var artWindow: some View {
+        ZStack {
+            isOwned ? Palette.fill(for: card.prefectureCode, strength: 0.14)
+                    : Palette.emptyMat
+            if let shinyArt {
+                Image(shinyArt).resizable().scaledToFit().padding(4)
+            } else {
+                Text(isOwned ? card.emoji : "❓")
+                    .font(.system(size: metrics.emojiSize))
+                    .minimumScaleFactor(0.5)
+            }
+        }
+        .aspectRatio(1, contentMode: .fit)
+        .overlay { sheen }
+        .clipShape(RoundedRectangle(cornerRadius: metrics.windowRadius, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: metrics.windowRadius, style: .continuous)
+                .strokeBorder(Palette.ink.opacity(0.18), lineWidth: 1)
+        }
+        .padding(.horizontal, 2)
+    }
+
+    /// The name, on a plate rather than loose on the panel — it is the card's
+    /// title, and a title on a card sits on something.
+    private var namePlate: some View {
+        Text(nameLine)
+            .font(AppFont.rounded(metrics.nameSize, relativeTo: .title3))
+            .foregroundStyle(Palette.ink)
+            .lineLimit(1)
+            .minimumScaleFactor(0.5)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, metrics.plateVerticalPadding)
+            .background(
+                RoundedRectangle(cornerRadius: metrics.windowRadius, style: .continuous)
+                    .fill(isOwned ? Palette.fill(for: card.prefectureCode, strength: 0.34)
+                                  : Palette.emptyPlate)
+            )
+    }
+
+    /// An illustrated card always gets the reading, never the kanji. The
+    /// painting titles itself — but in kanji (「乳製品」「江戸前寿司」「飛騨牛」),
+    /// which is unreadable to the five-year-olds this app is for, so the plate is
+    /// the only place they can find out what they just won. It repeats the
+    /// picture for an adult; that is the cheaper mistake.
+    private var nameLine: String {
+        guard isOwned else { return "？？？" }
+        return shinyArt == nil ? card.displayName(mode) : card.nameKana
+    }
+
+    private var footer: some View {
+        HStack {
+            Text(card.category.label(mode))
+                .font(AppFont.rounded(10, relativeTo: .caption2))
+                .foregroundStyle(Palette.ink.opacity(0.45))
+            Spacer(minLength: 0)
+            // A collector number. It means nothing mechanically and that is
+            // fine — it is one of the things that makes a card feel like a card.
+            Text(verbatim: "No.\(card.id)")
+                .font(AppFont.rounded(10, relativeTo: .caption2))
+                .foregroundStyle(Palette.ink.opacity(0.35))
+                .monospacedDigit()
+        }
+    }
+
+    /// The shine over the picture, and the reason tilting is worth doing at all.
+    ///
+    /// It slides across as the card turns, so the highlight belongs to the angle
+    /// rather than being a decal printed on the face.
+    ///
+    /// キラ only. A plain card used to carry a faint white version of this on the
+    /// theory that glass catches light too, but the two cards then differed by
+    /// how much they shone rather than by whether they shone — and "less shiny"
+    /// is a comparison a child can only make with both cards side by side.
+    @ViewBuilder private var sheen: some View {
+        if isShiny {
+            let shift = tilt.width / Self.maxTilt
+            LinearGradient(
+                colors: Palette.holographicBand,
+                startPoint: UnitPoint(x: 0.1 + shift * 0.5, y: 0),
+                endPoint: UnitPoint(x: 0.9 + shift * 0.5, y: 1))
+            // Enough to read as foil while it slides, not so much that the
+            // illustration underneath changes colour at rest.
+            .opacity(0.24)
+            .blendMode(.plusLighter)
+            .allowsHitTesting(false)
+        }
+    }
+}
+
+#Preview {
+    let card = SpecialtyCard(id: "01-1", prefectureCode: 1, emoji: "🦀",
+                             nameKana: "かに", nameKanji: "蟹", category: .food,
+                             description: "つめたい うみで そだつよ")
+    return VStack(spacing: 16) {
+        HStack(spacing: 10) {
+            ForEach(0...2, id: \.self) { owned in
+                CardFaceView(card: card, prefecture: nil, ownedCount: owned,
+                             metrics: .chip)
+            }
+        }
+        CardFaceView(card: card, prefecture: nil, ownedCount: 2)
+            .frame(maxWidth: 240)
+    }
+    .padding()
+    .background(Palette.background)
+}

@@ -48,8 +48,19 @@ nonisolated enum Palette {
 
     /// The album page a sticker is stuck onto.
     static let page = Color(hex: 0xFFFBF2)
-    /// Outline of a slot no sticker has been earned for yet.
-    static let emptySlot = Color(hex: 0xD8D2C4)
+    /// Outline of a slot no sticker has been earned for yet, and the stock of a
+    /// card not collected yet.
+    static let emptySlotHex: UInt32 = 0xD8D2C4
+    static let emptySlot = Color(hex: emptySlotHex)
+    /// A blank card's stock, lighter than the slot outline it comes from: on a
+    /// fresh save 139 of the 141 are blank, and at full strength the book was a
+    /// wall of grey with the two earned cards lost in it.
+    static let emptyBoard = Color(hex: emptySlotHex, mixedWithWhite: 0.5)
+    static let emptyBoardDeep = Color(hex: emptySlotHex, mixedWithWhite: 0.12)
+    /// The mat and the name plate of an uncollected card: the same grey the
+    /// stock uses, thinned, so a blank card is one colour rather than three.
+    static let emptyMat = Color(hex: emptySlotHex, mixedWithWhite: 0.72)
+    static let emptyPlate = Color(hex: emptySlotHex, mixedWithWhite: 0.42)
 
     /// The prefecture boundary. Darker than the slot grey it used to borrow, so
     /// a hairline still reads as a border rather than as a smudge — the line

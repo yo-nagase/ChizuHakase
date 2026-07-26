@@ -130,10 +130,12 @@ struct ResultView: View {
             LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10),
                                      count: typeSize.cardColumns), spacing: 10) {
                 ForEach(newCards) { card in
-                    CardChipView(card: card, ownedCount: 1, showsDescription: false)
+                    CardChipView(card: card, prefecture: app.mapData[card.prefectureCode],
+                                 ownedCount: 1)
                 }
                 ForEach(shinyCards) { card in
-                    CardChipView(card: card, ownedCount: 2, showsDescription: false)
+                    CardChipView(card: card, prefecture: app.mapData[card.prefectureCode],
+                                 ownedCount: 2)
                 }
             }
         }
