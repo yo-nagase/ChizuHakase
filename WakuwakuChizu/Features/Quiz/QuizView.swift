@@ -40,7 +40,7 @@ struct QuizView: View {
             // fired on advancing to the *next* question, and the first question
             // is never advanced to. For a child who cannot read hiragana that
             // is the question they cannot start.
-            speak(model)
+            announce(model)
         }
         .onDisappear { advanceTask?.cancel() }
     }
@@ -324,7 +324,7 @@ struct QuizView: View {
             if quiz.phase == .finished {
                 onFinish(quiz.makeResult())
             } else {
-                speak(quiz)
+                announce(quiz)
             }
         }
     }
@@ -350,17 +350,28 @@ struct QuizView: View {
         }
     }
 
-    /// Reads the question out.
+    /// Spoken by itself when a question appears.
+    ///
+    /// Only in 「ちずで さがす」, where the sentence carries the question: it
+    /// names a different prefecture every time. 「なまえを あてる」 asks the same
+    /// sentence every time and the answer is on the map, so reading anything
+    /// automatically there is noise on a loop — and reading the four choices,
+    /// which is what it used to do, is fourteen names a question that say
+    /// nothing about which one is right.
+    private func announce(_ quiz: QuizViewModel) {
+        guard quiz.mode == .findOnMap else { return }
+        speak(quiz)
+    }
+
+    /// The 🔊 button, which is always a deliberate press.
     ///
     /// In 「なまえを あてる」 it must never say the target's name — that *is* the
-    /// answer. It reads the four choices instead, which is the only way a child
-    /// who cannot yet read them can play the mode at all (CLAUDE.md §7).
+    /// answer — so it reads the instruction, which is what a child who cannot
+    /// read the screen actually needs from it (CLAUDE.md §7).
     private func speak(_ quiz: QuizViewModel) {
         guard app.save.data.settings.speechEnabled else { return }
         if quiz.mode == .nameIt {
-            let names = quiz.choices.compactMap { app.mapData[$0]?.spokenName }
-            guard !names.isEmpty else { return }
-            return SpeechService.shared.speak(names.joined(separator: "、"))
+            return SpeechService.shared.speak("\(mode.nameItQuestion)\(mode.nameItPrompt)")
         }
         guard let target = quiz.target else { return }
         SpeechService.shared.speak("\(target.kana)は、どこかな?")
