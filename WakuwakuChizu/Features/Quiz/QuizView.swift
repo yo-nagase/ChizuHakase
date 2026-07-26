@@ -371,7 +371,9 @@ struct QuizView: View {
     private func speak(_ quiz: QuizViewModel) {
         guard app.save.data.settings.speechEnabled else { return }
         if quiz.mode == .nameIt {
-            return SpeechService.shared.speak("\(mode.nameItQuestion)\(mode.nameItPrompt)")
+            // Two phrases, not one string: the question and the instruction are
+            // separate things to hear.
+            return SpeechService.shared.speak([mode.nameItQuestion, mode.nameItPrompt])
         }
         guard let target = quiz.target else { return }
         SpeechService.shared.speak("\(target.kana)は、どこかな?")
