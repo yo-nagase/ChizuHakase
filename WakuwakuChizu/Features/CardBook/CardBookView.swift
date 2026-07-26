@@ -8,15 +8,27 @@ struct CardBookView: View {
     @Environment(\.dynamicTypeSize) private var typeSize
     @Environment(\.textMode) private var mode
 
-    @State private var category: SpecialtyCard.Category?
+    /// Which cards the book opens on. A caller that already knows what the
+    /// child is looking for should not make them find it again.
+    var initialFilter: CardFilter = .all
+
+    @State private var filter: CardFilter?
 
     private var save: SaveData { app.save.data }
+    private var active: CardFilter { filter ?? initialFilter }
 
     private var groups: [(prefecture: Prefecture, cards: [SpecialtyCard])] {
         app.mapData.prefectures.compactMap { pref in
-            let cards = app.cards.cards(for: pref.code)
-                .filter { category == nil || $0.category == category }
+            let cards = app.cards.cards(for: pref.code).filter { matches($0) }
             return cards.isEmpty ? nil : (pref, cards)
+        }
+    }
+
+    private func matches(_ card: SpecialtyCard) -> Bool {
+        switch active {
+        case .all: true
+        case .category(let c): card.category == c
+        case .shiny: save.isShiny(card.id)
         }
     }
 
@@ -27,6 +39,7 @@ struct CardBookView: View {
                     ForEach(groups, id: \.prefecture.code) { group in
                         prefectureSection(group.prefecture, cards: group.cards)
                     }
+                    emptyNote
                 } header: {
                     filterBar
                 }
@@ -49,16 +62,34 @@ struct CardBookView: View {
     private var filterBar: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
-                chip(title: mode.allCategories, isOn: category == nil) { category = nil }
+                chip(title: mode.allCategories, isOn: active == .all) { filter = .all }
+                // Ahead of the categories: it is the one a child arrives here
+                // looking for, and the one they will want to switch back to.
+                chip(title: "✨ \(mode.sparklingCount)", isOn: active == .shiny) {
+                    filter = active == .shiny ? .all : .shiny
+                }
                 ForEach(SpecialtyCard.Category.allCases, id: \.self) { c in
-                    chip(title: "\(c.emoji) \(c.label(mode))", isOn: category == c) {
-                        category = category == c ? nil : c
+                    chip(title: "\(c.emoji) \(c.label(mode))",
+                         isOn: active == .category(c)) {
+                        filter = active == .category(c) ? .all : .category(c)
                     }
                 }
             }
             .padding(.vertical, 8)
         }
         .background(Palette.page)
+    }
+
+    /// Shown when a filter leaves nothing, so an empty book reads as "none yet"
+    /// rather than as broken.
+    @ViewBuilder private var emptyNote: some View {
+        if groups.isEmpty {
+            Text(mode.notCollectedYet)
+                .font(AppFont.rounded(15, relativeTo: .body))
+                .foregroundStyle(Palette.ink.opacity(0.55))
+                .frame(maxWidth: .infinity)
+                .padding(.top, 40)
+        }
     }
 
     private func chip(title: String, isOn: Bool, action: @escaping () -> Void) -> some View {
@@ -71,6 +102,7 @@ struct CardBookView: View {
                 .background(isOn ? Palette.orange : Color.white, in: Capsule())
         }
         .buttonStyle(.plain)
+        .accessibilityAddTraits(isOn ? [.isSelected] : [])
     }
 
     private func prefectureSection(_ pref: Prefecture, cards: [SpecialtyCard]) -> some View {
@@ -94,4 +126,14 @@ struct CardBookView: View {
             }
         }
     }
+}
+
+
+/// What the card book is showing.
+nonisolated enum CardFilter: Hashable, Sendable {
+    case all
+    case category(SpecialtyCard.Category)
+    /// The ones already turned キラ — the payoff, and what the title screen's
+    /// ✨ count is counting.
+    case shiny
 }

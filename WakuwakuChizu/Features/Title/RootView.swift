@@ -21,14 +21,14 @@ struct RootView: View {
         /// the value that selects it.
         case result(StageResult, sparkles: [Int])
         case myMap
-        case cardBook
+        case cardBook(filter: CardFilter)
     }
 
     var body: some View {
         NavigationStack(path: $path) {
             TitleView(onStart: { path.append(.stageSelect) },
                       onMyMap: { path.append(.myMap) },
-                      onCardBook: { path.append(.cardBook) },
+                      onCardBook: { path.append(.cardBook(filter: $0)) },
                       onSettings: { showsSettings = true })
                 .navigationDestination(for: Route.self, destination: destination)
         }
@@ -56,7 +56,8 @@ struct RootView: View {
         switch arguments[index + 1] {
         case "stageSelect": path = [.stageSelect]
         case "myMap": path = [.myMap]
-        case "cardBook": path = [.cardBook]
+        case "cardBook": path = [.cardBook(filter: .all)]
+        case "cardBook:shiny": path = [.cardBook(filter: .shiny)]
         case let value where value.hasPrefix("quiz:"):
             if let i = Int(value.dropFirst(5)) {
                 let mode: QuizMode = arguments.contains("-nameIt") ? .nameIt : .findOnMap
@@ -109,8 +110,8 @@ struct RootView: View {
         case .myMap:
             MyMapView()
 
-        case .cardBook:
-            CardBookView()
+        case .cardBook(let filter):
+            CardBookView(initialFilter: filter)
         }
     }
 

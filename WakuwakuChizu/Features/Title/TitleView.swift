@@ -8,7 +8,7 @@ struct TitleView: View {
 
     var onStart: () -> Void
     var onMyMap: () -> Void
-    var onCardBook: () -> Void
+    var onCardBook: (CardFilter) -> Void
     var onSettings: () -> Void
 
     var body: some View {
@@ -47,7 +47,7 @@ struct TitleView: View {
                     HStack(spacing: 12) {
                         Button(mode.myMap) { onMyMap() }
                             .buttonStyle(.bouncy(Palette.teal, fontSize: 17))
-                        Button(mode.cardBook) { onCardBook() }
+                        Button(mode.cardBook) { onCardBook(.all) }
                             .buttonStyle(.bouncy(Palette.teal, fontSize: 17))
                     }
                 }
@@ -87,15 +87,19 @@ struct TitleView: View {
     private var progressLine: some View {
         HStack(spacing: 10) {
             tally("🗾", app.save.data.mastery.values.filter { $0 > 0 }.count, 47,
-                  mode.isKids ? "けん" : "県", Palette.learned, onMyMap)
+                  mode.isKids ? "けん" : "県", Palette.learned, action: onMyMap)
             // Shiny *cards*, not キラキラ prefectures. Both were called キラ and
             // the map already counts the prefectures on its own screen; here,
             // between a prefecture count and a card count, out of 141 says
             // plainly which one this is.
+            //
+            // It opens the book already filtered to them. The count is what the
+            // child is proud of; making them find those nine again among 141
+            // would be the app forgetting what they just tapped.
             tally("✨", app.save.data.shinyCardCount, max(app.cards.count, 1), "キラ",
-                  Palette.gold, onCardBook)
+                  Palette.gold) { onCardBook(.shiny) }
             tally("🃏", app.save.data.totalOwnedCards, max(app.cards.count, 1), "カード",
-                  Palette.collected, onCardBook)
+                  Palette.collected) { onCardBook(.all) }
         }
     }
 
@@ -105,7 +109,7 @@ struct TitleView: View {
     /// "where can I see them?".
     private func tally(_ emoji: String, _ have: Int, _ total: Int,
                        _ label: String, _ tint: Color,
-                       _ action: @escaping () -> Void) -> some View {
+                       action: @escaping () -> Void) -> some View {
         Button(action: action) { tallyFace(emoji, have, total, label, tint) }
             .buttonStyle(TallyPressStyle())
             .accessibilityElement(children: .ignore)
