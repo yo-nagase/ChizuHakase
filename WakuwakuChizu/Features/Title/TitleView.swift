@@ -75,49 +75,86 @@ struct TitleView: View {
         .allowsHitTesting(false)
     }
 
-    /// Three counts, printed on the page rather than stuck on it.
+    /// Three counts, each with how far along it is.
     ///
-    /// These used to be white sticker cards with a drop shadow, which is the
-    /// same raised treatment the buttons below use — so they read as three more
-    /// things to press, and pressing them did nothing. Flat, with hairline
-    /// rules, they are legible as a tally and unmistakably not tappable.
+    /// A bare number answers "how many" but not "how close am I", which is the
+    /// question a collection actually raises. The bar carries that, and it is
+    /// also what stops these reading as buttons: they were raised white cards
+    /// with a drop shadow, the same treatment as the pill buttons right below,
+    /// so a child could reasonably press them and nothing would happen. A card
+    /// with a meter in it is plainly a readout.
     private var progressLine: some View {
-        HStack(spacing: 0) {
+        HStack(spacing: 10) {
             tally("🗾", app.save.data.mastery.values.filter { $0 > 0 }.count, 47,
-                  mode.isKids ? "けん" : "県")
-            rule
-            tally("✨", app.save.data.sparklingPrefectureCount, 47, "キラ")
-            rule
-            tally("🃏", app.save.data.totalOwnedCards, max(app.cards.count, 1), "カード")
+                  mode.isKids ? "けん" : "県", Palette.learned)
+            tally("✨", app.save.data.sparklingPrefectureCount, 47, "キラ", Palette.gold)
+            tally("🃏", app.save.data.totalOwnedCards, max(app.cards.count, 1), "カード",
+                  Palette.collected)
         }
-        .padding(.vertical, 2)
-    }
-
-    private var rule: some View {
-        Rectangle()
-            .fill(Palette.ink.opacity(0.11))
-            .frame(width: 1, height: 30)
     }
 
     private func tally(_ emoji: String, _ have: Int, _ total: Int,
-                       _ label: String) -> some View {
-        VStack(spacing: 1) {
-            HStack(spacing: 4) {
-                Text(emoji).font(.system(size: 14))
+                       _ label: String, _ tint: Color) -> some View {
+        VStack(spacing: 5) {
+            Text(emoji)
+                .font(.system(size: 15))
+                .frame(width: 28, height: 28)
+                .background(Circle().fill(tint.opacity(0.28)))
+
+            HStack(alignment: .firstTextBaseline, spacing: 2) {
                 // Verbatim: SwiftUI's localised interpolation groups integers,
                 // and a child reading 「1,120」 has to parse a comma first.
                 Text(verbatim: "\(have)")
-                    .font(AppFont.rounded(19, relativeTo: .headline))
+                    .font(AppFont.rounded(21, relativeTo: .title3))
                     .foregroundStyle(Palette.ink)
                     .monospacedDigit()
+                Text(verbatim: "/\(total)")
+                    .font(AppFont.rounded(11, relativeTo: .caption2))
+                    .foregroundStyle(Palette.ink.opacity(0.4))
+                    .monospacedDigit()
             }
-            Text(verbatim: "/ \(total) \(label)")
-                .font(AppFont.rounded(10, relativeTo: .caption2))
-                .foregroundStyle(Palette.ink.opacity(0.45))
-                .monospacedDigit()
+
+            Text(label)
+                .font(AppFont.rounded(11, relativeTo: .caption2))
+                .foregroundStyle(Palette.ink.opacity(0.55))
+
+            ProgressMeter(fraction: total > 0 ? Double(have) / Double(total) : 0, tint: tint)
         }
+        .padding(.vertical, 10)
+        .padding(.horizontal, 10)
         .frame(maxWidth: .infinity)
-        .accessibilityElement(children: .combine)
+        .background(
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .fill(.white)
+                // A soft ambient shadow, not the solid offset one the buttons
+                // use. The difference is what says "sitting on the page" rather
+                // than "waiting to be pushed".
+                .shadow(color: Palette.ink.opacity(0.06), radius: 5, y: 2)
+        )
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("\(label) \(have) / \(total)")
+    }
+}
+
+/// How far along one count is.
+///
+/// Rounded rather than square, and it keeps a visible sliver at zero: an empty
+/// track reads as broken, while a sliver reads as "not started yet", which is
+/// the honest and kinder version of the same fact (CLAUDE.md §12).
+private struct ProgressMeter: View {
+    let fraction: Double
+    let tint: Color
+
+    var body: some View {
+        GeometryReader { geo in
+            let clamped = min(max(fraction, 0), 1)
+            let width = max(geo.size.width * clamped, 6)
+            ZStack(alignment: .leading) {
+                Capsule().fill(Palette.ink.opacity(0.08))
+                Capsule().fill(tint).frame(width: width)
+            }
+        }
+        .frame(height: 6)
     }
 }
 
@@ -141,14 +178,11 @@ enum MasteryStyle {
     static func fill(level: Int) -> Color {
         switch level {
         case ..<1: Palette.unlearned
-        case 1: Color(hex: learnedHex, mixedWithWhite: 0.42)
-        case 2: Color(hex: learnedHex, mixedWithWhite: 0.18)
+        case 1: Color(hex: Palette.learnedHex, mixedWithWhite: 0.42)
+        case 2: Color(hex: Palette.learnedHex, mixedWithWhite: 0.18)
         default: Palette.gold
         }
     }
-
-    /// The green the ramp climbs through, from the §9 prefecture palette.
-    private static let learnedHex: UInt32 = 0xA5D6A7
 
     /// Only the fill moves as a prefecture is learned.
     ///

@@ -55,6 +55,14 @@ nonisolated enum Palette {
     /// a hairline still reads as a border rather than as a smudge — the line
     /// got thin enough that a pale colour simply disappeared.
     static let boundary = Color(hex: 0x9B9384)
+
+    /// The two progress hues that are not already tokens, both taken from the
+    /// §9 prefecture palette so the title screen introduces no new colours.
+    /// Green is the same one the mastery ramp climbs through, so a filling bar
+    /// and a filling map are visibly the same measurement.
+    static let learnedHex: UInt32 = 0xA5D6A7
+    static let learned = Color(hex: learnedHex)
+    static let collected = Color(hex: 0xCE93D8)
     /// Die-cut border. Every sticker in the app shares this white edge.
     static let dieCut = Color.white
 
