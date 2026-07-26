@@ -79,76 +79,120 @@ struct CardDetailView: View {
 
     // MARK: - The card itself
 
+    /// Built the way a printed card is: coloured stock, an inset panel, a matted
+    /// window for the picture, a name plate under it, and a number in the
+    /// corner. The chips in the book are tiles — this is the object they stand
+    /// for, so it is worth the layers.
     private var cardFace: some View {
-        VStack(spacing: 0) {
-            header
-            art
-            caption
-        }
-        .background(Palette.page)
-        .overlay {
-            RoundedRectangle(cornerRadius: 22, style: .continuous)
-                .strokeBorder(isShiny ? Palette.gold : Palette.dieCut, lineWidth: 5)
-        }
-        .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
-        .shadow(color: .black.opacity(0.3), radius: 18, y: 10)
-    }
-
-    /// Ink on the prefecture's own colour. White was unreadable: the palette is
-    /// eight pastels, and white text on a pastel is white text on white.
-    private var header: some View {
-        Text(prefecture?.displayName(mode) ?? "")
-            .font(AppFont.rounded(16, relativeTo: .headline))
-            .foregroundStyle(Palette.ink)
-            .lineLimit(1)
-            .minimumScaleFactor(0.6)
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 10)
-            .background(Palette.fill(for: card.prefectureCode))
-    }
-
-    /// Square, so the card sizes itself around the picture instead of forcing
-    /// a portrait ratio the illustrations then float inside.
-    @ViewBuilder private var art: some View {
         ZStack {
-            Palette.fill(for: card.prefectureCode, strength: 0.16)
-            if let art = card.art {
-                Image(art)
-                    .resizable()
-                    .scaledToFit()
-                    .padding(6)
-            } else {
-                Text(card.emoji)
-                    .font(.system(size: 96))
+            stock
+            VStack(spacing: 8) {
+                topRow
+                artWindow
+                namePlate
+                Text(card.description)
+                    .font(AppFont.rounded(13, relativeTo: .caption))
+                    .foregroundStyle(Palette.ink.opacity(0.7))
+                    .multilineTextAlignment(.center)
+                    .lineLimit(2)
+                    .frame(maxWidth: .infinity)
+                footer
             }
+            .padding(12)
+            .background(
+                RoundedRectangle(cornerRadius: 7, style: .continuous)
+                    .fill(Palette.page)
+            )
+            // The inset is what turns the outer colour into a border rather
+            // than a background.
+            .padding(11)
         }
-        .aspectRatio(1, contentMode: .fit)
-        // The shine belongs to the picture, which is where foil would be. Over
-        // the caption it tinted the words and cost more legibility than it was
-        // ever going to buy in sparkle.
-        .overlay { sheen }
-        .clipped()
+        .aspectRatio(0.7, contentMode: .fit)
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .shadow(color: .black.opacity(0.35), radius: 20, y: 12)
     }
 
-    private var caption: some View {
-        VStack(spacing: 4) {
-            // The reading, always: an illustrated card titles itself in kanji,
-            // which the child this app is for cannot read.
-            Text(card.nameKana)
-                .font(AppFont.rounded(22, relativeTo: .title3))
+    /// The card stock. Gold for キラ, the prefecture's colour otherwise, darker
+    /// toward the bottom so the border reads as a printed edge and not a flat
+    /// rectangle behind the panel.
+    private var stock: some View {
+        let base = isShiny ? Palette.gold : Palette.fill(for: card.prefectureCode)
+        return LinearGradient(colors: [base, base.opacity(0.72)],
+                              startPoint: .topLeading, endPoint: .bottomTrailing)
+            .overlay(alignment: .topLeading) {
+                // A gloss on the corner, as printed card stock has.
+                RadialGradient(colors: [.white.opacity(0.55), .clear],
+                               center: .topLeading, startRadius: 0, endRadius: 190)
+            }
+    }
+
+    private var topRow: some View {
+        HStack(spacing: 6) {
+            Text(card.category.emoji)
+                .font(.system(size: 15))
+            Text(prefecture?.displayName(mode) ?? "")
+                .font(AppFont.heading(16, relativeTo: .subheadline))
                 .foregroundStyle(Palette.ink)
                 .lineLimit(1)
                 .minimumScaleFactor(0.6)
-            Text(card.description)
+                .tracking(0.5)
+            Spacer(minLength: 0)
+            // Rarity, in the corner where a card keeps it.
+            Text(isShiny ? "★★" : "★")
                 .font(AppFont.rounded(13, relativeTo: .caption))
-                .foregroundStyle(Palette.ink.opacity(0.65))
-                .multilineTextAlignment(.center)
-                .lineLimit(2)
+                .foregroundStyle(isShiny ? Palette.gold : Palette.ink.opacity(0.28))
         }
-        .frame(maxWidth: .infinity)
-        .padding(.horizontal, 10)
-        .padding(.vertical, 14)
-        .background(.white)
+    }
+
+    /// The picture, matted and ruled like a window cut in the card.
+    private var artWindow: some View {
+        ZStack {
+            Palette.fill(for: card.prefectureCode, strength: 0.14)
+            if let art = card.art {
+                Image(art).resizable().scaledToFit().padding(4)
+            } else {
+                Text(card.emoji).font(.system(size: 88))
+            }
+        }
+        .aspectRatio(1, contentMode: .fit)
+        .overlay { sheen }
+        .clipShape(RoundedRectangle(cornerRadius: 5, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 5, style: .continuous)
+                .strokeBorder(Palette.ink.opacity(0.18), lineWidth: 1)
+        }
+        .padding(.horizontal, 2)
+    }
+
+    /// The name, on a plate rather than loose on the panel — it is the card's
+    /// title, and a title on a card sits on something.
+    private var namePlate: some View {
+        Text(card.nameKana)
+            .font(AppFont.rounded(21, relativeTo: .title3))
+            .foregroundStyle(Palette.ink)
+            .lineLimit(1)
+            .minimumScaleFactor(0.5)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 7)
+            .background(
+                RoundedRectangle(cornerRadius: 5, style: .continuous)
+                    .fill(Palette.fill(for: card.prefectureCode, strength: 0.34))
+            )
+    }
+
+    private var footer: some View {
+        HStack {
+            Text(card.category.label(mode))
+                .font(AppFont.rounded(10, relativeTo: .caption2))
+                .foregroundStyle(Palette.ink.opacity(0.45))
+            Spacer(minLength: 0)
+            // A collector number. It means nothing mechanically and that is
+            // fine — it is one of the things that makes a card feel like a card.
+            Text(verbatim: "No.\(card.id)")
+                .font(AppFont.rounded(10, relativeTo: .caption2))
+                .foregroundStyle(Palette.ink.opacity(0.35))
+                .monospacedDigit()
+        }
     }
 
     /// The shine, and the reason tilting is worth doing at all.
@@ -162,7 +206,9 @@ struct CardDetailView: View {
             colors: isShiny ? Palette.holographicBand : [.white.opacity(0.35), .clear],
             startPoint: UnitPoint(x: 0.1 + shift * 0.5, y: 0),
             endPoint: UnitPoint(x: 0.9 + shift * 0.5, y: 1))
-        .opacity(isShiny ? 0.34 : 0.18)
+        // Enough to read as foil while it slides, not so much that the
+        // illustration underneath changes colour at rest.
+        .opacity(isShiny ? 0.24 : 0.14)
         .blendMode(.plusLighter)
         .allowsHitTesting(false)
     }

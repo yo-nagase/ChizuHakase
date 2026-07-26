@@ -58,7 +58,9 @@ struct RootView: View {
             app.save.applyStageResult(StageResult(
                 mode: .findOnMap, stageIndex: 0, score: 0, stars: 3,
                 firstTryByPrefecture: [:],
-                cardDraws: app.cards["01-1"].map { [.new($0)] } ?? []
+                // Parenthesised: ?? binds looser than +, so without these the
+                // second array was swallowed and only one card was ever granted.
+                cardDraws: (app.cards["01-1"].map { [GameRules.CardDraw.new($0)] } ?? [])
                     + (app.cards["04-2"].map { [GameRules.CardDraw.shiny($0)] } ?? [])))
         }
         guard let index = arguments.firstIndex(of: "-startAt"),

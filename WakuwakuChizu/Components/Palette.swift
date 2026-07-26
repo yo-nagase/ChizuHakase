@@ -122,4 +122,14 @@ nonisolated enum AppFont {
     static func rounded(_ size: CGFloat, relativeTo style: Font.TextStyle) -> Font {
         .custom(familyName, size: size, relativeTo: style)
     }
+
+    /// Heavy gothic, for the one place that wants to look printed rather than
+    /// hand-drawn: the prefecture band on a card. Hiragino Sans W6 ships on
+    /// every iOS device, and the rounded face has no bold weight to reach for.
+    /// Everything else stays 丸ゴシック per CLAUDE.md §9.
+    static let headingFamilyName = "HiraginoSans-W6"
+
+    static func heading(_ size: CGFloat, relativeTo style: Font.TextStyle) -> Font {
+        .custom(headingFamilyName, size: size, relativeTo: style)
+    }
 }
