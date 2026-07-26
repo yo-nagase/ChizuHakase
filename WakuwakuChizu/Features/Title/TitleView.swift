@@ -88,8 +88,12 @@ struct TitleView: View {
         HStack(spacing: 10) {
             tally("🗾", app.save.data.mastery.values.filter { $0 > 0 }.count, 47,
                   mode.isKids ? "けん" : "県", Palette.learned, onMyMap)
-            tally("✨", app.save.data.sparklingPrefectureCount, 47, "キラ",
-                  Palette.gold, onMyMap)
+            // Shiny *cards*, not キラキラ prefectures. Both were called キラ and
+            // the map already counts the prefectures on its own screen; here,
+            // between a prefecture count and a card count, out of 141 says
+            // plainly which one this is.
+            tally("✨", app.save.data.shinyCardCount, max(app.cards.count, 1), "キラ",
+                  Palette.gold, onCardBook)
             tally("🃏", app.save.data.totalOwnedCards, max(app.cards.count, 1), "カード",
                   Palette.collected, onCardBook)
         }
