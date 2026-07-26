@@ -193,3 +193,90 @@ struct SaveStoreTests {
                       category: .food, description: "てすと")
     }
 }
+
+/// Version 1 → 2, which split the stage records per quiz mode.
+///
+/// A migration is the one piece of code that can quietly destroy everything a
+/// child has done, and it only ever runs on files this build did not write —
+/// so it cannot be checked by playing the game.
+@MainActor
+struct SaveMigrationTests {
+
+    private func load(_ json: String) throws -> SaveData {
+        try JSONDecoder().decode(SaveData.self, from: Data(json.utf8))
+    }
+
+    /// Everything version 1 recorded was played by tapping the map.
+    @Test func versionOneRecordsBecomeMapModeRecords() throws {
+        let data = try load("""
+        {"version":1,"mastery":{"1":3},"cards":{"01-1":2},
+         "stages":{"0":{"stars":3,"score":730},"1":{"stars":2,"score":400}},
+         "settings":{"soundEnabled":false}}
+        """)
+
+        #expect(data.record(forStage: 0, mode: .findOnMap) == StageRecord(stars: 3, score: 730))
+        #expect(data.record(forStage: 1, mode: .findOnMap) == StageRecord(stars: 2, score: 400))
+        #expect(data.record(forStage: 0, mode: .nameIt) == nil,
+                "a mode that did not exist cannot have records")
+        // The rest of the file has to survive the move.
+        #expect(data.masteryLevel(of: 1) == 3)
+        #expect(data.isShiny("01-1"))
+        #expect(data.settings.soundEnabled == false)
+    }
+
+    @Test func aVersionTwoFileIsReadAsIs() throws {
+        let data = try load("""
+        {"version":2,"records":{"findOnMap":{"0":{"stars":1,"score":100}},
+         "nameIt":{"0":{"stars":3,"score":900}}}}
+        """)
+        #expect(data.record(forStage: 0, mode: .findOnMap) == StageRecord(stars: 1, score: 100))
+        #expect(data.record(forStage: 0, mode: .nameIt) == StageRecord(stars: 3, score: 900))
+    }
+
+    /// Re-reading a file that has both shapes must not let the old flat record
+    /// overwrite a newer one — that would walk a best score backwards.
+    @Test func legacyRecordsNeverBeatMigratedOnes() throws {
+        let data = try load("""
+        {"version":2,"stages":{"0":{"stars":1,"score":100}},
+         "records":{"findOnMap":{"0":{"stars":3,"score":900}}}}
+        """)
+        #expect(data.record(forStage: 0, mode: .findOnMap) == StageRecord(stars: 3, score: 900))
+    }
+
+    @Test func migratedDataSurvivesARoundTrip() throws {
+        let migrated = try load("""
+        {"version":1,"stages":{"2":{"stars":2,"score":500}}}
+        """)
+        let reloaded = try JSONDecoder().decode(
+            SaveData.self, from: JSONEncoder().encode(migrated))
+        #expect(reloaded.record(forStage: 2, mode: .findOnMap) == StageRecord(stars: 2, score: 500))
+        #expect(reloaded.version == SaveData.currentVersion)
+    }
+
+    /// The written file must not carry the old key forward, or every future
+    /// read has two sources of truth to reconcile.
+    @Test func theOldKeyIsNotWrittenBack() throws {
+        var data = SaveData()
+        data.records["findOnMap"] = [0: StageRecord(stars: 3, score: 1)]
+        let json = try #require(String(data: try JSONEncoder().encode(data), encoding: .utf8))
+        #expect(!json.contains("\"stages\""))
+        #expect(json.contains("records"))
+    }
+
+    /// The best across modes, for the places that count a stage as cleared
+    /// however it was played.
+    @Test func theBestRecordLooksAcrossModes() throws {
+        let data = try load("""
+        {"version":2,"records":{"findOnMap":{"0":{"stars":1,"score":100}},
+         "nameIt":{"0":{"stars":3,"score":900}}}}
+        """)
+        #expect(data.bestRecord(forStage: 0) == StageRecord(stars: 3, score: 900))
+        #expect(data.bestRecord(forStage: 5) == nil)
+    }
+
+    @Test func anEmptyFileStillLoads() throws {
+        let data = try load("{}")
+        #expect(data.records.isEmpty)
+        #expect(data.version == SaveData.currentVersion)
+    }
+}

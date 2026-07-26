@@ -57,7 +57,12 @@ nonisolated struct SaveData: Codable, Sendable, Equatable {
 
     init(from decoder: any Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
-        version = try c.decodeIfPresent(Int.self, forKey: .version) ?? SaveData.currentVersion
+        // Decoding *is* the migration — the legacy key is folded in below — so
+        // what is in memory is the current shape whatever the file claimed. A
+        // file from a future build keeps its own number, so running an older
+        // build cannot relabel it and then write the older shape under it.
+        let stored = try c.decodeIfPresent(Int.self, forKey: .version) ?? SaveData.currentVersion
+        version = max(stored, SaveData.currentVersion)
         mastery = try c.decodeIfPresent([Int: Int].self, forKey: .mastery) ?? [:]
         cards = try c.decodeIfPresent([String: Int].self, forKey: .cards) ?? [:]
         records = try c.decodeIfPresent([String: [Int: StageRecord]].self,

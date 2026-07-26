@@ -63,14 +63,16 @@ final class SaveStore {
         }
     }
 
-    /// Version 1 is the only shipped schema. Newer-than-known files are left
-    /// alone rather than rewritten, so a downgrade cannot silently destroy data.
+    /// Schema moves that need more than decoding can do.
+    ///
+    /// Version 1 → 2 (records split per quiz mode) is handled inside
+    /// `SaveData.init(from:)`, because it is a rename of a key rather than a
+    /// transformation across fields — doing it there means a decode always
+    /// yields the current shape, with no window where a half-migrated value
+    /// could be written back out. This stays as the hook for the migration that
+    /// eventually cannot be expressed that way.
     private static func migrate(_ input: SaveData) -> SaveData {
-        var data = input
-        if data.version < SaveData.currentVersion {
-            data.version = SaveData.currentVersion
-        }
-        return data
+        input
     }
 
     // MARK: - Writing
