@@ -153,7 +153,11 @@ final class VoiceInputService {
         task = nil
         onResult = nil
         isListening = false
-        try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+        // Hand the session back. Listening puts it in .record, and leaving it
+        // there silently killed the read-aloud for the rest of the session —
+        // one use of the microphone and a child who cannot read hiragana had no
+        // way left to hear the question.
+        AudioSession.configureForPlayback()
     }
 }
 

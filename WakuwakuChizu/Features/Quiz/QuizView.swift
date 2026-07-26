@@ -30,11 +30,17 @@ struct QuizView: View {
         .navigationBarBackButtonHidden()
         .task {
             guard quiz == nil else { return }
-            quiz = QuizViewModel(stage: stage,
-                                 mode: quizMode,
-                                 mapData: app.mapData,
-                                 catalog: app.cards,
-                                 ownedCards: app.save.data.cards)
+            let model = QuizViewModel(stage: stage,
+                                      mode: quizMode,
+                                      mapData: app.mapData,
+                                      catalog: app.cards,
+                                      ownedCards: app.save.data.cards)
+            quiz = model
+            // The first question was the only one never read aloud: speech
+            // fired on advancing to the *next* question, and the first question
+            // is never advanced to. For a child who cannot read hiragana that
+            // is the question they cannot start.
+            speak(model)
         }
         .onDisappear { advanceTask?.cancel() }
     }

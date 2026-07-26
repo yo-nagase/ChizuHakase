@@ -50,9 +50,8 @@ final class SoundService {
             if !engine.isRunning { try engine.start() }
             return
         }
-        // .ambient + mixWithOthers: the app should never stop a family's music.
-        try AVAudioSession.sharedInstance().setCategory(.ambient, options: [.mixWithOthers])
-        try AVAudioSession.sharedInstance().setActive(true)
+        // The app should never stop a family's music.
+        AudioSession.configureForPlayback()
 
         engine.attach(player)
         engine.connect(player, to: engine.mainMixerNode, format: format)
