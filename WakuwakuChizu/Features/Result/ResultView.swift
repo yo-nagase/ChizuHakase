@@ -86,7 +86,8 @@ struct ResultView: View {
                 .font(AppFont.rounded(15, relativeTo: .subheadline))
                 .foregroundStyle(Palette.ink.opacity(0.6))
 
-            if let best = app.save.data.record(forStage: stage.index), best.score > result.score {
+            if let best = app.save.data.record(forStage: stage.index, mode: result.mode),
+               best.score > result.score {
                 Text(verbatim: "\(mode.bestScore) \(best.score) \(mode.points)")
                     .font(AppFont.rounded(12, relativeTo: .caption))
                     .foregroundStyle(Palette.ink.opacity(0.45))

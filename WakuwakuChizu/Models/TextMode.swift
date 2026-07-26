@@ -48,6 +48,10 @@ nonisolated extension TextMode {
 
     // Quiz
     var questionSuffix: String { isKids ? "は どこかな?" : "はどこ?" }
+    /// 「なまえを あてる」 asks about the prefecture lit up on the map, so the
+    /// question has no name in it to read out.
+    var nameItQuestion: String { isKids ? "この けんは どこかな?" : "この県はどこ?" }
+    var nameItPrompt: String { isKids ? "なまえを えらんでね" : "名前を選んでください" }
     var readAloud: String { isKids ? "もんだいを よむ" : "問題を読む" }
     var answerByVoice: String { isKids ? "こえで こたえる" : "音声で答える" }
     var listening: String { isKids ? "きいています" : "聞いています" }

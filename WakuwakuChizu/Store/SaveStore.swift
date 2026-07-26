@@ -113,9 +113,13 @@ final class SaveStore {
             data.cards = GameRules.applyDraw(draw, to: data.cards)
         }
 
+        // Stars and score are kept per mode; mastery and cards above are not,
+        // because they measure the prefecture rather than the run.
         let record = StageRecord(stars: result.stars, score: result.score)
-        data.stages[result.stageIndex] = GameRules.bestRecord(
-            existing: data.stages[result.stageIndex], new: record)
+        data.records[result.mode.rawValue, default: [:]][result.stageIndex] =
+            GameRules.bestRecord(
+                existing: data.record(forStage: result.stageIndex, mode: result.mode),
+                new: record)
 
         save()
         return newlySparkling.sorted()
@@ -140,6 +144,7 @@ final class SaveStore {
 /// What one finished stage produced. Built by the quiz, consumed by the store,
 /// so the scoring rules stay out of the persistence layer.
 nonisolated struct StageResult: Sendable, Hashable {
+    let mode: QuizMode
     let stageIndex: Int
     let score: Int
     let stars: Int

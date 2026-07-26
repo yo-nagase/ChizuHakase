@@ -7,10 +7,13 @@ struct RootView: View {
 
     @State private var path: [Route] = []
     @State private var showsSettings = false
+    /// Which way the questions run. Chosen on the stage picker and kept for
+    /// the session, so a child does not have to re-pick it every stage.
+    @State private var quizMode: QuizMode = .findOnMap
 
     enum Route: Hashable {
         case stageSelect
-        case quiz(stageIndex: Int)
+        case quiz(stageIndex: Int, mode: QuizMode)
         /// The finished result travels *in the path*, not alongside it.
         /// Keeping it in separate @State meant NavigationStack could resolve
         /// the destination before that state was visible to it, and finishing a
@@ -55,7 +58,10 @@ struct RootView: View {
         case "myMap": path = [.myMap]
         case "cardBook": path = [.cardBook]
         case let value where value.hasPrefix("quiz:"):
-            if let i = Int(value.dropFirst(5)) { path = [.stageSelect, .quiz(stageIndex: i)] }
+            if let i = Int(value.dropFirst(5)) {
+                let mode: QuizMode = arguments.contains("-nameIt") ? .nameIt : .findOnMap
+                path = [.stageSelect, .quiz(stageIndex: i, mode: mode)]
+            }
         case "result":
             // Synthetic 3-star clear so the celebration can be captured.
             //
@@ -65,7 +71,7 @@ struct RootView: View {
             let illustrated = app.cards.all.first { $0.art != nil }
             let plain = app.cards.all.filter { $0.id != illustrated?.id }.prefix(2)
             let demo = StageResult(
-                stageIndex: 1, score: 1120, stars: 3,
+                mode: .findOnMap, stageIndex: 1, score: 1120, stars: 3,
                 firstTryByPrefecture: Dictionary(uniqueKeysWithValues:
                     Stage.all[1].codes.map { ($0, true) }),
                 cardDraws: plain.map { .new($0) }
@@ -80,11 +86,13 @@ struct RootView: View {
     private func destination(_ route: Route) -> some View {
         switch route {
         case .stageSelect:
-            StageSelectView(onPlay: { path.append(.quiz(stageIndex: $0.index)) })
+            StageSelectView(quizMode: $quizMode,
+                            onPlay: { path.append(.quiz(stageIndex: $0.index,
+                                                        mode: quizMode)) })
 
-        case .quiz(let stageIndex):
+        case .quiz(let stageIndex, let mode):
             if let stage = Stage.stage(at: stageIndex) {
-                QuizView(stage: stage) { result in
+                QuizView(stage: stage, quizMode: mode) { result in
                     finish(result, stage: stage)
                 }
             }
@@ -124,7 +132,7 @@ struct RootView: View {
     }
 
     private func replay(_ stage: Stage) {
-        path = [.stageSelect, .quiz(stageIndex: stage.index)]
+        path = [.stageSelect, .quiz(stageIndex: stage.index, mode: quizMode)]
     }
 
     private func backToStageSelect() {

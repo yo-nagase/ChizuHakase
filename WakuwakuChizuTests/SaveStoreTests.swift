@@ -23,7 +23,7 @@ struct SaveStoreTests {
         let store = SaveStore(directory: dir)
         #expect(store.data.mastery.isEmpty)
         #expect(store.data.cards.isEmpty)
-        #expect(store.data.stages.isEmpty)
+        #expect(store.data.records.isEmpty)
         #expect(store.data.version == SaveData.currentVersion)
         #expect(store.data.settings.soundEnabled)
         #expect(store.data.settings.speechEnabled)
@@ -35,15 +35,14 @@ struct SaveStoreTests {
         defer { try? FileManager.default.removeItem(at: dir) }
 
         let store = SaveStore(directory: dir)
-        store.applyStageResult(StageResult(
-            stageIndex: 0, score: 730, stars: 3,
+        store.applyStageResult(StageResult(mode: .findOnMap, stageIndex: 0, score: 730, stars: 3,
             firstTryByPrefecture: [1: true, 2: true, 3: false],
             cardDraws: []))
 
         let reloaded = SaveStore(directory: dir)
         #expect(reloaded.data.masteryLevel(of: 1) == 1)
         #expect(reloaded.data.masteryLevel(of: 3) == 0, "a missed prefecture gains nothing")
-        #expect(reloaded.data.record(forStage: 0) == StageRecord(stars: 3, score: 730))
+        #expect(reloaded.data.record(forStage: 0, mode: .findOnMap) == StageRecord(stars: 3, score: 730))
     }
 
     @Test func replayNeverLowersABestRecord() throws {
@@ -51,12 +50,12 @@ struct SaveStoreTests {
         defer { try? FileManager.default.removeItem(at: dir) }
 
         let store = SaveStore(directory: dir)
-        store.applyStageResult(StageResult(stageIndex: 1, score: 800, stars: 3,
+        store.applyStageResult(StageResult(mode: .findOnMap, stageIndex: 1, score: 800, stars: 3,
                                            firstTryByPrefecture: [:], cardDraws: []))
-        store.applyStageResult(StageResult(stageIndex: 1, score: 100, stars: 1,
+        store.applyStageResult(StageResult(mode: .findOnMap, stageIndex: 1, score: 100, stars: 1,
                                            firstTryByPrefecture: [:], cardDraws: []))
 
-        #expect(store.data.record(forStage: 1) == StageRecord(stars: 3, score: 800))
+        #expect(store.data.record(forStage: 1, mode: .findOnMap) == StageRecord(stars: 3, score: 800))
     }
 
     @Test func masteryAccumulatesAcrossPlaysAndCapsAtThree() throws {
@@ -65,7 +64,7 @@ struct SaveStoreTests {
 
         let store = SaveStore(directory: dir)
         for _ in 0..<5 {
-            store.applyStageResult(StageResult(stageIndex: 0, score: 100, stars: 3,
+            store.applyStageResult(StageResult(mode: .findOnMap, stageIndex: 0, score: 100, stars: 3,
                                                firstTryByPrefecture: [1: true],
                                                cardDraws: []))
         }
@@ -80,7 +79,7 @@ struct SaveStoreTests {
         var announcements: [[Int]] = []
         for _ in 0..<4 {
             announcements.append(store.applyStageResult(
-                StageResult(stageIndex: 0, score: 100, stars: 3,
+                StageResult(mode: .findOnMap, stageIndex: 0, score: 100, stars: 3,
                             firstTryByPrefecture: [5: true], cardDraws: [])))
         }
         // Levels 1, 2, then 3 (announced), then nothing further.
@@ -92,9 +91,9 @@ struct SaveStoreTests {
         defer { try? FileManager.default.removeItem(at: dir) }
 
         let store = SaveStore(directory: dir)
-        store.applyStageResult(StageResult(stageIndex: 0, score: 100, stars: 3,
+        store.applyStageResult(StageResult(mode: .findOnMap, stageIndex: 0, score: 100, stars: 3,
                                            firstTryByPrefecture: [7: true], cardDraws: []))
-        store.applyStageResult(StageResult(stageIndex: 0, score: 50, stars: 1,
+        store.applyStageResult(StageResult(mode: .findOnMap, stageIndex: 0, score: 50, stars: 1,
                                            firstTryByPrefecture: [7: false], cardDraws: []))
         #expect(store.data.masteryLevel(of: 7) == 1)
     }
@@ -107,14 +106,14 @@ struct SaveStoreTests {
                                  nameKana: "かに", nameKanji: "蟹",
                                  category: .food, description: "うみ")
         let store = SaveStore(directory: dir)
-        store.applyStageResult(StageResult(stageIndex: 0, score: 0, stars: 3,
+        store.applyStageResult(StageResult(mode: .findOnMap, stageIndex: 0, score: 0, stars: 3,
                                            firstTryByPrefecture: [:],
                                            cardDraws: [.new(card)]))
         #expect(store.data.ownedCount(of: "01-1") == 1)
         #expect(store.data.owns("01-1"))
         #expect(!store.data.isShiny("01-1"))
 
-        store.applyStageResult(StageResult(stageIndex: 0, score: 0, stars: 3,
+        store.applyStageResult(StageResult(mode: .findOnMap, stageIndex: 0, score: 0, stars: 3,
                                            firstTryByPrefecture: [:],
                                            cardDraws: [.shiny(card), .duplicate(card)]))
         #expect(store.data.ownedCount(of: "01-1") == GameRules.maxCardCopies)
@@ -162,13 +161,13 @@ struct SaveStoreTests {
         defer { try? FileManager.default.removeItem(at: dir) }
 
         let store = SaveStore(directory: dir)
-        store.applyStageResult(StageResult(stageIndex: 0, score: 500, stars: 3,
+        store.applyStageResult(StageResult(mode: .findOnMap, stageIndex: 0, score: 500, stars: 3,
                                            firstTryByPrefecture: [1: true, 2: true],
                                            cardDraws: []))
         store.eraseAll()
 
         #expect(store.data.mastery.isEmpty)
-        #expect(store.data.stages.isEmpty)
+        #expect(store.data.records.isEmpty)
         #expect(SaveStore(directory: dir).data.mastery.isEmpty)
     }
 
@@ -177,8 +176,7 @@ struct SaveStoreTests {
         defer { try? FileManager.default.removeItem(at: dir) }
 
         let store = SaveStore(directory: dir)
-        store.applyStageResult(StageResult(
-            stageIndex: 0, score: 0, stars: 3,
+        store.applyStageResult(StageResult(mode: .findOnMap, stageIndex: 0, score: 0, stars: 3,
             firstTryByPrefecture: [:],
             cardDraws: [
                 .new(card("01-1")), .new(card("01-2")), .shiny(card("02-1")),

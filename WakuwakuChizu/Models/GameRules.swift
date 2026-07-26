@@ -19,7 +19,14 @@ nonisolated enum GameRules {
     static let shakeDuration: TimeInterval = 0.45
     static let hintBlinkPeriod: TimeInterval = 0.9
     /// Wrong attempts on the current question before the answer starts blinking.
-    static let missesBeforeHint = 2
+    ///
+    /// Three, not two: two came up often enough that a child who was thinking
+    /// rather than guessing kept getting the answer handed to them, and being
+    /// helped before you have finished trying is its own small insult.
+    static let missesBeforeHint = 3
+
+    /// How many names 「なまえを あてる」 offers at once.
+    static let nameChoiceCount = 4
 
     /// How loudly a streak should be celebrated. 0 means say nothing.
     ///
@@ -34,6 +41,25 @@ nonisolated enum GameRules {
         case 4...6: 2
         default: 3
         }
+    }
+
+    /// The names offered for one question: the answer plus decoys.
+    ///
+    /// Decoys come from the same stage, never the whole country. 「あいちけん」
+    /// against three neighbours asks whether the child knows Aichi; against
+    /// 北海道, 沖縄 and 青森 it asks nothing, because the shape on screen
+    /// already rules those out.
+    ///
+    /// Order is shuffled — always putting the answer first would be learnable
+    /// in about three questions.
+    static func nameChoices(answer: Int,
+                            from pool: [Int],
+                            count: Int = nameChoiceCount,
+                            using rng: inout AnyRandomNumberGenerator) -> [Int] {
+        var chosen = [answer]
+        let decoys = pool.filter { $0 != answer }.shuffled(using: &rng)
+        chosen.append(contentsOf: decoys.prefix(max(0, count - 1)))
+        return chosen.shuffled(using: &rng)
     }
 
     /// Whether a correct answer still earns a card.

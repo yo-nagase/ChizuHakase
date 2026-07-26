@@ -181,15 +181,22 @@ struct QuizViewModelTests {
 
     // MARK: - Hint
 
-    @Test func hintAppearsOnlyAfterTwoMisses() throws {
+    /// Driven by the constant rather than a hard-coded two: the threshold moved
+    /// to three, and a test that says "two" in its name and its body is the
+    /// kind that gets edited to match the code instead of checking it.
+    @Test func theHintWaitsForTheFullAllowanceOfMisses() throws {
         let quiz = makeQuiz()
         let target = try #require(quiz.target)
         let others = quiz.order.filter { $0 != target.code }
+        #expect(others.count >= GameRules.missesBeforeHint, "stage too small for this test")
 
         #expect(quiz.hintCode == nil)
-        quiz.answer(others[0])
-        #expect(quiz.hintCode == nil, "one miss is not enough to give it away")
-        quiz.answer(others[1])
+        for miss in 0..<(GameRules.missesBeforeHint - 1) {
+            quiz.answer(others[miss])
+            #expect(quiz.hintCode == nil,
+                    "\(miss + 1) miss(es) is not enough to give the answer away")
+        }
+        quiz.answer(others[GameRules.missesBeforeHint - 1])
         #expect(quiz.hintCode == target.code)
     }
 

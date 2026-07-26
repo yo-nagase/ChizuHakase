@@ -11,15 +11,18 @@ struct StageSelectView: View {
     @Environment(AppState.self) private var app
     @Environment(\.textMode) private var mode
 
+    @Binding var quizMode: QuizMode
     var onPlay: (Stage) -> Void
 
     var body: some View {
         ScrollView {
             VStack(spacing: 16) {
+                modeSwitch
                 ForEach(Stage.all) { stage in
                     StageSheet(stage: stage,
                                mapData: app.mapData,
-                               record: app.save.data.record(forStage: stage.index),
+                               record: app.save.data.record(forStage: stage.index,
+                                                            mode: quizMode),
                                stuckCount: stuckCount(stage),
                                sparklingCount: sparklingCount(stage)) {
                         onPlay(stage)
@@ -32,6 +35,47 @@ struct StageSelectView: View {
         .background(AlbumPage())
         .navigationTitle(mode.stages)
         .navigationBarTitleDisplayMode(.inline)
+    }
+
+    /// Which way the questions run.
+    ///
+    /// Sits above the shelf rather than in settings: it changes what the next
+    /// tap does, and the stars underneath are per mode, so the two have to be
+    /// visible together or the records look like they reset themselves.
+    private var modeSwitch: some View {
+        HStack(spacing: 10) {
+            ForEach(QuizMode.allCases) { candidate in
+                Button {
+                    quizMode = candidate
+                } label: {
+                    VStack(spacing: 3) {
+                        Text("\(candidate.symbol) \(candidate.title(mode))")
+                            .font(AppFont.rounded(15, relativeTo: .subheadline))
+                            .foregroundStyle(Palette.ink)
+                        Text(candidate.blurb(mode))
+                            .font(AppFont.rounded(10, relativeTo: .caption2))
+                            .foregroundStyle(Palette.ink.opacity(0.5))
+                    }
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.7)
+                    .multilineTextAlignment(.center)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 10)
+                    .padding(.horizontal, 6)
+                    .background(
+                        RoundedRectangle(cornerRadius: 18, style: .continuous)
+                            .fill(quizMode == candidate ? .white : Color(hex: 0xF3EDE0))
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 18, style: .continuous)
+                            .strokeBorder(quizMode == candidate ? Palette.orange : .clear,
+                                          lineWidth: 2.5)
+                    )
+                }
+                .buttonStyle(.plain)
+                .accessibilityAddTraits(quizMode == candidate ? [.isSelected] : [])
+            }
+        }
     }
 
     /// How many of this stage's prefectures the child has stuck down at all.

@@ -22,6 +22,18 @@ nonisolated struct PrefectureAppearance: Equatable {
                              isStuck: false)
     }
 
+    /// The one being asked about in 「なまえを あてる」.
+    ///
+    /// Full colour against neighbours washed out to 22%, which is the widest
+    /// contrast the palette has. It has to be unmistakable at a glance among 46
+    /// others — if finding the lit one is any work at all, that becomes the
+    /// puzzle instead of the name, which is the thing being asked.
+    static func spotlit(for code: Int) -> PrefectureAppearance {
+        PrefectureAppearance(fill: Palette.fill(for: code),
+                             stroke: Palette.boundary,
+                             isStuck: false)
+    }
+
     /// A sticker pressed onto the page.
     static func stuck(for code: Int, strength: Double = 1, sparkling: Bool = false,
                       badge: String? = nil) -> PrefectureAppearance {

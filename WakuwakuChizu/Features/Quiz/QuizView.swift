@@ -10,6 +10,7 @@ struct QuizView: View {
     @Environment(\.textMode) private var mode
 
     let stage: Stage
+    var quizMode: QuizMode = .findOnMap
     var onFinish: (StageResult) -> Void
 
     @State private var quiz: QuizViewModel?
@@ -30,6 +31,7 @@ struct QuizView: View {
         .task {
             guard quiz == nil else { return }
             quiz = QuizViewModel(stage: stage,
+                                 mode: quizMode,
                                  mapData: app.mapData,
                                  catalog: app.cards,
                                  ownedCards: app.save.data.cards)
@@ -46,6 +48,7 @@ struct QuizView: View {
             Spacer(minLength: 0)
             map(quiz)
             Spacer(minLength: 0)
+            if quiz.mode == .nameIt { choiceGrid(quiz) }
             footer(quiz)
         }
         .padding(.horizontal, 16)
@@ -88,7 +91,7 @@ struct QuizView: View {
                 VStack(alignment: .leading, spacing: 8) {
                     questionName(quiz)
                     HStack(spacing: 10) {
-                        prompt
+                        prompt(quiz)
                         Spacer(minLength: 0)
                         speakButton(quiz)
                         micButton(quiz)
@@ -97,7 +100,7 @@ struct QuizView: View {
             } else {
                 HStack(spacing: 10) {
                     questionName(quiz)
-                    prompt
+                    prompt(quiz)
                     speakButton(quiz)
                     micButton(quiz)
                 }
@@ -111,7 +114,8 @@ struct QuizView: View {
 
     private func questionName(_ quiz: QuizViewModel) -> some View {
         VStack(alignment: typeSize.isAccessibilitySize ? .leading : .center, spacing: 1) {
-            Text(quiz.target?.displayName(mode) ?? "")
+            Text(quiz.mode == .nameIt ? mode.nameItQuestion
+                                      : (quiz.target?.displayName(mode) ?? ""))
                 .font(AppFont.rounded(31, relativeTo: .title))
                 .foregroundStyle(Palette.ink)
                 // Side by side with the prompt there is only room for one line,
@@ -122,13 +126,18 @@ struct QuizView: View {
                 .minimumScaleFactor(0.7)
                 .fixedSize(horizontal: false, vertical: true)
             // Kanji stays secondary: the reading is what a 5-year-old uses.
-            Text(quiz.target?.secondaryName(mode) ?? "")
+            Text(quiz.mode == .nameIt ? mode.nameItPrompt
+                                      : (quiz.target?.secondaryName(mode) ?? ""))
                 .font(AppFont.rounded(13, relativeTo: .caption))
                 .foregroundStyle(Palette.ink.opacity(0.5))
         }
     }
 
-    private var prompt: some View {
+    @ViewBuilder private func prompt(_ quiz: QuizViewModel) -> some View {
+        if quiz.mode == .findOnMap { promptText }
+    }
+
+    private var promptText: some View {
         Text(mode.questionSuffix)
             .font(AppFont.rounded(19, relativeTo: .title3))
             .foregroundStyle(Palette.ink)
@@ -163,7 +172,7 @@ struct QuizView: View {
             mapData: app.mapData,
             codes: quiz.order,
             appearance: { appearance(for: $0, quiz: quiz) },
-            interactiveCodes: quiz.interactiveCodes,
+            interactiveCodes: quiz.mode == .nameIt ? [] : quiz.interactiveCodes,
             targetCode: quiz.target?.code,
             hintCode: quiz.hintCode,
             effect: quiz.effect,
@@ -209,6 +218,30 @@ struct QuizView: View {
     }
 
     @ViewBuilder
+    /// The four names.
+    ///
+    /// Two columns rather than four in a row: at 47 prefectures the names run
+    /// long (「かごしまけん」), and a row of four would shrink them past reading
+    /// size for the child who most needs to read them.
+    private func choiceGrid(_ quiz: QuizViewModel) -> some View {
+        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: 2),
+                  spacing: 10) {
+            ForEach(quiz.choices, id: \.self) { code in
+                if let pref = app.mapData[code] {
+                    ChoiceButton(
+                        title: pref.displayName(mode),
+                        isRuledOut: quiz.ruledOut.contains(code),
+                        isAnswer: quiz.phase != .asking && quiz.target?.code == code,
+                        reduceMotion: reduceMotion
+                    ) {
+                        handleTap(pref, at: .prefecture(code), quiz: quiz)
+                    }
+                }
+            }
+        }
+        .animation(reduceMotion ? nil : .snappy, value: quiz.ruledOut)
+    }
+
     private func footer(_ quiz: QuizViewModel) -> some View {
         ZStack {
             // Reserved height so the map does not jump when the card appears.
@@ -228,6 +261,12 @@ struct QuizView: View {
     // MARK: - Appearance
 
     private func appearance(for pref: Prefecture, quiz: QuizViewModel) -> PrefectureAppearance {
+        // 「なまえを あてる」 asks about the one that is lit, so it stays lit until
+        // it is answered — including through a wrong guess, when the child needs
+        // to look at it again rather than hunt for what the question was.
+        if quiz.mode == .nameIt, quiz.phase == .asking, quiz.target?.code == pref.code {
+            return .spotlit(for: pref.code)
+        }
         guard quiz.answeredCodes.contains(pref.code) else {
             // Pre-printed slot, not a grey blank: the map should look like a
             // sticker album waiting to be filled from the very first question.
@@ -292,7 +331,11 @@ struct QuizView: View {
             app.voice.stop()
             return
         }
-        let candidates = app.mapData.prefectures(in: Array(quiz.interactiveCodes))
+        // Only the names actually on offer: in 「なまえを あてる」 a child saying
+        // a prefecture that is not one of the four has not answered the
+        // question, and scoring it would be scoring the wrong thing.
+        let codes = quiz.mode == .nameIt ? quiz.choices : Array(quiz.interactiveCodes)
+        let candidates = app.mapData.prefectures(in: codes)
         app.voice.start { heard in
             guard let match = PrefectureNameMatcher.match(heard, among: candidates) else { return }
             app.voice.stop()
@@ -301,8 +344,19 @@ struct QuizView: View {
         }
     }
 
+    /// Reads the question out.
+    ///
+    /// In 「なまえを あてる」 it must never say the target's name — that *is* the
+    /// answer. It reads the four choices instead, which is the only way a child
+    /// who cannot yet read them can play the mode at all (CLAUDE.md §7).
     private func speak(_ quiz: QuizViewModel) {
-        guard app.save.data.settings.speechEnabled, let target = quiz.target else { return }
+        guard app.save.data.settings.speechEnabled else { return }
+        if quiz.mode == .nameIt {
+            let names = quiz.choices.compactMap { app.mapData[$0]?.spokenName }
+            guard !names.isEmpty else { return }
+            return SpeechService.shared.speak(names.joined(separator: "、"))
+        }
+        guard let target = quiz.target else { return }
         SpeechService.shared.speak("\(target.kana)は、どこかな?")
     }
 
@@ -372,5 +426,59 @@ private struct CardWinBanner: View {
         .padding(.horizontal, 16)
         .padding(.vertical, 10)
         .stickerCard(cornerRadius: 18, isHolographic: isShiny)
+    }
+}
+
+/// One name in 「なまえを あてる」.
+///
+/// A ruled-out name stays on screen, dimmed and unpressable, rather than
+/// disappearing. A choice that vanishes takes with it the memory of having
+/// tried it, and a child who cannot see what they already ruled out will try it
+/// again.
+private struct ChoiceButton: View {
+    let title: String
+    let isRuledOut: Bool
+    let isAnswer: Bool
+    let reduceMotion: Bool
+    var action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Text(title)
+                .font(AppFont.rounded(19, relativeTo: .headline))
+                .foregroundStyle(isRuledOut ? Palette.ink.opacity(0.35) : Palette.ink)
+                .lineLimit(2)
+                .minimumScaleFactor(0.6)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 14)
+                .padding(.horizontal, 8)
+                .background(
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        .fill(fill)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        .strokeBorder(isAnswer ? Palette.gold : .clear, lineWidth: 3)
+                )
+        }
+        .buttonStyle(ChoicePressStyle(reduceMotion: reduceMotion))
+        .disabled(isRuledOut)
+        .accessibilityLabel(title)
+        .accessibilityHint(isRuledOut ? "ちがったよ" : "")
+    }
+
+    private var fill: Color {
+        if isAnswer { return Palette.gold.opacity(0.35) }
+        return isRuledOut ? Color(hex: 0xEDE7DA) : .white
+    }
+}
+
+private struct ChoicePressStyle: ButtonStyle {
+    let reduceMotion: Bool
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed && !reduceMotion ? 0.96 : 1)
+            .animation(.spring(duration: 0.16), value: configuration.isPressed)
     }
 }

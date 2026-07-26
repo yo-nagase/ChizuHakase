@@ -26,6 +26,7 @@ final class QuizViewModel {
     }
 
     let stage: Stage
+    let mode: QuizMode
     private let mapData: MapData
     private let catalog: CardCatalog
     private var rng: AnyRandomNumberGenerator
@@ -40,6 +41,13 @@ final class QuizViewModel {
     private(set) var answeredCodes: Set<Int> = []
     private(set) var effect: MapEffect?
     private(set) var lastDraw: GameRules.CardDraw?
+    /// Prefecture codes offered for the current question in 「なまえを あてる」.
+    /// Empty in the map mode.
+    private(set) var choices: [Int] = []
+    /// Names already ruled out on this question. They stay on screen greyed
+    /// out rather than vanishing: a choice that disappears takes the memory of
+    /// having tried it with it.
+    private(set) var ruledOut: Set<Int> = []
 
     private var firstTryByPrefecture: [Int: Bool] = [:]
     private var draws: [GameRules.CardDraw] = []
@@ -49,11 +57,13 @@ final class QuizViewModel {
     private var effectCounter = 0
 
     init(stage: Stage,
+         mode: QuizMode = .findOnMap,
          mapData: MapData,
          catalog: CardCatalog,
          ownedCards: [String: Int] = [:],
          generator: AnyRandomNumberGenerator = AnyRandomNumberGenerator()) {
         self.stage = stage
+        self.mode = mode
         self.mapData = mapData
         self.catalog = catalog
         self.ownedCards = ownedCards
@@ -64,6 +74,15 @@ final class QuizViewModel {
         self.order = mapData.prefectures(in: stage.codes).map(\.code)
             .shuffled(using: &self.rng)
         if order.isEmpty { phase = .finished }
+        dealChoices()
+    }
+
+    /// Fresh names for the current question. Called once per question so the
+    /// four buttons do not reshuffle under a finger mid-answer.
+    private func dealChoices() {
+        ruledOut = []
+        guard mode == .nameIt, let target else { return choices = [] }
+        choices = GameRules.nameChoices(answer: target.code, from: order, using: &rng)
     }
 
     // MARK: - Derived state
@@ -137,6 +156,7 @@ final class QuizViewModel {
         // Recorded as missed the moment it is first fumbled; getting it right
         // later still counts for the stage, just not for mastery.
         firstTryByPrefecture[target?.code ?? code] = false
+        ruledOut.insert(code)
         fire(.shake, on: code)
         return .wrong(code: code)
     }
@@ -150,6 +170,7 @@ final class QuizViewModel {
         lastDraw = nil
         effect = nil
         phase = index >= order.count ? .finished : .asking
+        dealChoices()
     }
 
     private func fire(_ kind: MapEffect.Kind, on code: Int) {
@@ -160,7 +181,8 @@ final class QuizViewModel {
     // MARK: - Output
 
     func makeResult() -> StageResult {
-        StageResult(stageIndex: stage.index,
+        StageResult(mode: mode,
+                    stageIndex: stage.index,
                     score: score,
                     stars: stars,
                     firstTryByPrefecture: firstTryByPrefecture,
