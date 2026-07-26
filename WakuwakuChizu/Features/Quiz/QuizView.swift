@@ -267,16 +267,16 @@ struct QuizView: View {
         if quiz.mode == .nameIt, quiz.phase == .asking, quiz.target?.code == pref.code {
             return .spotlit(for: pref.code)
         }
-        guard quiz.answeredCodes.contains(pref.code) else {
-            // Pre-printed slot, not a grey blank: the map should look like a
-            // sticker album waiting to be filled from the very first question.
-            return .slot(for: pref.code)
-        }
-        // The emoji rises only on the prefecture just won, and only while its
-        // celebration is on screen.
+        // Answering does not colour a prefecture in.
+        //
+        // It used to: each correct answer stuck that prefecture down in full
+        // colour, so by the last question of a seven-prefecture stage there was
+        // exactly one pale shape left and the question answered itself. The
+        // celebration is the pop and the card, both of which pass — what stays
+        // on screen has to stay a question.
         let isCelebrating = quiz.effect?.code == pref.code && quiz.phase == .celebrating
-        return .stuck(for: pref.code,
-                      badge: isCelebrating ? quiz.lastDraw?.card.emoji : nil)
+        guard isCelebrating else { return .slot(for: pref.code) }
+        return .stuck(for: pref.code, badge: quiz.lastDraw?.card.emoji)
     }
 
     // MARK: - Actions

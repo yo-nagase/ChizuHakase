@@ -64,12 +64,37 @@ nonisolated enum GameRules {
 
     /// Whether a correct answer still earns a card.
     ///
-    /// Once the hint has outlined the answer, tapping it is following a
-    /// pointer rather than knowing where the prefecture is, so there is nothing
-    /// to reward. The points and the mastery credit are untouched — this
-    /// withholds a prize, it never takes one away (CLAUDE.md §12).
+    /// A single wrong tap is enough to lose it. Getting there in the end is
+    /// still worth points and still counts toward the stage; the card is what
+    /// marks having known it outright, and handing one out after a fumble makes
+    /// it mean nothing.
+    ///
+    /// Points and mastery are untouched either way — this withholds a prize, it
+    /// never takes one away (CLAUDE.md §12).
     static func earnsCard(afterMisses misses: Int) -> Bool {
-        misses < missesBeforeHint
+        misses == 0
+    }
+
+    /// The order questions are asked in.
+    ///
+    /// `repeats` passes over the same prefectures, shuffled separately, and no
+    /// prefecture is asked twice in a row — an immediate repeat tests what is
+    /// still under the child's finger rather than what they know.
+    static func questionOrder(codes: [Int], repeats: Int,
+                              using rng: inout AnyRandomNumberGenerator) -> [Int] {
+        guard repeats > 1 else { return codes.shuffled(using: &rng) }
+        var order: [Int] = []
+        for _ in 0..<repeats {
+            var pass = codes.shuffled(using: &rng)
+            // Swap the head away if it repeats the previous pass's tail. With
+            // two or more prefectures there is always somewhere to put it.
+            if let last = order.last, pass.first == last,
+               let swap = pass.indices.dropFirst().first(where: { pass[$0] != last }) {
+                pass.swapAt(0, swap)
+            }
+            order.append(contentsOf: pass)
+        }
+        return order
     }
 
     /// Breathing room added around the fitted map, as a fraction of its own

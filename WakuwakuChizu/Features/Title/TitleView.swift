@@ -78,23 +78,39 @@ struct TitleView: View {
     /// Three counts, each with how far along it is.
     ///
     /// A bare number answers "how many" but not "how close am I", which is the
-    /// question a collection actually raises. The bar carries that, and it is
-    /// also what stops these reading as buttons: they were raised white cards
-    /// with a drop shadow, the same treatment as the pill buttons right below,
-    /// so a child could reasonably press them and nothing would happen. A card
-    /// with a meter in it is plainly a readout.
+    /// question a collection actually raises. The bar carries that.
+    ///
+    /// These looked pressable long before they were, which was the original
+    /// complaint. The answer turned out not to be making them look inert but
+    /// making them do the obvious thing: each one now opens the screen where
+    /// the things it counts can be looked at.
     private var progressLine: some View {
         HStack(spacing: 10) {
             tally("🗾", app.save.data.mastery.values.filter { $0 > 0 }.count, 47,
-                  mode.isKids ? "けん" : "県", Palette.learned)
-            tally("✨", app.save.data.sparklingPrefectureCount, 47, "キラ", Palette.gold)
+                  mode.isKids ? "けん" : "県", Palette.learned, onMyMap)
+            tally("✨", app.save.data.sparklingPrefectureCount, 47, "キラ",
+                  Palette.gold, onMyMap)
             tally("🃏", app.save.data.totalOwnedCards, max(app.cards.count, 1), "カード",
-                  Palette.collected)
+                  Palette.collected, onCardBook)
         }
     }
 
+    /// Each count opens the place its things live: the two prefecture counts go
+    /// to the map, the card count to the book. A number a child is proud of
+    /// should lead somewhere — and every one of these was already the answer to
+    /// "where can I see them?".
     private func tally(_ emoji: String, _ have: Int, _ total: Int,
-                       _ label: String, _ tint: Color) -> some View {
+                       _ label: String, _ tint: Color,
+                       _ action: @escaping () -> Void) -> some View {
+        Button(action: action) { tallyFace(emoji, have, total, label, tint) }
+            .buttonStyle(TallyPressStyle())
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("\(label) \(have) / \(total)")
+            .accessibilityAddTraits(.isButton)
+    }
+
+    private func tallyFace(_ emoji: String, _ have: Int, _ total: Int,
+                           _ label: String, _ tint: Color) -> some View {
         VStack(spacing: 5) {
             Text(emoji)
                 .font(.system(size: 15))
@@ -131,8 +147,17 @@ struct TitleView: View {
                 // than "waiting to be pushed".
                 .shadow(color: Palette.ink.opacity(0.06), radius: 5, y: 2)
         )
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel("\(label) \(have) / \(total)")
+    }
+}
+
+/// Presses the card into the page, the same way the stage sheets do.
+private struct TallyPressStyle: ButtonStyle {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed && !reduceMotion ? 0.96 : 1)
+            .animation(.spring(duration: 0.18), value: configuration.isPressed)
     }
 }
 

@@ -44,8 +44,12 @@ nonisolated struct MapData: Sendable {
 
     subscript(code: Int) -> Prefecture? { byCode[code] }
 
+    /// Deduplicated: a regional stage lists every prefecture twice in its
+    /// question order, and handing that straight to the map drew — and made an
+    /// accessibility element for — each shape twice.
     func prefectures(in codes: [Int]) -> [Prefecture] {
-        codes.compactMap { byCode[$0] }
+        var seen: Set<Int> = []
+        return codes.compactMap { seen.insert($0).inserted ? byCode[$0] : nil }
     }
 
     var size: CGSize { CGSize(width: width, height: height) }

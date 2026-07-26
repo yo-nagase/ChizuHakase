@@ -44,10 +44,11 @@ struct QuizViewModelTests {
         #expect(answerAfterMissing(quiz, times: 0) != nil)
     }
 
-    /// One miss is a guess, not a giveaway — the answer has not been shown yet.
-    @Test func oneMissStillWinsACard() {
+    /// One wrong tap is enough. The card marks having known it outright, and
+    /// one handed out after a fumble marks nothing.
+    @Test func oneMissLosesTheCard() {
         let quiz = makeQuiz()
-        #expect(answerAfterMissing(quiz, times: 1) != nil)
+        #expect(answerAfterMissing(quiz, times: 1) == nil)
     }
 
     /// Two misses light up the answer, so tapping it proves nothing.
@@ -82,11 +83,40 @@ struct QuizViewModelTests {
 
     // MARK: - Setup
 
-    @Test func asksEveryPrefectureInTheStageExactlyOnce() {
+    /// A regional stage asks each prefecture twice. Once is a coin-flip.
+    @Test func aRegionalStageAsksEveryPrefectureTwice() {
         let quiz = makeQuiz(stageIndex: 0)
-        #expect(quiz.questionCount == 7)
+        #expect(quiz.questionCount == 14)
         #expect(Set(quiz.order) == Set(Stage.all[0].codes))
-        #expect(quiz.order.count == Set(quiz.order).count, "no prefecture repeats")
+        for code in Stage.all[0].codes {
+            #expect(quiz.order.filter { $0 == code }.count == 2,
+                    "prefecture \(code) is not asked exactly twice")
+        }
+    }
+
+    /// 47 questions is already a long sitting; 94 would be a different activity.
+    @Test func theAllJapanStageAsksEachPrefectureOnce() {
+        let quiz = makeQuiz(stageIndex: 6)
+        #expect(quiz.questionCount == 47)
+        #expect(quiz.order.count == Set(quiz.order).count)
+    }
+
+    /// An immediate repeat tests what is still under the child's finger.
+    @Test func aPrefectureIsNeverAskedTwiceInARow() {
+        for seed in UInt64(1)...20 {
+            let quiz = makeQuiz(stageIndex: 0, seed: seed)
+            for (a, b) in zip(quiz.order, quiz.order.dropFirst()) {
+                #expect(a != b, "seed \(seed) repeats \(a) back to back")
+            }
+        }
+    }
+
+    /// Stars are judged out of the prefectures, not the questions. A stage that
+    /// asks 7 twice is still a 7-prefecture stage.
+    @Test func starsAreGradedOnPrefecturesNotQuestions() {
+        let quiz = makeQuiz(stageIndex: 0)
+        #expect(quiz.prefectureCount == 7)
+        #expect(quiz.questionCount == 14)
     }
 
     @Test func questionOrderIsShuffled() {
@@ -150,9 +180,10 @@ struct QuizViewModelTests {
     @Test func comboRaisesTheScoreOnConsecutiveFirstTryAnswers() {
         let quiz = makeQuiz(stageIndex: 0)
         playPerfectly(quiz)
-        // 7 questions: 100 + 120 + 140 + 160 + 180 + 200 + 220
-        #expect(quiz.score == 1120)
-        #expect(quiz.combo == 7)
+        // 14 questions, the combo climbing by 20 each time:
+        // 14 x 100 + 20 x (0 + 1 + ... + 13)
+        #expect(quiz.score == 3220)
+        #expect(quiz.combo == 14)
     }
 
     @Test func answeringAfterAMissScoresTheFlatFifty() throws {
@@ -214,13 +245,19 @@ struct QuizViewModelTests {
 
     // MARK: - Interactivity
 
-    @Test func answeredPrefecturesStopBeingTappable() throws {
+    /// Answered prefectures stay tappable.
+    ///
+    /// They used to drop out, which together with them changing colour made
+    /// every question easier than the last — by the seventh there was one shape
+    /// left. They also get asked again, so they have to stay live.
+    @Test func answeredPrefecturesStayTappable() throws {
         let quiz = makeQuiz()
         let target = try #require(quiz.target)
         #expect(quiz.interactiveCodes.contains(target.code))
         quiz.answer(target.code)
         quiz.advance()
-        #expect(!quiz.interactiveCodes.contains(target.code))
+        #expect(quiz.interactiveCodes.contains(target.code))
+        #expect(quiz.interactiveCodes == Set(Stage.all[0].codes))
     }
 
     @Test func nothingIsTappableWhileCelebrating() throws {
@@ -241,8 +278,8 @@ struct QuizViewModelTests {
             }
             quiz.advance()
         }
-        #expect(drawCount == 7)
-        #expect(quiz.makeResult().cardDraws.count == 7)
+        #expect(drawCount == 14)
+        #expect(quiz.makeResult().cardDraws.count == 14)
     }
 
     @Test func oneStageNeverAwardsTheSameUnownedCardTwice() {

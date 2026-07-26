@@ -57,13 +57,50 @@ struct GameRulesTests {
 
     // MARK: - Earning a card
 
-    /// Once the hint has outlined the answer, tapping it is following a pointer
-    /// rather than knowing where the prefecture is.
-    @Test func aCardIsEarnedUntilTheHintGivesItAway() {
+    /// Only a clean answer earns one. A card marks having known it outright.
+    @Test func onlyAnUnfumbledAnswerEarnsACard() {
         #expect(GameRules.earnsCard(afterMisses: 0))
-        #expect(GameRules.earnsCard(afterMisses: 1))
+        #expect(!GameRules.earnsCard(afterMisses: 1))
         #expect(!GameRules.earnsCard(afterMisses: GameRules.missesBeforeHint))
         #expect(!GameRules.earnsCard(afterMisses: 9))
+    }
+
+    // MARK: - Question order
+
+    @Test func oneRepeatIsJustAShuffle() {
+        var rng = AnyRandomNumberGenerator(SeededGenerator(seed: 3))
+        let order = GameRules.questionOrder(codes: [1, 2, 3], repeats: 1, using: &rng)
+        #expect(Set(order) == [1, 2, 3])
+        #expect(order.count == 3)
+    }
+
+    @Test func twoRepeatsAskEverythingTwice() {
+        var rng = AnyRandomNumberGenerator(SeededGenerator(seed: 4))
+        let order = GameRules.questionOrder(codes: Array(1...7), repeats: 2, using: &rng)
+        #expect(order.count == 14)
+        for code in 1...7 {
+            #expect(order.filter { $0 == code }.count == 2)
+        }
+    }
+
+    /// The seam between the two passes is the only place a repeat can land back
+    /// to back, so it is the only place worth checking hard.
+    @Test func noPrefectureIsAskedTwiceInARow() {
+        for seed in UInt64(1)...50 {
+            var rng = AnyRandomNumberGenerator(SeededGenerator(seed: seed))
+            let order = GameRules.questionOrder(codes: Array(1...7), repeats: 2, using: &rng)
+            for (a, b) in zip(order, order.dropFirst()) {
+                #expect(a != b, "seed \(seed): \(a) repeats immediately")
+            }
+        }
+    }
+
+    /// A single prefecture has nowhere else to go, so it does repeat back to
+    /// back — but it must still be asked twice rather than dropped.
+    @Test func aSinglePrefectureIsStillAskedTwice() {
+        var rng = AnyRandomNumberGenerator(SeededGenerator(seed: 5))
+        let order = GameRules.questionOrder(codes: [9], repeats: 2, using: &rng)
+        #expect(order == [9, 9])
     }
 
     /// The card is the only thing withheld. Points and the mastery credit are

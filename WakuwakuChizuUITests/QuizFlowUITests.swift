@@ -25,8 +25,10 @@ final class QuizFlowUITests: XCTestCase {
     /// is a race: the elements exist before the map has settled at its final
     /// position, so the tap can land on stale coordinates. Only shows up when
     /// the suite runs together, which is exactly when it matters.
+    /// Regional stages ask each prefecture twice, so a 7-prefecture stage is
+    /// 14 questions.
     @discardableResult
-    private func waitUntilQuizIsReady(questions: Int = 7) -> Bool {
+    private func waitUntilQuizIsReady(questions: Int = 14) -> Bool {
         app.staticTexts["\(questions) もんちゅう 1 もんめ"].waitForExistence(timeout: 10)
     }
 
@@ -84,23 +86,24 @@ final class QuizFlowUITests: XCTestCase {
         XCTAssertNotNil(currentTargetName(), "the question stays open after a miss")
     }
 
-    /// The whole point: seven correct taps in a row reach the result screen
-    /// with three stars.
+    /// The whole point: a full stage of correct taps reaches the result screen
+    /// with three stars. Seven prefectures asked twice is fourteen questions.
     func testPlayingAStageThroughReachesTheResultScreen() throws {
         launch(at: "quiz:0")
         XCTAssertTrue(waitUntilQuizIsReady(), "the quiz never appeared")
 
-        for question in 1...7 {
+        let questions = 14
+        for question in 1...questions {
             guard let target = currentTargetName() else {
-                XCTFail("no question on screen at \(question)/7")
+                XCTFail("no question on screen at \(question)/\(questions)")
                 return
             }
             tapPrefecture(target)
             // The celebration runs for 1.15s before the next question.
             // Matched on the accessibility label, which ProgressPips
-            // substitutes for the visible "1 / 7".
-            if question < 7 {
-                let next = app.staticTexts["7 もんちゅう \(question + 1) もんめ"]
+            // substitutes for the visible "1 / 14".
+            if question < questions {
+                let next = app.staticTexts["14 もんちゅう \(question + 1) もんめ"]
                 XCTAssertTrue(next.waitForExistence(timeout: 5),
                               "did not advance past question \(question)")
             }
@@ -108,9 +111,9 @@ final class QuizFlowUITests: XCTestCase {
 
         XCTAssertTrue(app.staticTexts["てん"].waitForExistence(timeout: 6),
                       "did not reach the result screen")
-        // 100+120+140+160+180+200+220 for an unbroken combo.
-        XCTAssertTrue(app.staticTexts["1120"].exists,
-                      "a perfect run of 7 should total 1120")
+        // 14 x 100 plus 20 for each step of an unbroken combo.
+        XCTAssertTrue(app.staticTexts["3220"].exists,
+                      "a perfect run of 14 should total 3220")
         // The star row merges its children into one element, so it is an
         // "other", not a static text.
         XCTAssertTrue(app.otherElements["ほし 3 こ"].exists, "a perfect run earns 3 stars")
@@ -158,7 +161,7 @@ final class QuizFlowUITests: XCTestCase {
         tapPrefecture(first)
         XCTAssertFalse(app.staticTexts["1 れんぞく!"].exists,
                        "one right answer is not a streak")
-        XCTAssertTrue(app.staticTexts["7 もんちゅう 2 もんめ"].waitForExistence(timeout: 8))
+        XCTAssertTrue(app.staticTexts["14 もんちゅう 2 もんめ"].waitForExistence(timeout: 8))
 
         let second = try XCTUnwrap(currentTargetName())
         tapPrefecture(second)
@@ -199,7 +202,7 @@ final class QuizFlowUITests: XCTestCase {
             guard let name = currentTargetName() else {
                 return XCTFail("could not read the asked prefecture")
             }
-            let next = app.staticTexts["7 もんちゅう \(question + 1) もんめ"]
+            let next = app.staticTexts["14 もんちゅう \(question + 1) もんめ"]
             let element = app.buttons[name]
 
             app.pinch(withScale: 1.6, velocity: 2)
@@ -257,7 +260,7 @@ final class QuizFlowUITests: XCTestCase {
         let kinki = stageSheet("きんき")
         XCTAssertTrue(kinki.waitForExistence(timeout: 10))
         kinki.tap()
-        XCTAssertTrue(app.staticTexts["7 もんちゅう 1 もんめ"].waitForExistence(timeout: 10),
+        XCTAssertTrue(app.staticTexts["14 もんちゅう 1 もんめ"].waitForExistence(timeout: 10),
                       "きんき did not start")
     }
 

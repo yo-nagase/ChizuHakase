@@ -14,7 +14,16 @@ nonisolated struct Stage: Identifiable, Sendable, Equatable {
     let codes: [Int]
 
     var id: Int { index }
-    var questionCount: Int { codes.count }
+
+    /// Regional stages ask each prefecture twice.
+    ///
+    /// Once is a coin-flip a child can pass by luck, and with the answered
+    /// prefectures no longer changing colour there is no elimination shortcut
+    /// to shorten the second pass either. 全国チャレンジ is exempt: 47 questions
+    /// is already a long sitting, and 94 would be a different activity.
+    var asksEachTwice: Bool { codes.count < 47 }
+
+    var questionCount: Int { codes.count * (asksEachTwice ? 2 : 1) }
 
     static let all: [Stage] = [
         Stage(index: 0, name: "ほっかいどう・とうほく", kanjiName: "北海道・東北",
