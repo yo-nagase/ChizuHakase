@@ -18,6 +18,22 @@ struct CardDetailView: View {
     @State private var tilt: CGSize = .zero
     @State private var appeared = false
 
+    /// Debug builds can start the card already leaning, so the tilted state can
+    /// be looked at in a screenshot. A gesture-driven pose is otherwise
+    /// impossible to capture without a finger on the glass.
+    private static var debugTilt: CGSize? {
+        #if DEBUG
+        let arguments = ProcessInfo.processInfo.arguments
+        guard let index = arguments.firstIndex(of: "-tiltCard"),
+              index + 1 < arguments.count else { return nil }
+        let parts = arguments[index + 1].split(separator: ",").compactMap { Double($0) }
+        guard parts.count == 2 else { return nil }
+        return CGSize(width: parts[0], height: parts[1])
+        #else
+        return nil
+        #endif
+    }
+
     private var isShiny: Bool { ownedCount >= GameRules.maxCardCopies }
 
     /// How far the card will lean. Enough to catch the light, not so far that
@@ -49,6 +65,7 @@ struct CardDetailView: View {
             .padding(24)
         }
         .onAppear {
+            if let debugTilt = Self.debugTilt { tilt = debugTilt }
             if reduceMotion { appeared = true }
             else { withAnimation(.spring(duration: 0.35)) { appeared = true } }
         }
