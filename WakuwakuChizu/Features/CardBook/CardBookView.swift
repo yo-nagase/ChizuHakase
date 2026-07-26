@@ -28,6 +28,18 @@ struct CardBookView: View {
         }
     }
 
+    /// Opens with the cover's own slide suppressed.
+    ///
+    /// A full-screen cover comes up from the bottom edge, which is the gesture
+    /// for a sheet of paper being pushed onto a desk. A card is picked up — it
+    /// should arrive from depth, which is what CardDetailView animates once the
+    /// system is not also sliding the whole thing.
+    private func open(_ card: SpecialtyCard) {
+        var transaction = Transaction()
+        transaction.disablesAnimations = true
+        withTransaction(transaction) { opened = card }
+    }
+
     private func matches(_ card: SpecialtyCard) -> Bool {
         switch active {
         case .all, .card: true
@@ -54,7 +66,7 @@ struct CardBookView: View {
         .navigationTitle(mode.cardBook)
         .navigationBarTitleDisplayMode(.inline)
         .task {
-            if case .card(let id) = initialFilter { opened = app.cards[id] }
+            if case .card(let id) = initialFilter, let card = app.cards[id] { open(card) }
         }
         .fullScreenCover(item: $opened) { card in
             CardDetailView(card: card,
@@ -138,7 +150,7 @@ struct CardBookView: View {
                 ForEach(cards) { card in
                     CardChipView(card: card,
                                  ownedCount: save.ownedCount(of: card.id),
-                                 onOpen: { opened = card })
+                                 onOpen: { open(card) })
                 }
             }
         }

@@ -16,7 +16,13 @@ struct CardDetailView: View {
 
     /// Live tilt, in degrees. x is pitch, y is yaw.
     @State private var tilt: CGSize = .zero
+    /// Pinch magnification, 1...3.
+    @State private var zoom: CGFloat = 1
+    @GestureState private var pinch: CGFloat = 1
     @State private var appeared = false
+
+    private static let maxZoom: CGFloat = 3
+    private var liveZoom: CGFloat { min(max(zoom * pinch, 1), Self.maxZoom) }
 
     /// Debug builds can start the card already leaning, so the tilted state can
     /// be looked at in a screenshot. A gesture-driven pose is otherwise
@@ -44,31 +50,38 @@ struct CardDetailView: View {
         ZStack {
             // Tapping the backdrop closes: a child who does not find the button
             // will try tapping away from the thing, and should be right.
-            Color.black.opacity(0.45)
+            Color.black.opacity(appeared ? 0.45 : 0)
                 .ignoresSafeArea()
-                .onTapGesture { dismiss() }
+                .onTapGesture { close() }
 
             VStack(spacing: 18) {
                 cardFace
                     .frame(maxWidth: 300)
                     .aspectRatio(0.72, contentMode: .fit)
+                    .scaleEffect(liveZoom)
                     .rotation3DEffect(.degrees(tilt.height), axis: (x: 1, y: 0, z: 0),
                                       perspective: 0.6)
                     .rotation3DEffect(.degrees(tilt.width), axis: (x: 0, y: 1, z: 0),
                                       perspective: 0.6)
-                    .scaleEffect(appeared ? 1 : 0.86)
+                    // Out of the depth of the screen rather than up from the
+                    // bottom edge: small, soft and transparent, coming forward
+                    // into focus. A card is picked up, not slid onto the desk.
+                    .scaleEffect(appeared ? 1 : 0.62)
+                    .blur(radius: appeared ? 0 : 14)
                     .opacity(appeared ? 1 : 0)
-                    .gesture(tiltGesture)
+                    .gesture(magnifyGesture)
+                    .simultaneousGesture(tiltGesture)
 
-                Button(mode.close) { dismiss() }
+                Button(mode.close) { close() }
                     .buttonStyle(.bouncy(Palette.teal, fontSize: 17))
+                    .opacity(appeared ? 1 : 0)
             }
             .padding(24)
         }
         .onAppear {
             if let debugTilt = Self.debugTilt { tilt = debugTilt }
             if reduceMotion { appeared = true }
-            else { withAnimation(.spring(duration: 0.35)) { appeared = true } }
+            else { withAnimation(.spring(duration: 0.42, bounce: 0.22)) { appeared = true } }
         }
     }
 
@@ -93,6 +106,26 @@ struct CardDetailView: View {
 
     private func clamp(_ value: CGFloat) -> CGFloat {
         min(max(value, -Self.maxTilt), Self.maxTilt)
+    }
+
+    /// Pinch to look closer. The magnification is kept rather than sprung back:
+    /// this is a viewer, and something zoomed into on purpose should stay that
+    /// way until it is put down.
+    private var magnifyGesture: some Gesture {
+        MagnifyGesture()
+            .updating($pinch) { value, state, _ in state = value.magnification }
+            .onEnded { value in zoom = min(max(zoom * value.magnification, 1), Self.maxZoom) }
+    }
+
+    /// Reverses the arrival, then dismisses. Without it the card vanishes on
+    /// the frame the button is pressed, which is not how anything is put down.
+    private func close() {
+        guard !reduceMotion else { return dismiss() }
+        withAnimation(.easeIn(duration: 0.2)) { appeared = false }
+        Task {
+            try? await Task.sleep(for: .seconds(0.2))
+            dismiss()
+        }
     }
 
     // MARK: - The card itself

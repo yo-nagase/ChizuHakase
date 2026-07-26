@@ -83,6 +83,34 @@ final class CardBookUITests: XCTestCase {
         XCTAssertFalse(close.waitForExistence(timeout: 2), "the card would not close")
     }
 
+    /// Pinching the open card makes it bigger, and the tilt gesture attached
+    /// alongside it must not swallow the pinch.
+    func testTheOpenCardCanBePinchedLarger() {
+        launch(at: "cardBook", withCards: true)
+        let card = app.buttons["かに"]
+        XCTAssertTrue(card.waitForExistence(timeout: 10))
+        card.tap()
+
+        let caption = app.staticTexts["かに"].firstMatch
+        XCTAssertTrue(caption.waitForExistence(timeout: 3))
+        let before = caption.frame.width
+
+        // scaleEffect changes the reported frame, so this reads the actual
+        // rendered size rather than trusting that the gesture fired. Two
+        // attempts: a synthesised pinch occasionally lands before the view has
+        // settled and is simply ignored, and one dropped gesture is not a
+        // regression worth failing a suite over.
+        var grew = false
+        for _ in 0..<2 where !grew {
+            app.pinch(withScale: 2.2, velocity: 2)
+            for _ in 0..<15 where !grew {
+                grew = app.staticTexts["かに"].firstMatch.frame.width > before * 1.2
+                if !grew { Thread.sleep(forTimeInterval: 0.2) }
+            }
+        }
+        XCTAssertTrue(grew, "pinching did not enlarge the card")
+    }
+
     /// An unowned slot must not open. There is nothing behind a 「？」, and a
     /// tap that produces an empty card is a small lie.
     func testAnUnownedSlotDoesNotOpen() {
