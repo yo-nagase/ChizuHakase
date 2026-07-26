@@ -21,6 +21,21 @@ nonisolated enum GameRules {
     /// Wrong attempts on the current question before the answer starts blinking.
     static let missesBeforeHint = 2
 
+    /// How loudly a streak should be celebrated. 0 means say nothing.
+    ///
+    /// A streak that always shouts the same way stops being news by the third
+    /// one. Growing the celebration is the only part of a run a child can feel
+    /// before the score screen, and it costs nothing when it breaks — combos
+    /// reset silently (CLAUDE.md §12).
+    static func comboTier(_ combo: Int) -> Int {
+        switch combo {
+        case ..<2: 0
+        case 2...3: 1
+        case 4...6: 2
+        default: 3
+        }
+    }
+
     /// Whether a correct answer still earns a card.
     ///
     /// Once the hint has outlined the answer, tapping it is following a

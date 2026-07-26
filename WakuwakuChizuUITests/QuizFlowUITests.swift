@@ -146,6 +146,26 @@ final class QuizFlowUITests: XCTestCase {
                        "prefectures share a centre; accessibility frames are wrong")
     }
 
+    // MARK: - Streak
+
+    /// The streak is called out on the map, not just in the header, and only
+    /// from the second in a row.
+    func testAStreakIsCalledOutOnTheSecondCorrectAnswer() throws {
+        launch(at: "quiz:0")
+        XCTAssertTrue(waitUntilQuizIsReady())
+
+        let first = try XCTUnwrap(currentTargetName())
+        tapPrefecture(first)
+        XCTAssertFalse(app.staticTexts["1 れんぞく!"].exists,
+                       "one right answer is not a streak")
+        XCTAssertTrue(app.staticTexts["7 もんちゅう 2 もんめ"].waitForExistence(timeout: 8))
+
+        let second = try XCTUnwrap(currentTargetName())
+        tapPrefecture(second)
+        XCTAssertTrue(app.staticTexts["2 れんぞく!"].waitForExistence(timeout: 5),
+                      "no streak call-out after two in a row")
+    }
+
     // MARK: - Zoom
 
     /// 全国チャレンジ puts all 47 prefectures in one frame, which is why the quiz

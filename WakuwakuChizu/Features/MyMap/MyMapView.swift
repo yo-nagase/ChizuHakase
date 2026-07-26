@@ -50,7 +50,7 @@ struct MyMapView: View {
             appearance: appearance,
             interactiveCodes: Set(1...47),
             zoom: zoom,
-            onTap: { selected = $0 })
+            onTap: { prefecture, _ in selected = prefecture })
         .aspectRatio(PrefectureGeometry.aspectRatio(of: app.mapData.prefectures),
                      contentMode: .fit)
         .zoomPan(scale: $zoom, offset: $pan)

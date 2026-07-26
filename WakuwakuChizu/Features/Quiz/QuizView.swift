@@ -16,6 +16,8 @@ struct QuizView: View {
     @State private var advanceTask: Task<Void, Never>?
     @State private var zoom: CGFloat = 1
     @State private var pan: CGSize = .zero
+    @State private var comboBurst: ComboBurst?
+    @State private var burstCount = 0
 
     var body: some View {
         ZStack {
@@ -166,7 +168,8 @@ struct QuizView: View {
             hintCode: quiz.hintCode,
             effect: quiz.effect,
             zoom: zoom,
-            onTap: { handleTap($0, quiz: quiz) })
+            comboBurst: comboBurst,
+            onTap: { handleTap($0, at: .point($1), quiz: quiz) })
         .aspectRatio(PrefectureGeometry.aspectRatio(
             of: app.mapData.prefectures(in: quiz.order)), contentMode: .fit)
         .zoomPan(scale: $zoom, offset: $pan)
@@ -185,6 +188,7 @@ struct QuizView: View {
         .onChange(of: quiz.questionNumber) { _, _ in
             zoom = 1
             pan = .zero
+            comboBurst = nil
         }
     }
 
@@ -238,17 +242,31 @@ struct QuizView: View {
 
     // MARK: - Actions
 
-    private func handleTap(_ prefecture: Prefecture?, quiz: QuizViewModel) {
+    private func handleTap(_ prefecture: Prefecture?, at anchor: ComboBurst.Anchor,
+                           quiz: QuizViewModel) {
         guard let prefecture else { return }
         switch quiz.answer(prefecture.code) {
         case .correct:
             SoundService.shared.play(.correct, enabled: app.save.data.settings.soundEnabled)
+            showComboBurst(quiz, at: anchor)
             scheduleAdvance(quiz)
         case .wrong:
             SoundService.shared.play(.wrong, enabled: app.save.data.settings.soundEnabled)
         case .ignored:
             break
         }
+    }
+
+    /// Calls out a run of first-try answers, where the finger landed.
+    ///
+    /// Nothing is shown for a streak of one, because every correct answer would
+    /// then carry a badge and the badge would stop meaning anything.
+    private func showComboBurst(_ quiz: QuizViewModel, at anchor: ComboBurst.Anchor) {
+        let tier = GameRules.comboTier(quiz.combo)
+        guard tier > 0 else { return comboBurst = nil }
+        burstCount += 1
+        comboBurst = ComboBurst(text: "\(quiz.combo) \(mode.combo)",
+                                anchor: anchor, tier: tier, id: burstCount)
     }
 
     /// Let the pop and the card land before moving on (CLAUDE.md §5).
@@ -278,7 +296,8 @@ struct QuizView: View {
         app.voice.start { heard in
             guard let match = PrefectureNameMatcher.match(heard, among: candidates) else { return }
             app.voice.stop()
-            handleTap(match, quiz: quiz)
+            // A spoken answer has no fingertip to aim at.
+            handleTap(match, at: .prefecture(match.code), quiz: quiz)
         }
     }
 

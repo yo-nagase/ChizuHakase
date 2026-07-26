@@ -32,6 +32,28 @@ nonisolated struct PrefectureAppearance: Equatable {
     }
 }
 
+/// A streak called out where the finger landed.
+///
+/// Anchored to the tap rather than to the prefecture's centre: the child is
+/// already looking at their fingertip, and on 全国チャレンジ a centred label can
+/// land on a different island from the one they just touched.
+nonisolated struct ComboBurst: Equatable {
+    /// Where to put it. A spoken answer has no fingertip, so it falls back to
+    /// the prefecture itself rather than dropping the celebration.
+    enum Anchor: Equatable {
+        /// In the map's own coordinates, as handed back by `onTap`.
+        case point(CGPoint)
+        case prefecture(Int)
+    }
+
+    var text: String
+    var anchor: Anchor
+    /// 1...3, louder as the run grows (`GameRules.comboTier`).
+    var tier: Int
+    /// Changes per burst so two streaks in a row both animate.
+    var id: Int
+}
+
 /// A one-shot visual reaction targeted at a single prefecture.
 /// `id` changes on every new event so repeats of the same kind still fire.
 nonisolated struct MapEffect: Equatable {
@@ -65,7 +87,10 @@ struct PrefectureMapView: View {
     /// by the zoom keeps every line the same width on the glass no matter how
     /// far in the child has pinched.
     var zoom: CGFloat = 1
-    var onTap: ((Prefecture?) -> Void)?
+    var comboBurst: ComboBurst?
+    /// Hands back what was hit and where the finger actually landed, in this
+    /// view's own coordinates.
+    var onTap: ((Prefecture?, CGPoint) -> Void)?
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -107,7 +132,37 @@ struct PrefectureMapView: View {
             .contentShape(Rectangle())
             .onTapGesture { location in
                 guard let onTap else { return }
-                onTap(resolve(location, transform: transform))
+                onTap(resolve(location, transform: transform), location)
+            }
+            .overlay(alignment: .topLeading) { comboLabel(transform: transform) }
+        }
+    }
+
+    /// The streak call-out, at the tap.
+    ///
+    /// Counter-scaled by the zoom for the same reason the outlines are divided
+    /// by it: this sits inside the magnified content, and at 4x an unscaled
+    /// label would cover half the country.
+    @ViewBuilder private func comboLabel(transform: CGAffineTransform) -> some View {
+        if let comboBurst, let point = burstPoint(comboBurst.anchor, transform: transform) {
+            ComboBurstLabel(burst: comboBurst, reduceMotion: reduceMotion)
+                .scaleEffect(1 / max(zoom, 1))
+                .position(point)
+                .allowsHitTesting(false)
+                // Keyed on the burst so a second streak restarts the animation
+                // instead of inheriting the finished state of the first.
+                .id(comboBurst.id)
+        }
+    }
+
+    private func burstPoint(_ anchor: ComboBurst.Anchor,
+                            transform: CGAffineTransform) -> CGPoint? {
+        switch anchor {
+        case .point(let point):
+            point
+        case .prefecture(let code):
+            mapData[code].map {
+                PrefectureGeometry.screenCentroid(of: $0, transform: transform)
             }
         }
     }
@@ -376,6 +431,42 @@ private struct RiseEffect: ViewModifier {
         } else {
             content
         }
+    }
+}
+
+/// 「3 れんぞく!」 rising off the tap, louder the longer the run.
+///
+/// Every tier changes size *and* colour *and* how much sparkle it carries. One
+/// axis alone is too easy to miss at a glance, and the whole point is that the
+/// fourth in a row should feel different from the second.
+private struct ComboBurstLabel: View {
+    let burst: ComboBurst
+    let reduceMotion: Bool
+
+    @State private var shown = false
+
+    private var size: CGFloat { [18, 23, 29][min(max(burst.tier, 1), 3) - 1] }
+    private var tint: Color { burst.tier >= 3 ? Palette.gold : Palette.orange }
+    private var sparkles: String { String(repeating: "✨", count: max(burst.tier - 1, 0)) }
+
+    var body: some View {
+        Text(sparkles.isEmpty ? burst.text : "\(sparkles)\(burst.text)")
+            .font(AppFont.rounded(size, relativeTo: .title3))
+            .foregroundStyle(tint)
+            .monospacedDigit()
+            .padding(.horizontal, 10)
+            .padding(.vertical, 5)
+            .background(Capsule().fill(.white.opacity(0.94)))
+            .overlay(Capsule().strokeBorder(tint.opacity(0.35), lineWidth: 1.5))
+            .shadow(color: Palette.ink.opacity(0.16), radius: 4, y: 2)
+            .fixedSize()
+            // Reduce Motion keeps the call-out — it just stops travelling. The
+            // information is the streak, not the movement (CLAUDE.md §9).
+            .offset(y: reduceMotion ? -26 : (shown ? -34 : 0))
+            .scaleEffect(reduceMotion ? 1 : (shown ? 1 : 0.5))
+            .opacity(reduceMotion ? 1 : (shown ? 1 : 0))
+            .animation(reduceMotion ? nil : .spring(duration: 0.45), value: shown)
+            .onAppear { shown = true }
     }
 }
 

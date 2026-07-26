@@ -28,6 +28,33 @@ struct GameRulesTests {
         #expect(regional.count == 47, "a prefecture appears in two regional stages")
     }
 
+    // MARK: - Streak call-out
+
+    /// Nothing is said for a streak of one: every correct answer would carry a
+    /// badge and the badge would stop meaning anything.
+    @Test func aSingleCorrectAnswerIsNotAStreak() {
+        #expect(GameRules.comboTier(0) == 0)
+        #expect(GameRules.comboTier(1) == 0)
+        #expect(GameRules.comboTier(2) > 0)
+    }
+
+    /// The whole point is that the fourth in a row feels different from the
+    /// second, so the tier has to actually climb.
+    @Test func theCallOutGetsLouderAsTheRunGrows() {
+        let tiers = (2...12).map(GameRules.comboTier)
+        #expect(tiers == tiers.sorted(), "tiers go down somewhere: \(tiers)")
+        #expect(Set(tiers).count >= 3, "the celebration never changes")
+        #expect(GameRules.comboTier(2) < GameRules.comboTier(5))
+        #expect(GameRules.comboTier(5) < GameRules.comboTier(9))
+    }
+
+    /// It has to stop climbing, or a long run would ask for a font size the
+    /// screen does not have.
+    @Test func theCallOutStopsAtTheTop() {
+        #expect(GameRules.comboTier(9) == GameRules.comboTier(47))
+        #expect(GameRules.comboTier(47) == 3)
+    }
+
     // MARK: - Earning a card
 
     /// Once the hint has outlined the answer, tapping it is following a pointer
