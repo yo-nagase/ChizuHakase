@@ -54,7 +54,13 @@ struct CardDetailView: View {
                 .ignoresSafeArea()
                 .onTapGesture { close() }
 
-            VStack(spacing: 18) {
+            // The card floats in the space above the button rather than the two
+            // sitting together in the middle: 「とじる」 belongs where a thumb
+            // already is, and a card being looked at should not have a button
+            // parked against its bottom edge.
+            VStack(spacing: 0) {
+                Spacer(minLength: 8)
+
                 cardFace
                     .frame(maxWidth: 300)
                     .scaleEffect(liveZoom)
@@ -71,11 +77,17 @@ struct CardDetailView: View {
                     .gesture(magnifyGesture)
                     .simultaneousGesture(tiltGesture)
 
+                Spacer(minLength: 18)
+
                 Button(mode.close) { close() }
                     .buttonStyle(.bouncy(Palette.teal, fontSize: 17))
                     .opacity(appeared ? 1 : 0)
             }
-            .padding(24)
+            .padding(.horizontal, 24)
+            .padding(.top, 24)
+            // Low, but not against the home indicator — the bouncy style draws
+            // its shadow below the pill and sinks into it when pressed.
+            .padding(.bottom, 18)
         }
         .onAppear {
             if let debugTilt = Self.debugTilt { tilt = debugTilt }
