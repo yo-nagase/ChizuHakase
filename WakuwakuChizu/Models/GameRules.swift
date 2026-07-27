@@ -7,7 +7,11 @@ nonisolated enum GameRules {
     // MARK: - Constants
 
     static let maxMastery = 3
-    static let maxCardCopies = 2
+
+    /// A card's stars: one per copy won. Three make it silver, five make it
+    /// gold, and five is the cap (CLAUDE.md §5).
+    static let maxCardStars = 5
+    static let silverStars = 3
 
     static let firstTryBaseScore = 100
     static let comboBonus = 20
@@ -156,25 +160,42 @@ nonisolated enum GameRules {
     // MARK: - Card draw
 
     enum CardDraw: Hashable, Sendable {
-        /// First copy of a card the child did not have.
+        /// First copy of a card the child did not have: one star.
         case new(SpecialtyCard)
-        /// Promoted to the shiny copy (owned count 2).
-        case shiny(SpecialtyCard)
-        /// Already shiny — nothing left to gain on this one.
+        /// Another copy of a card they had. `stars` is the count afterwards.
+        case star(SpecialtyCard, stars: Int)
+        /// Already at five stars — nothing left to gain on this one.
         case duplicate(SpecialtyCard)
 
         var card: SpecialtyCard {
             switch self {
-            case .new(let c), .shiny(let c), .duplicate(let c): c
+            case .new(let c), .star(let c, _), .duplicate(let c): c
             }
         }
+
+        /// What the card is worth after this draw.
+        var stars: Int {
+            switch self {
+            case .new: 1
+            case .star(_, let stars): min(maxCardStars, stars)
+            case .duplicate: maxCardStars
+            }
+        }
+
+        var tier: CardTier { CardTier(stars: stars) }
+
+        /// True when this draw is what took the card up a tier, which is the
+        /// only moment worth announcing as more than a star.
+        var promoted: Bool { tier.isSpecial && CardTier(stars: stars - 1) != tier }
     }
 
     /// Draw one card for a correct answer.
     ///
-    /// Unowned cards come first so the collection fills up quickly; once a
-    /// prefecture is complete, further wins roll for the shiny upgrade, which
-    /// is what keeps cleared stages worth replaying (CLAUDE.md §5).
+    /// Unowned cards come first so the collection fills up quickly. After that
+    /// the draw is among the cards that can still take a star, which is what
+    /// keeps a cleared prefecture worth playing (CLAUDE.md §5) — drawing from
+    /// all of them instead would spend wins on cards already at five while
+    /// others sat at one.
     static func drawCard(
         from cards: [SpecialtyCard],
         owned: [String: Int],
@@ -186,22 +207,22 @@ nonisolated enum GameRules {
         if let pick = unowned.randomElement(using: &generator) {
             return .new(pick)
         }
+        let unfinished = cards.filter { (owned[$0.id] ?? 0) < maxCardStars }
+        if let pick = unfinished.randomElement(using: &generator) {
+            return .star(pick, stars: (owned[pick.id] ?? 0) + 1)
+        }
         guard let pick = cards.randomElement(using: &generator) else { return nil }
-        return (owned[pick.id] ?? 0) >= maxCardCopies ? .duplicate(pick) : .shiny(pick)
+        return .duplicate(pick)
     }
 
-    /// Owned count after a draw, capped at `maxCardCopies`.
+    /// Stars after a draw, capped at `maxCardStars`.
+    ///
+    /// Takes the higher of what is already recorded and what the draw is worth,
+    /// so replaying a stage's draws onto the save — which is exactly what
+    /// happens when a result is applied — can never walk a count backwards.
     static func applyDraw(_ draw: CardDraw, to owned: [String: Int]) -> [String: Int] {
         var next = owned
-        let id = draw.card.id
-        switch draw {
-        case .new:
-            next[id] = max(1, next[id] ?? 0)
-        case .shiny:
-            next[id] = maxCardCopies
-        case .duplicate:
-            next[id] = maxCardCopies
-        }
+        next[draw.card.id] = min(maxCardStars, max(next[draw.card.id] ?? 0, draw.stars))
         return next
     }
 

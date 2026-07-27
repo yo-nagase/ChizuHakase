@@ -52,7 +52,7 @@ struct RootView: View {
         let arguments = ProcessInfo.processInfo.arguments
         if arguments.contains("-resetSave") { app.save.eraseAll() }
         // Enough of a collection to exercise the book: one plain card and one
-        // キラ. Owning nothing hides every name behind 「？」, which is correct
+        // gold. Owning nothing hides every name behind 「？」, which is correct
         // but leaves nothing to open.
         if arguments.contains("-grantCards") {
             app.save.applyStageResult(StageResult(
@@ -61,7 +61,9 @@ struct RootView: View {
                 // Parenthesised: ?? binds looser than +, so without these the
                 // second array was swallowed and only one card was ever granted.
                 cardDraws: (app.cards["01-1"].map { [GameRules.CardDraw.new($0)] } ?? [])
-                    + (app.cards["04-2"].map { [GameRules.CardDraw.shiny($0)] } ?? [])))
+                    + (app.cards["04-2"].map {
+                        [GameRules.CardDraw.star($0, stars: GameRules.maxCardStars)]
+                    } ?? [])))
         }
         guard let index = arguments.firstIndex(of: "-startAt"),
               index + 1 < arguments.count else { return }
@@ -69,7 +71,7 @@ struct RootView: View {
         case "stageSelect": path = [.stageSelect]
         case "myMap": path = [.myMap]
         case "cardBook": path = [.cardBook(filter: .all)]
-        case "cardBook:shiny": path = [.cardBook(filter: .shiny)]
+        case "cardBook:special": path = [.cardBook(filter: .special)]
         // Opens straight onto one card, so the detail view can be looked
         // at without tapping through the book to reach it.
         case let value where value.hasPrefix("card:"):
@@ -92,7 +94,9 @@ struct RootView: View {
                 firstTryByPrefecture: Dictionary(uniqueKeysWithValues:
                     Stage.all[1].codes.map { ($0, true) }),
                 cardDraws: plain.map { .new($0) }
-                    + (illustrated.map { [GameRules.CardDraw.shiny($0)] } ?? []))
+                    + (illustrated.map {
+                        [GameRules.CardDraw.star($0, stars: GameRules.silverStars)]
+                    } ?? []))
             path = [.stageSelect, .result(demo, sparkles: [13, 14])]
         default: break
         }

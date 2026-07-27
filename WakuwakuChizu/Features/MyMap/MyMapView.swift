@@ -205,7 +205,7 @@ private struct PrefectureDetailSheet: View {
                                          count: typeSize.cardColumns), spacing: 10) {
                     ForEach(cards) { card in
                         CardChipView(card: card,
-                                     ownedCount: app.save.data.ownedCount(of: card.id))
+                                     stars: app.save.data.stars(of: card.id))
                     }
                 }
                 .padding(.top, 4)

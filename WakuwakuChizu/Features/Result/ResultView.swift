@@ -20,11 +20,20 @@ struct ResultView: View {
     @State private var revealedStars = 0
     @State private var celebrating = false
 
-    private var newCards: [SpecialtyCard] {
-        result.cardDraws.compactMap { if case .new(let c) = $0 { c } else { nil } }
-    }
-    private var shinyCards: [SpecialtyCard] {
-        result.cardDraws.compactMap { if case .shiny(let c) = $0 { c } else { nil } }
+    /// What this run moved, each card as it ended up.
+    ///
+    /// Deduped, keeping the highest: one stage can put two stars on the same
+    /// card, and showing it twice would read as two cards. Draws that gained
+    /// nothing are left out — the panel is for what changed.
+    private var wonCards: [(card: SpecialtyCard, stars: Int)] {
+        var best: [String: (card: SpecialtyCard, stars: Int)] = [:]
+        for draw in result.cardDraws {
+            if case .duplicate = draw { continue }
+            if let existing = best[draw.card.id], existing.stars >= draw.stars { continue }
+            best[draw.card.id] = (draw.card, draw.stars)
+        }
+        // Walked in draw order, so the cards appear in the order they were won.
+        return result.cardDraws.compactMap { best.removeValue(forKey: $0.card.id) }
     }
 
     var body: some View {
@@ -40,7 +49,7 @@ struct ResultView: View {
                     scoreCard
 
                     if !newlySparkling.isEmpty { sparklePanel }
-                    if !newCards.isEmpty || !shinyCards.isEmpty { cardPanel }
+                    if !wonCards.isEmpty { cardPanel }
 
                     buttons
                 }
@@ -129,13 +138,10 @@ struct ResultView: View {
 
             LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10),
                                      count: typeSize.cardColumns), spacing: 10) {
-                ForEach(newCards) { card in
-                    CardChipView(card: card, prefecture: app.mapData[card.prefectureCode],
-                                 ownedCount: 1)
-                }
-                ForEach(shinyCards) { card in
-                    CardChipView(card: card, prefecture: app.mapData[card.prefectureCode],
-                                 ownedCount: 2)
+                ForEach(wonCards, id: \.card.id) { won in
+                    CardChipView(card: won.card,
+                                 prefecture: app.mapData[won.card.prefectureCode],
+                                 stars: won.stars)
                 }
             }
         }

@@ -109,15 +109,20 @@ struct SaveStoreTests {
         store.applyStageResult(StageResult(mode: .findOnMap, stageIndex: 0, score: 0, stars: 3,
                                            firstTryByPrefecture: [:],
                                            cardDraws: [.new(card)]))
-        #expect(store.data.ownedCount(of: "01-1") == 1)
+        #expect(store.data.stars(of: "01-1") == 1)
         #expect(store.data.owns("01-1"))
-        #expect(!store.data.isShiny("01-1"))
+        #expect(store.data.tier(of: "01-1") == .plain)
 
         store.applyStageResult(StageResult(mode: .findOnMap, stageIndex: 0, score: 0, stars: 3,
                                            firstTryByPrefecture: [:],
-                                           cardDraws: [.shiny(card), .duplicate(card)]))
-        #expect(store.data.ownedCount(of: "01-1") == GameRules.maxCardCopies)
-        #expect(store.data.isShiny("01-1"))
+                                           cardDraws: [.star(card, stars: 3)]))
+        #expect(store.data.tier(of: "01-1") == .silver)
+
+        store.applyStageResult(StageResult(mode: .findOnMap, stageIndex: 0, score: 0, stars: 3,
+                                           firstTryByPrefecture: [:],
+                                           cardDraws: [.star(card, stars: 5), .duplicate(card)]))
+        #expect(store.data.stars(of: "01-1") == GameRules.maxCardStars)
+        #expect(store.data.tier(of: "01-1") == .gold)
     }
 
     @Test func settingsPersist() throws {
@@ -151,7 +156,8 @@ struct SaveStoreTests {
             .write(to: dir.appendingPathComponent("savedata.json"))
 
         let store = SaveStore(directory: dir)
-        #expect(store.data.ownedCount(of: "01-1") == 2)
+        // A version 1 two — the old キラ — arrives as gold.
+        #expect(store.data.stars(of: "01-1") == GameRules.maxCardStars)
         #expect(store.data.mastery.isEmpty)
         #expect(store.data.settings.speechEnabled, "missing settings take their defaults")
     }
@@ -179,11 +185,13 @@ struct SaveStoreTests {
         store.applyStageResult(StageResult(mode: .findOnMap, stageIndex: 0, score: 0, stars: 3,
             firstTryByPrefecture: [:],
             cardDraws: [
-                .new(card("01-1")), .new(card("01-2")), .shiny(card("02-1")),
+                .new(card("01-1")), .new(card("01-2")),
+                .star(card("02-1"), stars: GameRules.silverStars),
             ]))
 
         #expect(store.data.totalOwnedCards == 3)
-        #expect(store.data.shinyCardCount == 1)
+        #expect(store.data.specialCardCount == 1)
+        #expect(store.data.goldCardCount == 0)
         #expect(store.data.sparklingPrefectureCount == 0)
     }
 
@@ -194,7 +202,8 @@ struct SaveStoreTests {
     }
 }
 
-/// Version 1 → 2, which split the stage records per quiz mode.
+/// Version 1 → 2 split the stage records per quiz mode; 2 → 3 gave cards five
+/// stars instead of a plain/キラ pair.
 ///
 /// A migration is the one piece of code that can quietly destroy everything a
 /// child has done, and it only ever runs on files this build did not write —
@@ -220,8 +229,45 @@ struct SaveMigrationTests {
                 "a mode that did not exist cannot have records")
         // The rest of the file has to survive the move.
         #expect(data.masteryLevel(of: 1) == 3)
-        #expect(data.isShiny("01-1"))
+        // Two was the top of version 1's scale, so the card arrives at the top
+        // of this one rather than as a two-star plain card.
+        #expect(data.tier(of: "01-1") == .gold)
         #expect(data.settings.soundEnabled == false)
+    }
+
+    /// Two used to be the top of the scale. Anything that had reached it was a
+    /// キラ, and キラ is now five stars — the child keeps what they earned rather
+    /// than finding it demoted to a plain two-star card (CLAUDE.md §12).
+    @Test func keepersOfAKiraCardKeepIt() throws {
+        let data = try load("""
+        {"version":2,"cards":{"01-1":2,"01-2":1,"01-3":0}}
+        """)
+        #expect(data.tier(of: "01-1") == .gold)
+        #expect(data.stars(of: "01-1") == GameRules.maxCardStars)
+        #expect(data.stars(of: "01-2") == 1)
+        #expect(data.tier(of: "01-2") == .plain)
+        #expect(!data.owns("01-3"))
+    }
+
+    /// The remap must not run twice: a version 3 file already speaks in stars,
+    /// and a two there is a two.
+    @Test func aVersionThreeFileKeepsItsStarCounts() throws {
+        let data = try load("""
+        {"version":3,"cards":{"01-1":2,"01-2":3,"01-3":5}}
+        """)
+        #expect(data.stars(of: "01-1") == 2)
+        #expect(data.tier(of: "01-1") == .plain)
+        #expect(data.tier(of: "01-2") == .silver)
+        #expect(data.tier(of: "01-3") == .gold)
+    }
+
+    /// Encoding a migrated file writes the new version, so reloading it cannot
+    /// put the cards through the remap a second time.
+    @Test func migratedCardsSurviveARoundTrip() throws {
+        let migrated = try load(#"{"version":1,"cards":{"01-1":2}}"#)
+        let reloaded = try JSONDecoder().decode(
+            SaveData.self, from: JSONEncoder().encode(migrated))
+        #expect(reloaded.stars(of: "01-1") == GameRules.maxCardStars)
     }
 
     @Test func aVersionTwoFileIsReadAsIs() throws {

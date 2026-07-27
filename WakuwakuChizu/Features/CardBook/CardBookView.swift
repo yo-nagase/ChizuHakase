@@ -44,7 +44,7 @@ struct CardBookView: View {
         switch active {
         case .all, .card: true
         case .category(let c): card.category == c
-        case .shiny: save.isShiny(card.id)
+        case .special: save.tier(of: card.id).isSpecial
         }
     }
 
@@ -71,7 +71,7 @@ struct CardBookView: View {
         .fullScreenCover(item: $opened) { card in
             CardDetailView(card: card,
                            prefecture: app.mapData[card.prefectureCode],
-                           ownedCount: save.ownedCount(of: card.id))
+                           stars: save.stars(of: card.id))
                 .environment(\.textMode, mode)
                 .presentationBackground(.clear)
         }
@@ -92,8 +92,8 @@ struct CardBookView: View {
                      isOn: active == .all || isOpeningOneCard) { filter = .all }
                 // Ahead of the categories: it is the one a child arrives here
                 // looking for, and the one they will want to switch back to.
-                chip(title: "✨ \(mode.sparklingCount)", isOn: active == .shiny) {
-                    filter = active == .shiny ? .all : .shiny
+                chip(title: "✨ \(mode.sparklingCount)", isOn: active == .special) {
+                    filter = active == .special ? .all : .special
                 }
                 ForEach(SpecialtyCard.Category.allCases, id: \.self) { c in
                     chip(title: "\(c.emoji) \(c.label(mode))",
@@ -149,7 +149,7 @@ struct CardBookView: View {
                                      count: typeSize.cardColumns), spacing: 10) {
                 ForEach(cards) { card in
                     CardChipView(card: card,
-                                 ownedCount: save.ownedCount(of: card.id),
+                                 stars: save.stars(of: card.id),
                                  onOpen: { open(card) })
                 }
             }
@@ -162,9 +162,9 @@ struct CardBookView: View {
 nonisolated enum CardFilter: Hashable, Sendable {
     case all
     case category(SpecialtyCard.Category)
-    /// The ones already turned キラ — the payoff, and what the title screen's
-    /// ✨ count is counting.
-    case shiny
+    /// Silver and gold — the payoff, and what the title screen's ✨ count is
+    /// counting.
+    case special
     /// Everything, opened straight onto one card. Debug only, for looking at
     /// the detail view without tapping through the book to find it.
     case card(String)

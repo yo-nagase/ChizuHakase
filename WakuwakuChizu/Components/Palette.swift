@@ -106,8 +106,25 @@ nonisolated enum Palette {
         .init(color: Color(hex: 0x996612), location: 1.00),
     ]
 
+    /// Silver foil, on the same ramp shape as the gold so the two read as the
+    /// same material in two metals — three stars and five stars, not two
+    /// unrelated cards.
+    static let silverRamp: [Gradient.Stop] = [
+        .init(color: Color(hex: 0x8E979F), location: 0.00),
+        .init(color: Color(hex: 0xD8DFE5), location: 0.16),
+        .init(color: Color(hex: 0xF7FAFC), location: 0.30),
+        .init(color: Color(hex: 0xAEB8C0), location: 0.48),
+        .init(color: Color(hex: 0xEDF2F6), location: 0.68),
+        .init(color: Color(hex: 0xA3ADB5), location: 0.86),
+        .init(color: Color(hex: 0x828C94), location: 1.00),
+    ]
+
     /// The lit edge of cut foil.
     static let foilEdge = Color(hex: 0xFFF6D2)
+    static let silverEdge = Color(hex: 0xF7FAFC)
+    /// Stars on a silver card. Darker than the metal: they sit on the white
+    /// panel, where the metal's own tone would disappear.
+    static let silverMark = Color(hex: 0x8A939B)
 
     /// The cut edge of the card — its thickness, seen when it is turned.
     ///

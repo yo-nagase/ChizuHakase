@@ -407,24 +407,28 @@ private struct CardWinBanner: View {
     @Environment(\.textMode) private var mode
     let draw: GameRules.CardDraw
 
-    private var isShiny: Bool {
-        if case .shiny = draw { return true }
-        return false
-    }
+    private var tier: CardTier { draw.tier }
 
+    /// Crossing into silver or gold is the news; a star that lands inside a tier
+    /// is still worth saying, and the stars underneath show how far it got.
     private var headline: String {
         switch draw {
         case .new: mode.cardWonNew
-        case .shiny: mode.cardWonShiny
         case .duplicate: mode.cardWonDuplicate
+        case .star:
+            switch (draw.promoted, tier) {
+            case (true, .gold): mode.cardWonGold
+            case (true, .silver): mode.cardWonSilver
+            default: mode.cardWonStar
+            }
         }
     }
 
     var body: some View {
         HStack(spacing: 10) {
-            // A キラ card shows its painting here too, so the moment it is won
+            // A card with a picture shows it here too, so the moment it is won
             // looks like what the card book will show afterwards.
-            if isShiny, let art = draw.card.art {
+            if tier.isSpecial, let art = draw.card.art {
                 Image(art)
                     .resizable()
                     .scaledToFit()
@@ -436,15 +440,24 @@ private struct CardWinBanner: View {
                 Text(headline)
                     .font(AppFont.rounded(13, relativeTo: .caption))
                     .foregroundStyle(Palette.ink.opacity(0.65))
-                Text(draw.card.displayName(mode))
-                    .font(AppFont.rounded(20, relativeTo: .headline))
-                    .foregroundStyle(Palette.ink)
+                HStack(spacing: 6) {
+                    Text(draw.card.displayName(mode))
+                        .font(AppFont.rounded(20, relativeTo: .headline))
+                        .foregroundStyle(Palette.ink)
+                    // 「ほしが ふえた!」 says something changed; this says how far
+                    // it got, which is the part worth watching climb.
+                    Text(String(repeating: "★", count: draw.stars))
+                        .font(AppFont.rounded(12, relativeTo: .caption2))
+                        .foregroundStyle(tier == .gold ? Palette.gold
+                                         : tier == .silver ? Palette.silverMark
+                                         : Palette.ink.opacity(0.3))
+                }
             }
             Spacer(minLength: 0)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 10)
-        .stickerCard(cornerRadius: 18, isHolographic: isShiny)
+        .stickerCard(cornerRadius: 18, isHolographic: tier.isSpecial)
     }
 }
 

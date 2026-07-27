@@ -63,9 +63,23 @@ nonisolated extension TextMode {
 
     // Cards
     var cardWonNew: String { isKids ? "カードを もらったよ!" : "カードを獲得!" }
-    var cardWonShiny: String { isKids ? "キラカードに なった!" : "キラカードになりました" }
+    /// A star that did not cross a tier. Said plainly — the card went up, and
+    /// the stars on it are where a child reads how far.
+    var cardWonStar: String { isKids ? "ほしが ふえた!" : "星が増えました" }
+    var cardWonSilver: String { isKids ? "シルバーカードに なった!" : "シルバーカードになりました" }
+    var cardWonGold: String { isKids ? "ゴールドカードに なった!" : "ゴールドカードになりました" }
     var cardWonDuplicate: String { isKids ? "もっている カードだね" : "所持済みのカードです" }
     var specialtyCards: String { isKids ? "とくさんひん カード" : "特産品カード" }
+    /// Nil for a card with nothing to say about its tier yet. Katakana in both
+    /// modes: シルバー and ゴールド are the words a six-year-old already has for
+    /// second and first place.
+    func cardTierName(_ tier: CardTier) -> String? {
+        switch tier {
+        case .none, .plain: nil
+        case .silver: "シルバーカード"
+        case .gold: "ゴールドカード"
+        }
+    }
     var notCollectedYet: String { isKids ? "まだ もっていない カード" : "未取得のカード" }
     var allCategories: String { isKids ? "ぜんぶ" : "すべて" }
 

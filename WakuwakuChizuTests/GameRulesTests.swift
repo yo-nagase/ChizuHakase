@@ -194,22 +194,66 @@ struct GameRulesTests {
         #expect(draw == .new(Self.sample[2]), "should have drawn the only unowned card")
     }
 
-    @Test func fullSetPromotesToShiny() {
+    @Test func aCompleteSetStartsAddingStars() {
         var rng = SeededGenerator(seed: 7)
         let owned = ["01-1": 1, "01-2": 1, "01-3": 1]
         let draw = GameRules.drawCard(from: Self.sample, owned: owned, using: &rng)
-        if case .shiny = draw {} else {
-            Issue.record("expected a shiny promotion, got \(String(describing: draw))")
+        guard case .star(_, let stars) = draw else {
+            Issue.record("expected a star, got \(String(describing: draw))")
+            return
+        }
+        #expect(stars == 2)
+    }
+
+    /// Wins go to a card that can still use one. Drawing across all of them
+    /// would spend a correct answer on a card already at five while another sat
+    /// at one, which is a complete answer earning less than the last one did.
+    @Test func starsGoToACardThatCanStillTakeOne() {
+        var rng = SeededGenerator(seed: 11)
+        let owned = ["01-1": GameRules.maxCardStars, "01-2": GameRules.maxCardStars,
+                     "01-3": 2]
+        for _ in 0..<20 {
+            let draw = GameRules.drawCard(from: Self.sample, owned: owned, using: &rng)
+            #expect(draw?.card.id == "01-3", "a full card was drawn while one was unfinished")
         }
     }
 
-    @Test func alreadyShinyReportsDuplicate() {
+    @Test func aFullSetOfGoldCardsReportsDuplicate() {
         var rng = SeededGenerator(seed: 7)
-        let owned = ["01-1": 2, "01-2": 2, "01-3": 2]
+        let owned = Dictionary(uniqueKeysWithValues:
+            Self.sample.map { ($0.id, GameRules.maxCardStars) })
         let draw = GameRules.drawCard(from: Self.sample, owned: owned, using: &rng)
         if case .duplicate = draw {} else {
             Issue.record("expected a duplicate, got \(String(describing: draw))")
         }
+    }
+
+    /// Three stars is silver, five is gold, and the tier only counts as a
+    /// promotion on the draw that crossed into it.
+    @Test func tiersFollowTheStarCount() {
+        #expect(CardTier(stars: 0) == .none)
+        #expect(CardTier(stars: 1) == .plain)
+        #expect(CardTier(stars: 2) == .plain)
+        #expect(CardTier(stars: 3) == .silver)
+        #expect(CardTier(stars: 4) == .silver)
+        #expect(CardTier(stars: 5) == .gold)
+        #expect(CardTier(stars: 99) == .gold)
+
+        let card = Self.sample[0]
+        #expect(GameRules.CardDraw.star(card, stars: 3).promoted)
+        #expect(GameRules.CardDraw.star(card, stars: 5).promoted)
+        #expect(!GameRules.CardDraw.star(card, stars: 4).promoted)
+        #expect(!GameRules.CardDraw.star(card, stars: 2).promoted)
+        #expect(!GameRules.CardDraw.new(card).promoted)
+    }
+
+    /// Applying the same draw twice is what happens when a stage result is
+    /// replayed onto the save, and it must not add a star each time.
+    @Test func applyingADrawTwiceCountsItOnce() {
+        let card = Self.sample[0]
+        var owned = GameRules.applyDraw(.star(card, stars: 3), to: ["01-1": 2])
+        owned = GameRules.applyDraw(.star(card, stars: 3), to: owned)
+        #expect(owned["01-1"] == 3)
     }
 
     @Test func drawingFromNoCardsIsNilNotACrash() {
@@ -220,24 +264,24 @@ struct GameRulesTests {
     @Test func repeatedDrawsEventuallyCompleteTheSet() {
         var rng = SeededGenerator(seed: 99)
         var owned: [String: Int] = [:]
-        for _ in 0..<40 {
+        for _ in 0..<80 {
             guard let draw = GameRules.drawCard(from: Self.sample, owned: owned, using: &rng)
             else { break }
             owned = GameRules.applyDraw(draw, to: owned)
         }
         #expect(owned.count == 3, "every card should be owned after enough draws")
-        #expect(owned.values.allSatisfy { $0 == GameRules.maxCardCopies },
-                "every card should have reached the shiny cap")
+        #expect(owned.values.allSatisfy { $0 == GameRules.maxCardStars },
+                "every card should have reached five stars")
     }
 
-    @Test func ownedCountNeverExceedsTheCap() {
+    @Test func starsNeverExceedTheCap() {
         var rng = SeededGenerator(seed: 3)
         var owned: [String: Int] = [:]
         for _ in 0..<100 {
             guard let draw = GameRules.drawCard(from: Self.sample, owned: owned, using: &rng)
             else { break }
             owned = GameRules.applyDraw(draw, to: owned)
-            #expect(owned.values.allSatisfy { $0 <= GameRules.maxCardCopies })
+            #expect(owned.values.allSatisfy { $0 <= GameRules.maxCardStars })
         }
     }
 

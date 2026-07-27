@@ -14,7 +14,7 @@ struct CardDetailView: View {
 
     let card: SpecialtyCard
     let prefecture: Prefecture?
-    let ownedCount: Int
+    let stars: Int
 
     /// Live tilt, in degrees. x is pitch, y is yaw.
     @State private var tilt: CGSize = .zero
@@ -56,7 +56,7 @@ struct CardDetailView: View {
                 Spacer(minLength: 8)
 
                 CardFaceView(card: card, prefecture: prefecture,
-                             ownedCount: ownedCount, tilt: tilt)
+                             stars: stars, tilt: tilt)
                     .frame(maxWidth: 300)
                     // Pinch to look closer and drag to choose what you are
                     // looking closer at, on the same terms as the map: the zoom

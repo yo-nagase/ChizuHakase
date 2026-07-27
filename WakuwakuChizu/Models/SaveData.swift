@@ -28,9 +28,10 @@ nonisolated struct Settings: Codable, Sendable, Equatable {
 }
 
 nonisolated struct SaveData: Codable, Sendable, Equatable {
-    /// 2 split the stage records per quiz mode. Version 1 had one mode and
-    /// wrote a flat `stages` dictionary.
-    static let currentVersion = 2
+    /// 3 gave every card five stars instead of a plain/キラ pair. 2 split the
+    /// stage records per quiz mode. Version 1 had one mode and wrote a flat
+    /// `stages` dictionary.
+    static let currentVersion = 3
 
     var version: Int = SaveData.currentVersion
     /// prefecture code -> 0...3.
@@ -38,7 +39,7 @@ nonisolated struct SaveData: Codable, Sendable, Equatable {
     /// Deliberately *not* split by mode: both directions teach the same
     /// prefecture, and a child should not have two separate maps to fill in.
     var mastery: [Int: Int] = [:]
-    /// card id -> owned count, 0...2 (2 means the shiny copy is owned)
+    /// card id -> stars, 0...5. Three is silver, five is gold.
     var cards: [String: Int] = [:]
     /// quiz mode -> stage index -> best record.
     ///
@@ -65,6 +66,14 @@ nonisolated struct SaveData: Codable, Sendable, Equatable {
         version = max(stored, SaveData.currentVersion)
         mastery = try c.decodeIfPresent([Int: Int].self, forKey: .mastery) ?? [:]
         cards = try c.decodeIfPresent([String: Int].self, forKey: .cards) ?? [:]
+        if stored < 3 {
+            // Two used to be the whole scale, and the second copy was キラ. Five
+            // is the top of the new one, so a card that had reached キラ arrives
+            // as gold rather than being demoted to a two-star plain card.
+            // Handing back a キラ that was already won is precisely what §12
+            // rules out.
+            cards = cards.mapValues { $0 >= 2 ? GameRules.maxCardStars : $0 }
+        }
         records = try c.decodeIfPresent([String: [Int: StageRecord]].self,
                                         forKey: .records) ?? [:]
         settings = try c.decodeIfPresent(Settings.self, forKey: .settings) ?? .init()
@@ -95,15 +104,13 @@ nonisolated struct SaveData: Codable, Sendable, Equatable {
         min(GameRules.maxMastery, max(0, mastery[code] ?? 0))
     }
 
-    func ownedCount(of cardID: String) -> Int {
-        min(GameRules.maxCardCopies, max(0, cards[cardID] ?? 0))
+    func stars(of cardID: String) -> Int {
+        min(GameRules.maxCardStars, max(0, cards[cardID] ?? 0))
     }
 
-    func owns(_ cardID: String) -> Bool { ownedCount(of: cardID) > 0 }
+    func owns(_ cardID: String) -> Bool { stars(of: cardID) > 0 }
 
-    func isShiny(_ cardID: String) -> Bool {
-        ownedCount(of: cardID) >= GameRules.maxCardCopies
-    }
+    func tier(of cardID: String) -> CardTier { CardTier(stars: stars(of: cardID)) }
 
     func record(forStage index: Int, mode: QuizMode) -> StageRecord? {
         records[mode.rawValue]?[index]
@@ -120,7 +127,10 @@ nonisolated struct SaveData: Codable, Sendable, Equatable {
 
     var totalOwnedCards: Int { cards.values.filter { $0 > 0 }.count }
 
-    var shinyCardCount: Int { cards.values.filter { $0 >= GameRules.maxCardCopies }.count }
+    /// Silver and gold together — see `CardTier.isSpecial`.
+    var specialCardCount: Int { cards.values.filter { CardTier(stars: $0).isSpecial }.count }
+
+    var goldCardCount: Int { cards.values.filter { CardTier(stars: $0) == .gold }.count }
 
     /// Prefectures at level 3 — the ones drawn with a gold border on the my-map.
     var sparklingPrefectureCount: Int {

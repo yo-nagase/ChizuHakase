@@ -10,8 +10,8 @@ struct CardChipView: View {
     /// Named on the card, so the same face works in the result screen where
     /// nothing else says which prefecture the card came from.
     var prefecture: Prefecture?
-    /// 0 = not collected yet, 1 = owned, 2 = shiny.
-    var ownedCount: Int = 1
+    /// 0 = not collected yet, then one per copy won, to five.
+    var stars: Int = 1
     /// Set to open the card on its own. Nil leaves the chip inert, which is
     /// what the result screen wants — nothing there should lead away from the
     /// celebration mid-flow.
@@ -19,12 +19,11 @@ struct CardChipView: View {
 
     @Environment(\.textMode) private var mode
 
-    private var isOwned: Bool { ownedCount > 0 }
-    private var isShiny: Bool { ownedCount >= GameRules.maxCardCopies }
+    private var tier: CardTier { CardTier(stars: stars) }
+    private var isOwned: Bool { tier != .none }
 
     var body: some View {
-        CardFaceView(card: card, prefecture: prefecture, ownedCount: ownedCount,
-                     metrics: .chip)
+        CardFaceView(card: card, prefecture: prefecture, stars: stars, metrics: .chip)
             .accessibilityElement(children: .ignore)
             .accessibilityLabel(accessibilityText)
             // Only a card you own opens: there is nothing to look at behind a
@@ -33,10 +32,14 @@ struct CardChipView: View {
             .modifier(OpenOnTap(action: isOwned ? onOpen : nil))
     }
 
+    /// The stars are read out too: they are the whole progression, and a
+    /// VoiceOver user hearing only 「かに」 cannot tell a one-star card from one
+    /// that is a single win away from gold.
     private var accessibilityText: String {
         guard isOwned else { return mode.notCollectedYet }
-        let name = card.displayName(mode)
-        return isShiny ? "\(name) キラカード" : name
+        let name = "\(card.displayName(mode))。\(mode.starCount(stars))"
+        guard let tierName = mode.cardTierName(tier) else { return name }
+        return "\(name)。\(tierName)"
     }
 }
 
@@ -45,9 +48,10 @@ struct CardChipView: View {
                              nameKana: "かに", nameKanji: "蟹", category: .food,
                              description: "つめたい うみで そだつよ")
     return HStack(spacing: 12) {
-        CardChipView(card: card, ownedCount: 0)
-        CardChipView(card: card, ownedCount: 1)
-        CardChipView(card: card, ownedCount: 2)
+        CardChipView(card: card, stars: 0)
+        CardChipView(card: card, stars: 1)
+        CardChipView(card: card, stars: 3)
+        CardChipView(card: card, stars: 5)
     }
     .padding()
     .background(Palette.background)

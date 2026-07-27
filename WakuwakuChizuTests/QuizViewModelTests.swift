@@ -293,7 +293,7 @@ struct QuizViewModelTests {
                 owned = GameRules.applyDraw(draw, to: owned)
             }
         }
-        #expect(owned.values.allSatisfy { $0 <= GameRules.maxCardCopies })
+        #expect(owned.values.allSatisfy { $0 <= GameRules.maxCardStars })
     }
 
     @Test func alreadyOwnedCardsAreNotDrawnAgainWhileNewOnesRemain() throws {

@@ -88,7 +88,7 @@ struct TitleView: View {
         HStack(spacing: 10) {
             tally("🗾", app.save.data.mastery.values.filter { $0 > 0 }.count, 47,
                   mode.isKids ? "けん" : "県", Palette.learned, action: onMyMap)
-            // Shiny *cards*, not キラキラ prefectures. Both were called キラ and
+            // Silver and gold *cards*, not キラキラ prefectures. Both were called キラ and
             // the map already counts the prefectures on its own screen; here,
             // between a prefecture count and a card count, out of 141 says
             // plainly which one this is.
@@ -96,8 +96,8 @@ struct TitleView: View {
             // It opens the book already filtered to them. The count is what the
             // child is proud of; making them find those nine again among 141
             // would be the app forgetting what they just tapped.
-            tally("✨", app.save.data.shinyCardCount, max(app.cards.count, 1), "キラ",
-                  Palette.gold) { onCardBook(.shiny) }
+            tally("✨", app.save.data.specialCardCount, max(app.cards.count, 1), "キラ",
+                  Palette.gold) { onCardBook(.special) }
             tally("🃏", app.save.data.totalOwnedCards, max(app.cards.count, 1), "カード",
                   Palette.collected) { onCardBook(.all) }
         }

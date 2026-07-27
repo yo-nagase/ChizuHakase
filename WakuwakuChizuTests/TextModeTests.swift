@@ -130,7 +130,8 @@ extension TextMode {
         [appTitleTop, appTitleMain, play, myMap, cardBook, settings, stages, close, quit,
          questionSuffix, readAloud, answerByVoice, listening, hintNudge, combo,
          questionCounter(1, 7),
-         cardWonNew, cardWonShiny, cardWonDuplicate, specialtyCards, notCollectedYet,
+         cardWonNew, cardWonStar, cardWonSilver, cardWonGold, cardWonDuplicate,
+         specialtyCards, notCollectedYet,
          allCategories,
          points, bestScore, playAgain, chooseStage, becameSparkling, starCount(3),
          sparklingCount, learnedCount, stickerCount, resetZoom,
@@ -138,6 +139,7 @@ extension TextMode {
          eraseConfirmAction,
          soundSection, soundEffects, speech, voiceSection, voiceOnDeviceNote, micDenied,
          displaySection,
-         masteryLabel(0), masteryLabel(1), masteryLabel(2), masteryLabel(3)]
+         masteryLabel(0), masteryLabel(1), masteryLabel(2), masteryLabel(3),
+         cardTierName(.silver) ?? "", cardTierName(.gold) ?? ""]
     }
 }

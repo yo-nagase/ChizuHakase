@@ -21,8 +21,8 @@ struct CardFaceView: View {
     /// The result screen and the enlarged card do name it — there, nothing else
     /// does.
     let prefecture: Prefecture?
-    /// 0 = not collected yet, 1 = owned, 2 = キラ.
-    let ownedCount: Int
+    /// 0 = not collected yet, then one per copy won, to five.
+    let stars: Int
     var metrics: Metrics = .full
     /// Live yaw in degrees, which the foil highlight follows. Only the enlarged
     /// card has a gesture behind it; every other caller leaves this at zero.
@@ -42,15 +42,19 @@ struct CardFaceView: View {
     /// Trading-card proportions, at every size.
     static let aspectRatio: CGFloat = 0.7
 
-    private var isOwned: Bool { ownedCount > 0 }
-    private var isShiny: Bool { ownedCount >= GameRules.maxCardCopies }
+    private var tier: CardTier { CardTier(stars: stars) }
+    private var isOwned: Bool { tier != .none }
+    /// Silver and gold are foil; plain board and an empty slot are not.
+    private var isMetal: Bool { tier.isSpecial }
 
-    /// The painted card, shown only once this one has gone キラ (CLAUDE.md §4).
+    /// The painted card, shown from silver up (CLAUDE.md §4).
     ///
-    /// Holding the picture back until then is what makes a duplicate draw feel
-    /// like a win instead of a consolation: the emoji card the child already has
-    /// turns into the real thing. Cards without art keep the emoji.
-    private var shinyArt: String? { isShiny ? card.art : nil }
+    /// Holding the picture back is what makes a repeat draw feel like a win
+    /// instead of a consolation: the emoji card the child already has turns into
+    /// the real thing. Silver rather than gold, because gold is five copies of
+    /// one card and the paintings would spend most of the game unseen. Cards
+    /// without art keep the emoji.
+    private var shownArt: String? { tier.isSpecial ? card.art : nil }
 
     struct Metrics {
         /// How much stock shows around the panel — the border, in other words.
@@ -128,10 +132,11 @@ struct CardFaceView: View {
         .clipShape(RoundedRectangle(cornerRadius: metrics.outerRadius, style: .continuous))
         .overlay {
             // Cut foil is lit along its whole edge. Printed board is not, so
-            // only キラ gets the rim.
-            if isShiny {
+            // only the metals get the rim.
+            if isMetal {
                 RoundedRectangle(cornerRadius: metrics.outerRadius, style: .continuous)
-                    .strokeBorder(Palette.foilEdge, lineWidth: 1)
+                    .strokeBorder(tier == .gold ? Palette.foilEdge : Palette.silverEdge,
+                                  lineWidth: 1)
             }
         }
         .background { edge }
@@ -169,8 +174,9 @@ struct CardFaceView: View {
     /// The border the panel sits on, and the one place the difference between a
     /// plain card and a キラ has to be obvious at a glance.
     ///
-    /// キラ is foil: an opaque gold ramp with a highlight that slides across as
-    /// the card turns. Plain cards are matte board, and nothing on them moves.
+    /// Silver and gold are foil: an opaque metal ramp with a highlight that
+    /// slides across as the card turns. Plain cards are matte board, and nothing
+    /// on them moves.
     ///
     /// Both halves had to change together. The plain stock used to be the
     /// prefecture's own colour, and the warm end of that palette is gold enough
@@ -178,8 +184,8 @@ struct CardFaceView: View {
     /// colour is still on the mat and the name plate inside, where it is
     /// identifying the card rather than competing with its rarity.
     @ViewBuilder private var stock: some View {
-        if isShiny {
-            LinearGradient(stops: Palette.foilRamp,
+        if isMetal {
+            LinearGradient(stops: tier == .gold ? Palette.foilRamp : Palette.silverRamp,
                            startPoint: .topLeading, endPoint: .bottomTrailing)
                 .overlay { glint }
         } else if isOwned {
@@ -227,14 +233,27 @@ struct CardFaceView: View {
                     .tracking(0.5)
             }
             Spacer(minLength: 0)
-            // Rarity, in the corner where a card keeps it. A slot with nothing
-            // in it has no rarity to state yet.
+            // Rarity, in the corner where a card keeps it: one star per copy
+            // won. A slot with nothing in it has none to state yet.
             if isOwned {
-                Text(isShiny ? "★★" : "★")
-                    .font(AppFont.rounded(metrics.prefectureSize * 0.82,
+                // Small: five of them next to a six-character prefecture name
+                // is a lot of top row, and at the old size the name was the
+                // thing that got cut.
+                Text(String(repeating: "★", count: stars))
+                    .font(AppFont.rounded(metrics.prefectureSize * 0.68,
                                           relativeTo: .caption))
-                    .foregroundStyle(isShiny ? Palette.gold : Palette.ink.opacity(0.28))
+                    .foregroundStyle(starColour)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
             }
+        }
+    }
+
+    private var starColour: Color {
+        switch tier {
+        case .gold: Palette.gold
+        case .silver: Palette.silverMark
+        default: Palette.ink.opacity(0.28)
         }
     }
 
@@ -243,8 +262,8 @@ struct CardFaceView: View {
         ZStack {
             isOwned ? Palette.fill(for: card.prefectureCode, strength: 0.14)
                     : Palette.emptyMat
-            if let shinyArt {
-                Image(shinyArt).resizable().scaledToFit().padding(4)
+            if let shownArt {
+                Image(shownArt).resizable().scaledToFit().padding(4)
             } else {
                 Text(isOwned ? card.emoji : "❓")
                     .font(.system(size: metrics.emojiSize))
@@ -285,7 +304,7 @@ struct CardFaceView: View {
     /// picture for an adult; that is the cheaper mistake.
     private var nameLine: String {
         guard isOwned else { return "？？？" }
-        return shinyArt == nil ? card.displayName(mode) : card.nameKana
+        return shownArt == nil ? card.displayName(mode) : card.nameKana
     }
 
     private var footer: some View {
@@ -308,15 +327,21 @@ struct CardFaceView: View {
     /// It slides across as the card turns, so the highlight belongs to the angle
     /// rather than being a decal printed on the face.
     ///
-    /// キラ only. A plain card used to carry a faint white version of this on the
-    /// theory that glass catches light too, but the two cards then differed by
+    /// Foil only. A plain card used to carry a faint white version of this on
+    /// the theory that glass catches light too, but the cards then differed by
     /// how much they shone rather than by whether they shone — and "less shiny"
     /// is a comparison a child can only make with both cards side by side.
+    ///
+    /// Gold refracts a rainbow; silver returns white. That is what the two
+    /// metals do, and it keeps the tiers apart at a glance even where the stock
+    /// itself is hidden behind the picture.
     @ViewBuilder private var sheen: some View {
-        if isShiny {
+        if isMetal {
             let shift = tilt.width / Self.maxTilt
             LinearGradient(
-                colors: Palette.holographicBand,
+                colors: tier == .gold
+                    ? Palette.holographicBand
+                    : [.clear, .white.opacity(0.9), .clear],
                 startPoint: UnitPoint(x: 0.1 + shift * 0.5, y: 0),
                 endPoint: UnitPoint(x: 0.9 + shift * 0.5, y: 1))
             // Enough to read as foil while it slides, not so much that the
@@ -333,13 +358,13 @@ struct CardFaceView: View {
                              nameKana: "かに", nameKanji: "蟹", category: .food,
                              description: "つめたい うみで そだつよ")
     return VStack(spacing: 16) {
+        // Empty slot, one star, silver, gold.
         HStack(spacing: 10) {
-            ForEach(0...2, id: \.self) { owned in
-                CardFaceView(card: card, prefecture: nil, ownedCount: owned,
-                             metrics: .chip)
+            ForEach([0, 1, 3, 5], id: \.self) { stars in
+                CardFaceView(card: card, prefecture: nil, stars: stars, metrics: .chip)
             }
         }
-        CardFaceView(card: card, prefecture: nil, ownedCount: 2)
+        CardFaceView(card: card, prefecture: nil, stars: GameRules.maxCardStars)
             .frame(maxWidth: 240)
     }
     .padding()

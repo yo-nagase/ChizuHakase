@@ -18,10 +18,17 @@ final class CardBookUITests: XCTestCase {
 
     private var detailIsOpen: Bool { app.buttons["とじる"].exists }
 
+    /// A chip's label carries its stars and tier as well as its name, so it is
+    /// matched on the name rather than pinned to a whole string that changes
+    /// every time the card goes up a star.
+    private func chip(named name: String) -> XCUIElement {
+        app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", name)).firstMatch
+    }
+
     /// Tapping the ✨ count has to land on those cards, not on a book of 141
     /// with the nine somewhere inside it.
     func testTheKiraCountOpensTheBookAlreadyFiltered() {
-        launch(at: "cardBook:shiny")
+        launch(at: "cardBook:special")
         let chip = app.buttons["✨ キラキラ"]
         XCTAssertTrue(chip.waitForExistence(timeout: 10), "no キラキラ filter in the book")
         XCTAssertTrue(chip.isSelected, "the book did not open on the キラキラ filter")
@@ -37,13 +44,13 @@ final class CardBookUITests: XCTestCase {
     /// A fresh save has no キラ cards, so the filter empties the book. That has
     /// to read as "none yet" rather than as a screen that failed to load.
     func testAnEmptyFilterSaysSoRatherThanShowingNothing() {
-        launch(at: "cardBook:shiny")
+        launch(at: "cardBook:special")
         XCTAssertTrue(app.staticTexts["まだ もっていない カード"].waitForExistence(timeout: 10),
                       "an empty filter showed a blank page")
     }
 
     func testSwitchingBackToEverythingWorks() {
-        launch(at: "cardBook:shiny")
+        launch(at: "cardBook:special")
         let all = app.buttons["ぜんぶ"]
         XCTAssertTrue(all.waitForExistence(timeout: 10))
         all.tap()
@@ -59,7 +66,7 @@ final class CardBookUITests: XCTestCase {
     /// A card you own opens on its own, big enough to look at.
     func testTappingAnOwnedCardOpensIt() {
         launch(at: "cardBook", withCards: true)
-        let card = app.buttons["かに"]
+        let card = chip(named: "かに")
         XCTAssertTrue(card.waitForExistence(timeout: 10), "the owned card is not in the book")
         XCTAssertFalse(detailIsOpen, "the card was open before anything was tapped")
 
@@ -73,7 +80,7 @@ final class CardBookUITests: XCTestCase {
 
     func testTheOpenedCardCloses() {
         launch(at: "cardBook", withCards: true)
-        let card = app.buttons["かに"]
+        let card = chip(named: "かに")
         XCTAssertTrue(card.waitForExistence(timeout: 10))
         card.tap()
 
@@ -87,7 +94,7 @@ final class CardBookUITests: XCTestCase {
     /// alongside it must not swallow the pinch.
     func testTheOpenCardCanBePinchedLarger() {
         launch(at: "cardBook", withCards: true)
-        let card = app.buttons["かに"]
+        let card = chip(named: "かに")
         XCTAssertTrue(card.waitForExistence(timeout: 10))
         card.tap()
 
@@ -116,7 +123,7 @@ final class CardBookUITests: XCTestCase {
     /// gesture is the same one finger, so only one of them can be live.
     func testTheZoomedCardCanBeMoved() {
         launch(at: "cardBook", withCards: true)
-        let card = app.buttons["かに"]
+        let card = chip(named: "かに")
         XCTAssertTrue(card.waitForExistence(timeout: 10))
         card.tap()
 
