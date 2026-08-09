@@ -53,7 +53,9 @@ wakuwaku-chizu/
 │   ├── Models/
 │   │   ├── Prefecture.swift        # 県マスタ(形状 + メタ)
 │   │   ├── SpecialtyCard.swift     # カードマスタ
+│   │   ├── CardTier.swift          # 星の数 → ふつう/シルバー/ゴールド
 │   │   ├── Stage.swift             # 地方ステージ定義
+│   │   ├── QuizMode.swift          # 出題モード(findOnMap / nameIt)
 │   │   ├── GameRules.swift         # §5 の定数と純粋関数
 │   │   ├── TextMode.swift          # こども/おとな 表記の語彙
 │   │   └── SaveData.swift          # セーブ用 Codable
@@ -63,19 +65,21 @@ wakuwaku-chizu/
 │   ├── Features/
 │   │   ├── Title/
 │   │   ├── StageSelect/
-│   │   ├── Quiz/                   # QuizViewModel, QuizView, MapView
+│   │   ├── Quiz/                   # QuizViewModel, QuizView
 │   │   ├── Result/
 │   │   ├── MyMap/
-│   │   └── CardBook/
+│   │   └── CardBook/               # CardBookView, CardDetailView(拡大表示)
 │   ├── Components/
 │   │   ├── PrefectureMapView.swift # 地図描画 + タップ判定(再利用)
 │   │   ├── PrefectureGeometry.swift# Path 生成 + ヒットテスト(純粋関数)
+│   │   ├── ZoomPan.swift           # ピンチズームの計算。地図とカード拡大で共有
 │   │   ├── CardFaceView.swift      # カードの絵柄。一覧と拡大で共有
 │   │   ├── CardChipView.swift      # 一覧のマスにするだけの薄い包み
 │   │   ├── BouncyButton.swift
 │   │   ├── StickerStyle.swift      # シール表現の共通モディファイア
 │   │   └── Palette.swift
 │   ├── Services/
+│   │   ├── AudioSession.swift      # 共有オーディオセッション設定
 │   │   ├── SpeechService.swift     # 読み上げ
 │   │   ├── VoiceInputService.swift # 音声入力
 │   │   └── SoundService.swift      # 効果音
@@ -253,8 +257,11 @@ python3 tools/build_card_art.py
 - **星とスコアはモードごとに分ける。** これは「回」の記録であり、別の回だから
 - `nameIt` の誤答選択肢は**同じステージ内から**選ぶ。全国から選ぶと、
   画面の形だけで消去できてしまい問題にならない
-- `nameIt` の 🔊 は **4 択を読み上げる。** 正解県の名前を読んではいけない
-  （それが答えそのもの）。読めない子がこのモードを遊べる唯一の手段
+- **自動読み上げは `findOnMap` だけ。** あちらは問題文が毎回違う県名を運ぶ。
+  `nameIt` は毎問同じ文で答えは地図の上にあるため、自動で読むとループするノイズになる
+- `nameIt` の 🔊 は**問いと指示を読む**(「この けんは どこかな?」「なまえを えらんでね」)。
+  正解県の名前を読んではいけない（それが答えそのもの）。
+  かつては 4 択を読み上げていたが、4 つの名前はどれが正解かについて何も言わない
 - 誤答した選択肢は**消さずに灰色で残す。** 消えると「もう試した」記憶ごと消える
 
 ### 1 問の流れ
@@ -376,11 +383,24 @@ struct Settings: Codable {
 
 `AVSpeechSynthesizer`。オンデバイスで完結し課金対象外。
 
-```swift
-let utterance = AVSpeechUtterance(string: "とうきょうとは、どこかな?")
-utterance.voice = AVSpeechSynthesisVoice(language: "ja-JP")
-utterance.rate = 0.42   // 既定より遅め。子どもは既定速度だと聞き取れない
-```
+- **声は端末に入っている最良の日本語音声を選ぶ。**
+  `AVSpeechSynthesisVoice(language: "ja-JP")` は使わない — 返るのは既定音声で、
+  設定を触ったことのない端末では compact の Kyoko(数 MB の継ぎ接ぎサンプル)になる。
+  enhanced / premium はただの無料ダウンロードで、既に入っている端末が多い。
+  インストール済みを品質順に並べ、同品質は identifier で決めて
+  起動ごとに声が変わらないようにする。ノベルティ音声(ジョーク)と
+  パーソナルボイス(録音した本人のもの)は除外。
+  日本語音声が 1 つも無ければ既定へフォールバック(compact でも読まないよりまし)
+- 選定ルールは `VoiceOption` 上の純粋関数として切り出す。
+  実行機に何がダウンロード済みかへテストが依存しないため
+- `rate = 0.42`。既定より遅め。子どもは既定速度だと聞き取れない
+- compact 音声だけ `pitchMultiplier = 1.05` で薄さを和らげる。
+  enhanced / premium は人の録音であり、ピッチを動かすと輪のかかった響きになる
+- 複数フレーズは 1 つの文字列に連結せず、utterance を分けて 0.3s の間を置く。
+  つなげると「どこかな?なまえを えらんでね」がひと息で届いてしまう
+- オーディオセッションは `AudioSession` の 1 箇所で設定する。
+  ambient + mixWithOthers(おもちゃなので他の音と共存し、消音スイッチに従う)。
+  音声入力が奪ったら必ず戻す — 最後に触った者が読み上げの可否を決めてしまう
 
 読み上げは **無料機能**。課金や広告の後ろに置かない。ひらがなが読めない層にとって
 これが無いとアプリが成立しないため。
@@ -451,6 +471,12 @@ enum Palette {
 - ★1–2 は寒色のマット台紙、★3 は銀の箔、★5 は金の箔。
   **ふつうの札とその上を「光り方の差」にしない。** 弱く光るという差は、
   2 枚並べないと子どもには見えない。銀と金は色相でも分かれている
+- 拡大したカードは印刷された長方形ではなく**手に取れる物**として振る舞う。
+  ドラッグで最大 26° まで傾き、傾くと紙芯の厚みが縁に見える。
+  ピンチズームは地図と同じ `ZoomPan` を使う(指の間の点を保ち、
+  フレームの外へは逃げない)。傾けるジェスチャは等倍のときだけ —
+  ズーム中のドラッグはパンで、同じ 1 本指を取り合わない。
+  「とじる」は画面下端に置く。見ている物の縁にボタンを貼り付けない
 
 ### アクセシビリティ
 
