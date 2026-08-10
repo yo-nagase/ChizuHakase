@@ -63,7 +63,7 @@ struct RootView: View {
                 cardDraws: (app.cards["01-1"].map { [GameRules.CardDraw.new($0)] } ?? [])
                     + (app.cards["04-2"].map {
                         [GameRules.CardDraw.star($0, stars: GameRules.maxCardStars)]
-                    } ?? [])))
+                    } ?? [])), catalog: app.cards)
         }
         guard let index = arguments.firstIndex(of: "-startAt"),
               index + 1 < arguments.count else { return }
@@ -148,7 +148,7 @@ struct RootView: View {
 
     /// Persist once, at stage end (CLAUDE.md §6), then show the result.
     private func finish(_ result: StageResult, stage: Stage) {
-        let sparkles = app.save.applyStageResult(result)
+        let sparkles = app.save.applyStageResult(result, catalog: app.cards)
         path = [.stageSelect, .result(result, sparkles: sparkles)]
     }
 

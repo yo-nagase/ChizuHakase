@@ -95,11 +95,15 @@ final class SaveStore {
 
     // MARK: - Mutations
 
-    /// Apply one finished stage: best-of record, mastery gains, cards won.
-    /// Returns the prefectures that reached level 3 so the result screen can
-    /// call them out individually.
+    /// Apply one finished stage: best-of record, mastery gains, cards won,
+    /// streaks moved and any rainbow latched. Returns the prefectures that
+    /// reached level 3 so the result screen can call them out individually.
+    ///
+    /// The catalog is how a streak finds the rest of its prefecture's cards —
+    /// without it gold can never turn rainbow, so only tests that are not
+    /// about cards pass `.empty`.
     @discardableResult
-    func applyStageResult(_ result: StageResult) -> [Int] {
+    func applyStageResult(_ result: StageResult, catalog: CardCatalog) -> [Int] {
         var newlySparkling: [Int] = []
 
         for (code, firstTry) in result.firstTryByPrefecture {
@@ -113,6 +117,23 @@ final class SaveStore {
 
         for draw in result.cardDraws {
             data.cards = GameRules.applyDraw(draw, to: data.cards)
+        }
+
+        for (code, outcomes) in result.outcomesByPrefecture {
+            data.streaks[code] = GameRules.nextStreak(current: data.streak(of: code),
+                                                      outcomes: outcomes)
+        }
+
+        // The rainbow latch, checked after stars and streaks have both moved so
+        // either order of arrival — gold first or streak first — catches here.
+        // Only prefectures this stage touched can have changed.
+        for code in result.outcomesByPrefecture.keys {
+            let streak = data.streak(of: code)
+            for card in catalog.cards(for: code)
+            where GameRules.qualifiesForRainbow(stars: data.stars(of: card.id),
+                                                streak: streak) {
+                data.rainbow.insert(card.id)
+            }
         }
 
         // Stars and score are kept per mode; mastery and cards above are not,
@@ -153,6 +174,12 @@ nonisolated struct StageResult: Sendable, Hashable {
     /// prefecture code -> answered correctly on the first attempt
     let firstTryByPrefecture: [Int: Bool]
     let cardDraws: [GameRules.CardDraw]
+    /// prefecture code -> each asking's clean flag, in the order asked.
+    ///
+    /// Not derivable from `firstTryByPrefecture`: the streak needs to know that
+    /// a prefecture fumbled first and clean second *ended* on a run of one,
+    /// which the collapsed flag has already thrown away.
+    var outcomesByPrefecture: [Int: [Bool]] = [:]
 
     var missedPrefectureCount: Int {
         firstTryByPrefecture.values.filter { !$0 }.count

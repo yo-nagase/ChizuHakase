@@ -189,7 +189,9 @@ private struct PrefectureDetailSheet: View {
                     .font(AppFont.rounded(33, relativeTo: .largeTitle))
                     .foregroundStyle(Palette.ink)
                 Text(prefecture.secondaryName(mode))
-                    .font(AppFont.rounded(15, relativeTo: .subheadline))
+                    // Sized to the quiz's second line, for the same reason: the
+                    // kanji is there to be looked at, not just acknowledged.
+                    .font(AppFont.rounded(17, relativeTo: .subheadline))
                     .foregroundStyle(Palette.ink.opacity(0.5))
 
                 HStack(spacing: 4) {
@@ -205,7 +207,8 @@ private struct PrefectureDetailSheet: View {
                                          count: typeSize.cardColumns), spacing: 10) {
                     ForEach(cards) { card in
                         CardChipView(card: card,
-                                     stars: app.save.data.stars(of: card.id))
+                                     stars: app.save.data.stars(of: card.id),
+                                     rainbow: app.save.data.isRainbow(card.id))
                     }
                 }
                 .padding(.top, 4)

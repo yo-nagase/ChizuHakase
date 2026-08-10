@@ -37,7 +37,7 @@ struct SaveStoreTests {
         let store = SaveStore(directory: dir)
         store.applyStageResult(StageResult(mode: .findOnMap, stageIndex: 0, score: 730, stars: 3,
             firstTryByPrefecture: [1: true, 2: true, 3: false],
-            cardDraws: []))
+            cardDraws: []), catalog: .empty)
 
         let reloaded = SaveStore(directory: dir)
         #expect(reloaded.data.masteryLevel(of: 1) == 1)
@@ -51,9 +51,9 @@ struct SaveStoreTests {
 
         let store = SaveStore(directory: dir)
         store.applyStageResult(StageResult(mode: .findOnMap, stageIndex: 1, score: 800, stars: 3,
-                                           firstTryByPrefecture: [:], cardDraws: []))
+                                           firstTryByPrefecture: [:], cardDraws: []), catalog: .empty)
         store.applyStageResult(StageResult(mode: .findOnMap, stageIndex: 1, score: 100, stars: 1,
-                                           firstTryByPrefecture: [:], cardDraws: []))
+                                           firstTryByPrefecture: [:], cardDraws: []), catalog: .empty)
 
         #expect(store.data.record(forStage: 1, mode: .findOnMap) == StageRecord(stars: 3, score: 800))
     }
@@ -66,7 +66,7 @@ struct SaveStoreTests {
         for _ in 0..<5 {
             store.applyStageResult(StageResult(mode: .findOnMap, stageIndex: 0, score: 100, stars: 3,
                                                firstTryByPrefecture: [1: true],
-                                               cardDraws: []))
+                                               cardDraws: []), catalog: .empty)
         }
         #expect(store.data.masteryLevel(of: 1) == GameRules.maxMastery)
     }
@@ -80,7 +80,7 @@ struct SaveStoreTests {
         for _ in 0..<4 {
             announcements.append(store.applyStageResult(
                 StageResult(mode: .findOnMap, stageIndex: 0, score: 100, stars: 3,
-                            firstTryByPrefecture: [5: true], cardDraws: [])))
+                            firstTryByPrefecture: [5: true], cardDraws: []), catalog: .empty))
         }
         // Levels 1, 2, then 3 (announced), then nothing further.
         #expect(announcements == [[], [], [5], []])
@@ -92,9 +92,9 @@ struct SaveStoreTests {
 
         let store = SaveStore(directory: dir)
         store.applyStageResult(StageResult(mode: .findOnMap, stageIndex: 0, score: 100, stars: 3,
-                                           firstTryByPrefecture: [7: true], cardDraws: []))
+                                           firstTryByPrefecture: [7: true], cardDraws: []), catalog: .empty)
         store.applyStageResult(StageResult(mode: .findOnMap, stageIndex: 0, score: 50, stars: 1,
-                                           firstTryByPrefecture: [7: false], cardDraws: []))
+                                           firstTryByPrefecture: [7: false], cardDraws: []), catalog: .empty)
         #expect(store.data.masteryLevel(of: 7) == 1)
     }
 
@@ -108,19 +108,22 @@ struct SaveStoreTests {
         let store = SaveStore(directory: dir)
         store.applyStageResult(StageResult(mode: .findOnMap, stageIndex: 0, score: 0, stars: 3,
                                            firstTryByPrefecture: [:],
-                                           cardDraws: [.new(card)]))
+                                           cardDraws: [.new(card)]), catalog: .empty)
         #expect(store.data.stars(of: "01-1") == 1)
         #expect(store.data.owns("01-1"))
         #expect(store.data.tier(of: "01-1") == .plain)
 
         store.applyStageResult(StageResult(mode: .findOnMap, stageIndex: 0, score: 0, stars: 3,
                                            firstTryByPrefecture: [:],
-                                           cardDraws: [.star(card, stars: 3)]))
+                                           cardDraws: [.star(card, stars: GameRules.silverStars)]),
+                               catalog: .empty)
         #expect(store.data.tier(of: "01-1") == .silver)
 
         store.applyStageResult(StageResult(mode: .findOnMap, stageIndex: 0, score: 0, stars: 3,
                                            firstTryByPrefecture: [:],
-                                           cardDraws: [.star(card, stars: 5), .duplicate(card)]))
+                                           cardDraws: [.star(card, stars: GameRules.maxCardStars),
+                                                       .duplicate(card)]),
+                               catalog: .empty)
         #expect(store.data.stars(of: "01-1") == GameRules.maxCardStars)
         #expect(store.data.tier(of: "01-1") == .gold)
     }
@@ -169,7 +172,7 @@ struct SaveStoreTests {
         let store = SaveStore(directory: dir)
         store.applyStageResult(StageResult(mode: .findOnMap, stageIndex: 0, score: 500, stars: 3,
                                            firstTryByPrefecture: [1: true, 2: true],
-                                           cardDraws: []))
+                                           cardDraws: []), catalog: .empty)
         store.eraseAll()
 
         #expect(store.data.mastery.isEmpty)
@@ -187,12 +190,106 @@ struct SaveStoreTests {
             cardDraws: [
                 .new(card("01-1")), .new(card("01-2")),
                 .star(card("02-1"), stars: GameRules.silverStars),
-            ]))
+            ]), catalog: .empty)
 
         #expect(store.data.totalOwnedCards == 3)
         #expect(store.data.specialCardCount == 1)
         #expect(store.data.goldCardCount == 0)
         #expect(store.data.sparklingPrefectureCount == 0)
+    }
+
+    // MARK: - Streaks and rainbow
+
+    private func result(outcomes: [Int: [Bool]],
+                        draws: [GameRules.CardDraw] = []) -> StageResult {
+        StageResult(mode: .findOnMap, stageIndex: 0, score: 0, stars: 3,
+                    firstTryByPrefecture: [:], cardDraws: draws,
+                    outcomesByPrefecture: outcomes)
+    }
+
+    @Test func cleanAnswersGrowThePrefectureStreakAcrossPlays() throws {
+        let dir = try makeScratch()
+        defer { try? FileManager.default.removeItem(at: dir) }
+
+        let store = SaveStore(directory: dir)
+        store.applyStageResult(result(outcomes: [1: [true, true]]), catalog: .empty)
+        #expect(store.data.streak(of: 1) == 2)
+
+        store.applyStageResult(result(outcomes: [1: [true]]), catalog: .empty)
+        #expect(store.data.streak(of: 1) == 3)
+        #expect(SaveStore(directory: dir).data.streak(of: 1) == 3,
+                "the streak must survive a reload")
+    }
+
+    /// The reset is silent bookkeeping: the counter goes back, nothing else
+    /// moves, and nothing is said about it (CLAUDE.md §12).
+    @Test func aFumbleResetsTheStreakAndOnlyTheStreak() throws {
+        let dir = try makeScratch()
+        defer { try? FileManager.default.removeItem(at: dir) }
+
+        let store = SaveStore(directory: dir)
+        store.applyStageResult(result(outcomes: [1: [true, true]],
+                                      draws: [.new(card("01-1"))]), catalog: .empty)
+        store.applyStageResult(result(outcomes: [1: [false, true]]), catalog: .empty)
+
+        #expect(store.data.streak(of: 1) == 1)
+        #expect(store.data.stars(of: "01-1") == 1, "stars stand through a broken streak")
+    }
+
+    @Test func goldHeldThroughAFifteenStreakTurnsRainbow() throws {
+        let dir = try makeScratch()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let catalog = CardCatalog(cards: [card("01-1"), card("01-2"), card("01-3")])
+
+        let store = SaveStore(directory: dir)
+        // Gold, but the streak is only fourteen: not yet.
+        store.applyStageResult(
+            result(outcomes: [1: Array(repeating: true, count: 14)],
+                   draws: [.star(card("01-1"), stars: GameRules.maxCardStars)]),
+            catalog: catalog)
+        #expect(store.data.tier(of: "01-1") == .gold)
+        #expect(store.data.rainbow.isEmpty)
+
+        // The fifteenth clean answer latches it.
+        store.applyStageResult(result(outcomes: [1: [true]]), catalog: catalog)
+        #expect(store.data.tier(of: "01-1") == .rainbow)
+        #expect(store.data.tier(of: "01-2") == .none,
+                "a card that is not gold has nothing to latch")
+    }
+
+    /// The other order: the streak is already there when the card reaches gold.
+    @Test func aCardReachingGoldUnderALiveStreakLatchesImmediately() throws {
+        let dir = try makeScratch()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let catalog = CardCatalog(cards: [card("01-1")])
+
+        let store = SaveStore(directory: dir)
+        store.applyStageResult(
+            result(outcomes: [1: Array(repeating: true, count: 16)]), catalog: catalog)
+        store.applyStageResult(
+            result(outcomes: [1: [true]],
+                   draws: [.star(card("01-1"), stars: GameRules.maxCardStars)]),
+            catalog: catalog)
+        #expect(store.data.tier(of: "01-1") == .rainbow)
+    }
+
+    /// Once rainbow, always rainbow. The streak breaking afterwards takes the
+    /// counter back to zero and nothing else (CLAUDE.md §12).
+    @Test func rainbowSurvivesTheStreakBreaking() throws {
+        let dir = try makeScratch()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let catalog = CardCatalog(cards: [card("01-1")])
+
+        let store = SaveStore(directory: dir)
+        store.applyStageResult(
+            result(outcomes: [1: Array(repeating: true, count: 15)],
+                   draws: [.star(card("01-1"), stars: GameRules.maxCardStars)]),
+            catalog: catalog)
+        #expect(store.data.tier(of: "01-1") == .rainbow)
+
+        store.applyStageResult(result(outcomes: [1: [false]]), catalog: catalog)
+        #expect(store.data.streak(of: 1) == 0)
+        #expect(store.data.tier(of: "01-1") == .rainbow)
     }
 
     private func card(_ id: String) -> SpecialtyCard {
@@ -249,16 +346,56 @@ struct SaveMigrationTests {
         #expect(!data.owns("01-3"))
     }
 
-    /// The remap must not run twice: a version 3 file already speaks in stars,
-    /// and a two there is a two.
-    @Test func aVersionThreeFileKeepsItsStarCounts() throws {
+    /// 3 → 4 stretched the scale: silver moved from three stars to five, gold
+    /// from five to fifteen. Counts move by their place on the old ladder so no
+    /// card demotes — an old three lands on the new silver floor, a four lands
+    /// mid-silver, an old gold stays gold.
+    @Test func versionThreeStarsAreLiftedToTheNewScale() throws {
         let data = try load("""
-        {"version":3,"cards":{"01-1":2,"01-2":3,"01-3":5}}
+        {"version":3,"cards":{"a":1,"b":2,"c":3,"d":4,"e":5}}
         """)
-        #expect(data.stars(of: "01-1") == 2)
-        #expect(data.tier(of: "01-1") == .plain)
-        #expect(data.tier(of: "01-2") == .silver)
-        #expect(data.tier(of: "01-3") == .gold)
+        #expect(data.stars(of: "a") == 1)
+        #expect(data.stars(of: "b") == 2)
+        #expect(data.stars(of: "c") == GameRules.silverStars)
+        #expect(data.stars(of: "d") == 10)
+        #expect(data.stars(of: "e") == GameRules.maxCardStars)
+        #expect(data.tier(of: "c") == .silver)
+        #expect(data.tier(of: "d") == .silver)
+        #expect(data.tier(of: "e") == .gold)
+    }
+
+    /// The lift must not run twice: a version 4 file already speaks the new
+    /// scale, and a five there is a five.
+    @Test func aVersionFourFileKeepsItsStarCounts() throws {
+        let data = try load("""
+        {"version":4,"cards":{"a":2,"b":5,"c":14,"d":15}}
+        """)
+        #expect(data.stars(of: "a") == 2)
+        #expect(data.tier(of: "a") == .plain)
+        #expect(data.tier(of: "b") == .silver)
+        #expect(data.tier(of: "c") == .silver)
+        #expect(data.tier(of: "d") == .gold)
+    }
+
+    /// Migration lifts stars, never grants rainbow: rainbow is the streak's
+    /// medal, and no streak has been walked yet on a file this old.
+    @Test func migrationGrantsNoRainbowAndNoStreak() throws {
+        let data = try load(#"{"version":3,"cards":{"a":5}}"#)
+        #expect(data.rainbow.isEmpty)
+        #expect(data.streaks.isEmpty)
+        #expect(data.tier(of: "a") == .gold)
+    }
+
+    @Test func rainbowAndStreaksSurviveARoundTrip() throws {
+        var data = SaveData()
+        data.cards["01-1"] = GameRules.maxCardStars
+        data.rainbow = ["01-1"]
+        data.streaks = [1: 7]
+        let reloaded = try JSONDecoder().decode(
+            SaveData.self, from: JSONEncoder().encode(data))
+        #expect(reloaded.rainbow == ["01-1"])
+        #expect(reloaded.streaks[1] == 7)
+        #expect(reloaded.tier(of: "01-1") == .rainbow)
     }
 
     /// Encoding a migrated file writes the new version, so reloading it cannot

@@ -19,21 +19,52 @@ struct ResultView: View {
 
     @State private var revealedStars = 0
     @State private var celebrating = false
+    @State private var opened: WonCard?
+
+    /// A card this run won, at the star count it ended on.
+    ///
+    /// Carries its own stars rather than reading them back out of the save, so
+    /// the card that opens agrees with the chip that was tapped even on the
+    /// debug route, which reaches this screen with a result never persisted.
+    private struct WonCard: Identifiable {
+        let card: SpecialtyCard
+        let stars: Int
+        var id: String { card.id }
+    }
 
     /// What this run moved, each card as it ended up.
     ///
     /// Deduped, keeping the highest: one stage can put two stars on the same
     /// card, and showing it twice would read as two cards. Draws that gained
     /// nothing are left out — the panel is for what changed.
-    private var wonCards: [(card: SpecialtyCard, stars: Int)] {
-        var best: [String: (card: SpecialtyCard, stars: Int)] = [:]
+    private var wonCards: [WonCard] {
+        var best: [String: WonCard] = [:]
         for draw in result.cardDraws {
             if case .duplicate = draw { continue }
             if let existing = best[draw.card.id], existing.stars >= draw.stars { continue }
-            best[draw.card.id] = (draw.card, draw.stars)
+            best[draw.card.id] = WonCard(card: draw.card, stars: draw.stars)
         }
         // Walked in draw order, so the cards appear in the order they were won.
         return result.cardDraws.compactMap { best.removeValue(forKey: $0.card.id) }
+    }
+
+    /// The card's next goal, from the save — which the result has already been
+    /// applied to, so the streak and any fresh rainbow are current. Stars come
+    /// from the run so the caption agrees with the chip above it even on the
+    /// debug route, which shows results that were never persisted.
+    private func nextGoal(for won: WonCard) -> GameRules.NextGoal? {
+        GameRules.nextGoal(stars: won.stars,
+                           streak: app.save.data.streak(of: won.card.prefectureCode),
+                           isRainbow: app.save.data.isRainbow(won.card.id))
+    }
+
+    /// Opens with the cover's own slide suppressed, on the same terms as the
+    /// card book: a card is picked up out of depth, not pushed onto the desk
+    /// from the bottom edge.
+    private func open(_ won: WonCard) {
+        var transaction = Transaction()
+        transaction.disablesAnimations = true
+        withTransaction(transaction) { opened = won }
     }
 
     var body: some View {
@@ -63,6 +94,18 @@ struct ResultView: View {
         }
         .navigationBarBackButtonHidden()
         .task { await revealStars() }
+        // The card just won is the one a child most wants to look at, and this
+        // is the only screen that names it. Opening it here is a layer over the
+        // celebration, not a way out of it — closing comes back to the stars.
+        .fullScreenCover(item: $opened) { won in
+            CardDetailView(card: won.card,
+                           prefecture: app.mapData[won.card.prefectureCode],
+                           stars: won.stars,
+                           rainbow: app.save.data.isRainbow(won.card.id),
+                           streak: app.save.data.streak(of: won.card.prefectureCode))
+                .environment(\.textMode, mode)
+                .presentationBackground(.clear)
+        }
     }
 
     // MARK: - Pieces
@@ -138,10 +181,23 @@ struct ResultView: View {
 
             LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10),
                                      count: typeSize.cardColumns), spacing: 10) {
-                ForEach(wonCards, id: \.card.id) { won in
-                    CardChipView(card: won.card,
-                                 prefecture: app.mapData[won.card.prefectureCode],
-                                 stars: won.stars)
+                ForEach(wonCards) { won in
+                    VStack(spacing: 5) {
+                        CardChipView(card: won.card,
+                                     prefecture: app.mapData[won.card.prefectureCode],
+                                     stars: won.stars,
+                                     rainbow: app.save.data.isRainbow(won.card.id),
+                                     onOpen: { open(won) })
+                        // 「あと◯」 — the reason to play this stage once more,
+                        // said while the card is still in front of them.
+                        if let goal = nextGoal(for: won) {
+                            Text(mode.nextGoalLabel(goal))
+                                .font(AppFont.rounded(11, relativeTo: .caption2))
+                                .foregroundStyle(Palette.ink.opacity(0.55))
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.7)
+                        }
+                    }
                 }
             }
         }

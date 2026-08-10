@@ -71,7 +71,9 @@ struct CardBookView: View {
         .fullScreenCover(item: $opened) { card in
             CardDetailView(card: card,
                            prefecture: app.mapData[card.prefectureCode],
-                           stars: save.stars(of: card.id))
+                           stars: save.stars(of: card.id),
+                           rainbow: save.isRainbow(card.id),
+                           streak: save.streak(of: card.prefectureCode))
                 .environment(\.textMode, mode)
                 .presentationBackground(.clear)
         }
@@ -150,6 +152,7 @@ struct CardBookView: View {
                 ForEach(cards) { card in
                     CardChipView(card: card,
                                  stars: save.stars(of: card.id),
+                                 rainbow: save.isRainbow(card.id),
                                  onOpen: { open(card) })
                 }
             }

@@ -10,20 +10,23 @@ struct CardChipView: View {
     /// Named on the card, so the same face works in the result screen where
     /// nothing else says which prefecture the card came from.
     var prefecture: Prefecture?
-    /// 0 = not collected yet, then one per copy won, to five.
+    /// 0 = not collected yet, then one per copy won, to fifteen.
     var stars: Int = 1
+    /// From the save's rainbow latch — see `CardFaceView.rainbow`.
+    var rainbow: Bool = false
     /// Set to open the card on its own. Nil leaves the chip inert, which is
-    /// what the result screen wants — nothing there should lead away from the
-    /// celebration mid-flow.
+    /// what the my-map sheet wants — it is already a presentation, and a card
+    /// put up over it would be the third layer deep.
     var onOpen: (() -> Void)?
 
     @Environment(\.textMode) private var mode
 
-    private var tier: CardTier { CardTier(stars: stars) }
+    private var tier: CardTier { CardTier(stars: stars, rainbow: rainbow) }
     private var isOwned: Bool { tier != .none }
 
     var body: some View {
-        CardFaceView(card: card, prefecture: prefecture, stars: stars, metrics: .chip)
+        CardFaceView(card: card, prefecture: prefecture, stars: stars,
+                     rainbow: rainbow, metrics: .chip)
             .accessibilityElement(children: .ignore)
             .accessibilityLabel(accessibilityText)
             // Only a card you own opens: there is nothing to look at behind a
@@ -50,8 +53,9 @@ struct CardChipView: View {
     return HStack(spacing: 12) {
         CardChipView(card: card, stars: 0)
         CardChipView(card: card, stars: 1)
-        CardChipView(card: card, stars: 3)
-        CardChipView(card: card, stars: 5)
+        CardChipView(card: card, stars: GameRules.silverStars)
+        CardChipView(card: card, stars: GameRules.maxCardStars)
+        CardChipView(card: card, stars: GameRules.maxCardStars, rainbow: true)
     }
     .padding()
     .background(Palette.background)

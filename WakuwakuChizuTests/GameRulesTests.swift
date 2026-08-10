@@ -228,23 +228,78 @@ struct GameRulesTests {
         }
     }
 
-    /// Three stars is silver, five is gold, and the tier only counts as a
+    /// Five stars is silver, fifteen is gold, and the tier only counts as a
     /// promotion on the draw that crossed into it.
     @Test func tiersFollowTheStarCount() {
         #expect(CardTier(stars: 0) == .none)
         #expect(CardTier(stars: 1) == .plain)
-        #expect(CardTier(stars: 2) == .plain)
-        #expect(CardTier(stars: 3) == .silver)
-        #expect(CardTier(stars: 4) == .silver)
-        #expect(CardTier(stars: 5) == .gold)
+        #expect(CardTier(stars: 4) == .plain)
+        #expect(CardTier(stars: 5) == .silver)
+        #expect(CardTier(stars: 14) == .silver)
+        #expect(CardTier(stars: 15) == .gold)
         #expect(CardTier(stars: 99) == .gold)
 
         let card = Self.sample[0]
-        #expect(GameRules.CardDraw.star(card, stars: 3).promoted)
         #expect(GameRules.CardDraw.star(card, stars: 5).promoted)
+        #expect(GameRules.CardDraw.star(card, stars: 15).promoted)
         #expect(!GameRules.CardDraw.star(card, stars: 4).promoted)
-        #expect(!GameRules.CardDraw.star(card, stars: 2).promoted)
+        #expect(!GameRules.CardDraw.star(card, stars: 6).promoted)
+        #expect(!GameRules.CardDraw.star(card, stars: 14).promoted)
         #expect(!GameRules.CardDraw.new(card).promoted)
+    }
+
+    /// Rainbow is never a star count. It is a fact recorded about the card —
+    /// gold, held while the prefecture's streak stood at fifteen — and once
+    /// recorded it does not wash off.
+    @Test func rainbowSitsAboveGoldAndNeedsTheFlag() {
+        #expect(CardTier(stars: 15, rainbow: true) == .rainbow)
+        #expect(CardTier(stars: 15, rainbow: false) == .gold)
+        #expect(CardTier.rainbow > .gold)
+        #expect(CardTier.rainbow.isSpecial)
+        // A card the child does not hold cannot be shown as anything.
+        #expect(CardTier(stars: 0, rainbow: true) == .none)
+    }
+
+    // MARK: - Prefecture streak
+
+    @Test func aCleanPassExtendsTheStreak() {
+        #expect(GameRules.nextStreak(current: 3, outcomes: [true, true]) == 5)
+        #expect(GameRules.nextStreak(current: 0, outcomes: [true]) == 1)
+    }
+
+    /// A fumble resets the count, but only the count: what comes after the
+    /// fumble starts a fresh run within the same stage.
+    @Test func aFumbleResetsTheStreakToWhatFollowedIt() {
+        #expect(GameRules.nextStreak(current: 9, outcomes: [false, true]) == 1)
+        #expect(GameRules.nextStreak(current: 9, outcomes: [true, false]) == 0)
+        #expect(GameRules.nextStreak(current: 9, outcomes: []) == 9)
+    }
+
+    // MARK: - Rainbow
+
+    @Test func rainbowNeedsAGoldCardAndAFifteenStreak() {
+        #expect(GameRules.qualifiesForRainbow(stars: 15, streak: 15))
+        #expect(GameRules.qualifiesForRainbow(stars: 15, streak: 20))
+        #expect(!GameRules.qualifiesForRainbow(stars: 14, streak: 20))
+        #expect(!GameRules.qualifiesForRainbow(stars: 15, streak: 14))
+    }
+
+    // MARK: - Next goal
+
+    /// The 「あと◯」 line: wins to silver, wins to gold, then streak to
+    /// rainbow, then nothing left to ask for. Unowned cards say nothing —
+    /// the first draw is the goal, and the slot already shows that.
+    @Test func nextGoalWalksTheLadder() {
+        #expect(GameRules.nextGoal(stars: 0, streak: 0, isRainbow: false) == nil)
+        #expect(GameRules.nextGoal(stars: 1, streak: 0, isRainbow: false) == .wins(4, to: .silver))
+        #expect(GameRules.nextGoal(stars: 4, streak: 0, isRainbow: false) == .wins(1, to: .silver))
+        #expect(GameRules.nextGoal(stars: 5, streak: 0, isRainbow: false) == .wins(10, to: .gold))
+        #expect(GameRules.nextGoal(stars: 14, streak: 0, isRainbow: false) == .wins(1, to: .gold))
+        #expect(GameRules.nextGoal(stars: 15, streak: 0, isRainbow: false) == .streak(15))
+        #expect(GameRules.nextGoal(stars: 15, streak: 12, isRainbow: false) == .streak(3))
+        #expect(GameRules.nextGoal(stars: 15, streak: 40, isRainbow: false) == .streak(1),
+                "a still-gold card never shows 「あと0」 — the latch just has not caught yet")
+        #expect(GameRules.nextGoal(stars: 15, streak: 0, isRainbow: true) == .done)
     }
 
     /// Applying the same draw twice is what happens when a stage result is
@@ -271,7 +326,7 @@ struct GameRulesTests {
         }
         #expect(owned.count == 3, "every card should be owned after enough draws")
         #expect(owned.values.allSatisfy { $0 == GameRules.maxCardStars },
-                "every card should have reached five stars")
+                "every card should have reached the star cap")
     }
 
     @Test func starsNeverExceedTheCap() {

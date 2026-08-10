@@ -78,6 +78,23 @@ nonisolated extension TextMode {
         case .none, .plain: nil
         case .silver: "シルバーカード"
         case .gold: "ゴールドカード"
+        // Hiragana, not 虹: the tier names are the words the child uses for
+        // them, and this one they can already read.
+        case .rainbow: "にじいろカード"
+        }
+    }
+    /// The 「あと◯」 line under a card (CLAUDE.md §5). It only ever counts
+    /// toward the next thing — a streak that broke is not mentioned, because
+    /// naming the loss is the loss (CLAUDE.md §12).
+    func nextGoalLabel(_ goal: GameRules.NextGoal) -> String {
+        switch goal {
+        case .wins(let n, let tier):
+            let name = tier == .gold ? "ゴールド" : "シルバー"
+            return isKids ? "あと \(n)かいで \(name)!" : "あと\(n)回で\(name)"
+        case .streak(let n):
+            return isKids ? "あと \(n)れんぞくで にじいろ!" : "あと\(n)連続でにじいろ"
+        case .done:
+            return isKids ? "さいこうの カード!" : "最高のカード"
         }
     }
     var notCollectedYet: String { isKids ? "まだ もっていない カード" : "未取得のカード" }

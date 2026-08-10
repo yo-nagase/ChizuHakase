@@ -28,10 +28,11 @@ nonisolated struct Settings: Codable, Sendable, Equatable {
 }
 
 nonisolated struct SaveData: Codable, Sendable, Equatable {
-    /// 3 gave every card five stars instead of a plain/キラ pair. 2 split the
-    /// stage records per quiz mode. Version 1 had one mode and wrote a flat
-    /// `stages` dictionary.
-    static let currentVersion = 3
+    /// 4 stretched the stars to fifteen and added the prefecture streaks with
+    /// their rainbow latch. 3 gave every card five stars instead of a
+    /// plain/キラ pair. 2 split the stage records per quiz mode. Version 1 had
+    /// one mode and wrote a flat `stages` dictionary.
+    static let currentVersion = 4
 
     var version: Int = SaveData.currentVersion
     /// prefecture code -> 0...3.
@@ -39,8 +40,16 @@ nonisolated struct SaveData: Codable, Sendable, Equatable {
     /// Deliberately *not* split by mode: both directions teach the same
     /// prefecture, and a child should not have two separate maps to fill in.
     var mastery: [Int: Int] = [:]
-    /// card id -> stars, 0...5. Three is silver, five is gold.
+    /// card id -> stars, 0...15. Five is silver, fifteen is gold.
     var cards: [String: Int] = [:]
+    /// Cards that were gold while their prefecture's streak stood at fifteen.
+    ///
+    /// Recorded rather than derived, because it cannot be derived: the streak
+    /// resets on the next fumble, and the rainbow must not reset with it
+    /// (CLAUDE.md §12).
+    var rainbow: Set<String> = []
+    /// prefecture code -> consecutive clean answers, running across sessions.
+    var streaks: [Int: Int] = [:]
     /// quiz mode -> stage index -> best record.
     ///
     /// Stars and score *are* per mode: they measure a run, and the two modes
@@ -49,7 +58,7 @@ nonisolated struct SaveData: Codable, Sendable, Equatable {
     var settings: Settings = .init()
 
     private enum CodingKeys: String, CodingKey {
-        case version, mastery, cards, records, settings
+        case version, mastery, cards, rainbow, streaks, records, settings
         /// Version 1's flat records. Read, never written.
         case stages
     }
@@ -67,13 +76,19 @@ nonisolated struct SaveData: Codable, Sendable, Equatable {
         mastery = try c.decodeIfPresent([Int: Int].self, forKey: .mastery) ?? [:]
         cards = try c.decodeIfPresent([String: Int].self, forKey: .cards) ?? [:]
         if stored < 3 {
-            // Two used to be the whole scale, and the second copy was キラ. Five
-            // is the top of the new one, so a card that had reached キラ arrives
-            // as gold rather than being demoted to a two-star plain card.
+            // Two used to be the whole scale, and the second copy was キラ. A
+            // card that had reached it arrives at the top of version 3's scale
+            // (five) and the lift below carries it the rest of the way, so it
+            // stays gold rather than being demoted to a two-star plain card.
             // Handing back a キラ that was already won is precisely what §12
             // rules out.
-            cards = cards.mapValues { $0 >= 2 ? GameRules.maxCardStars : $0 }
+            cards = cards.mapValues { $0 >= 2 ? 5 : $0 }
         }
+        if stored < 4 {
+            cards = cards.mapValues(Self.liftV3Stars)
+        }
+        rainbow = try c.decodeIfPresent(Set<String>.self, forKey: .rainbow) ?? []
+        streaks = try c.decodeIfPresent([Int: Int].self, forKey: .streaks) ?? [:]
         records = try c.decodeIfPresent([String: [Int: StageRecord]].self,
                                         forKey: .records) ?? [:]
         settings = try c.decodeIfPresent(Settings.self, forKey: .settings) ?? .init()
@@ -89,11 +104,27 @@ nonisolated struct SaveData: Codable, Sendable, Equatable {
         }
     }
 
+    /// Version 3 → 4 stretched the star scale: silver moved from three to
+    /// five, gold from five to fifteen. Counts move by their place on the old
+    /// ladder — the tier is what the child sees, so it is the tier that must
+    /// not demote (CLAUDE.md §12). An old three lands on the new silver floor,
+    /// a four (second of two silver steps) lands mid-silver, gold stays gold.
+    private static func liftV3Stars(_ stars: Int) -> Int {
+        switch stars {
+        case ..<3: max(0, stars)
+        case 3: GameRules.silverStars
+        case 4: 10
+        default: GameRules.maxCardStars
+        }
+    }
+
     func encode(to encoder: any Encoder) throws {
         var c = encoder.container(keyedBy: CodingKeys.self)
         try c.encode(version, forKey: .version)
         try c.encode(mastery, forKey: .mastery)
         try c.encode(cards, forKey: .cards)
+        try c.encode(rainbow, forKey: .rainbow)
+        try c.encode(streaks, forKey: .streaks)
         try c.encode(records, forKey: .records)
         try c.encode(settings, forKey: .settings)
     }
@@ -110,7 +141,15 @@ nonisolated struct SaveData: Codable, Sendable, Equatable {
 
     func owns(_ cardID: String) -> Bool { stars(of: cardID) > 0 }
 
-    func tier(of cardID: String) -> CardTier { CardTier(stars: stars(of: cardID)) }
+    func isRainbow(_ cardID: String) -> Bool { rainbow.contains(cardID) }
+
+    func tier(of cardID: String) -> CardTier {
+        CardTier(stars: stars(of: cardID), rainbow: isRainbow(cardID))
+    }
+
+    func streak(of prefectureCode: Int) -> Int {
+        max(0, streaks[prefectureCode] ?? 0)
+    }
 
     func record(forStage index: Int, mode: QuizMode) -> StageRecord? {
         records[mode.rawValue]?[index]
@@ -127,10 +166,11 @@ nonisolated struct SaveData: Codable, Sendable, Equatable {
 
     var totalOwnedCards: Int { cards.values.filter { $0 > 0 }.count }
 
-    /// Silver and gold together — see `CardTier.isSpecial`.
-    var specialCardCount: Int { cards.values.filter { CardTier(stars: $0).isSpecial }.count }
+    /// Silver and up — see `CardTier.isSpecial`.
+    var specialCardCount: Int { cards.keys.filter { tier(of: $0).isSpecial }.count }
 
-    var goldCardCount: Int { cards.values.filter { CardTier(stars: $0) == .gold }.count }
+    /// Gold and rainbow: a card that went rainbow has not stopped being gold.
+    var goldCardCount: Int { cards.keys.filter { tier(of: $0) >= .gold }.count }
 
     /// Prefectures at level 3 — the ones drawn with a gold border on the my-map.
     var sparklingPrefectureCount: Int {

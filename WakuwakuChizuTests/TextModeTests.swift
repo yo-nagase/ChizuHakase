@@ -113,6 +113,22 @@ struct TextModeTests {
         }
     }
 
+    /// The 「あと◯」 line counts toward what comes next and never mentions what
+    /// broke — the streak resetting is not something the interface says.
+    @Test func theNextGoalLineCountsUpTheLadder() {
+        let kids = TextMode.kids
+        #expect(kids.nextGoalLabel(.wins(3, to: .silver)) == "あと 3かいで シルバー!")
+        #expect(kids.nextGoalLabel(.wins(10, to: .gold)) == "あと 10かいで ゴールド!")
+        #expect(kids.nextGoalLabel(.streak(5)) == "あと 5れんぞくで にじいろ!")
+        #expect(kids.nextGoalLabel(.done) == "さいこうの カード!")
+
+        let adult = TextMode.adult
+        #expect(adult.nextGoalLabel(.wins(3, to: .silver)) == "あと3回でシルバー")
+        #expect(adult.nextGoalLabel(.wins(1, to: .gold)) == "あと1回でゴールド")
+        #expect(adult.nextGoalLabel(.streak(5)) == "あと5連続でにじいろ")
+        #expect(adult.nextGoalLabel(.done) == "最高のカード")
+    }
+
     /// Speech must keep using the reading regardless of mode, or adult mode
     /// would make the app mispronounce prefecture names.
     @Test func spokenNameIsAlwaysTheReading() {
@@ -140,6 +156,9 @@ extension TextMode {
          soundSection, soundEffects, speech, voiceSection, voiceOnDeviceNote, micDenied,
          displaySection,
          masteryLabel(0), masteryLabel(1), masteryLabel(2), masteryLabel(3),
-         cardTierName(.silver) ?? "", cardTierName(.gold) ?? ""]
+         cardTierName(.silver) ?? "", cardTierName(.gold) ?? "",
+         cardTierName(.rainbow) ?? "",
+         nextGoalLabel(.wins(3, to: .silver)), nextGoalLabel(.wins(10, to: .gold)),
+         nextGoalLabel(.streak(5)), nextGoalLabel(.done)]
     }
 }

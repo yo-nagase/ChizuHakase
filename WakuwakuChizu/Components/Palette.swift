@@ -119,12 +119,29 @@ nonisolated enum Palette {
         .init(color: Color(hex: 0x828C94), location: 1.00),
     ]
 
+    /// Rainbow foil, on the same ramp shape as the metals so a rainbow card is
+    /// the same material again — one more finish, not a new kind of object.
+    /// The hues walk the spectrum while the values keep the foil's dark/bright
+    /// alternation; every stop opaque for the same reason as the gold's.
+    static let rainbowRamp: [Gradient.Stop] = [
+        .init(color: Color(hex: 0xB4557E), location: 0.00),
+        .init(color: Color(hex: 0xF6A6C4), location: 0.16),
+        .init(color: Color(hex: 0xFFF3C9), location: 0.30),
+        .init(color: Color(hex: 0x7FC9A8), location: 0.48),
+        .init(color: Color(hex: 0xA8D8F0), location: 0.68),
+        .init(color: Color(hex: 0x9A7FD0), location: 0.86),
+        .init(color: Color(hex: 0x6B5AA0), location: 1.00),
+    ]
+
     /// The lit edge of cut foil.
     static let foilEdge = Color(hex: 0xFFF6D2)
     static let silverEdge = Color(hex: 0xF7FAFC)
+    static let rainbowEdge = Color(hex: 0xEFE3FF)
     /// Stars on a silver card. Darker than the metal: they sit on the white
     /// panel, where the metal's own tone would disappear.
     static let silverMark = Color(hex: 0x8A939B)
+    /// Stars on a rainbow card, on the same terms as the silver mark.
+    static let rainbowMark = Color(hex: 0x8A6FC8)
 
     /// The cut edge of the card — its thickness, seen when it is turned.
     ///

@@ -8,10 +8,13 @@ nonisolated enum GameRules {
 
     static let maxMastery = 3
 
-    /// A card's stars: one per copy won. Three make it silver, five make it
-    /// gold, and five is the cap (CLAUDE.md §5).
-    static let maxCardStars = 5
-    static let silverStars = 3
+    /// A card's stars: one per copy won. Five make it silver, fifteen make it
+    /// gold, and fifteen is the cap (CLAUDE.md §5).
+    static let maxCardStars = 15
+    static let silverStars = 5
+    /// Consecutive clean answers a prefecture needs before its gold cards
+    /// turn rainbow.
+    static let rainbowStreak = 15
 
     static let firstTryBaseScore = 100
     static let comboBonus = 20
@@ -157,6 +160,50 @@ nonisolated enum GameRules {
         return min(maxMastery, clamped + 1)
     }
 
+    // MARK: - Prefecture streak
+
+    /// The prefecture's consecutive-clean count after a stage asked about it.
+    ///
+    /// `outcomes` are this stage's questions on the prefecture, in the order
+    /// they were asked. A fumble puts the count back to zero, and the answers
+    /// after it start a fresh run inside the same stage. The count is the only
+    /// thing that resets — stars and tiers stand — and the reset itself is
+    /// never announced (CLAUDE.md §12).
+    static func nextStreak(current: Int, outcomes: [Bool]) -> Int {
+        outcomes.reduce(max(0, current)) { $1 ? $0 + 1 : 0 }
+    }
+
+    /// Rainbow is gold held through a fifteen-streak: the card at its star cap
+    /// while the prefecture's streak stands at `rainbowStreak` or better. The
+    /// moment both are true is recorded on the save and never re-examined.
+    static func qualifiesForRainbow(stars: Int, streak: Int) -> Bool {
+        stars >= maxCardStars && streak >= rainbowStreak
+    }
+
+    // MARK: - Next goal
+
+    /// What the 「あと◯」 line under a card counts down to.
+    enum NextGoal: Equatable, Sendable {
+        /// So many more wins to the named tier.
+        case wins(Int, to: CardTier)
+        /// So many more consecutive clean answers to rainbow.
+        case streak(Int)
+        /// Rainbow — nothing above it left to count toward.
+        case done
+    }
+
+    /// The next thing this card can become. Nil for a card not yet owned:
+    /// the empty slot already says what the first goal is.
+    static func nextGoal(stars: Int, streak: Int, isRainbow: Bool) -> NextGoal? {
+        guard stars > 0 else { return nil }
+        if isRainbow { return .done }
+        if stars < silverStars { return .wins(silverStars - stars, to: .silver) }
+        if stars < maxCardStars { return .wins(maxCardStars - stars, to: .gold) }
+        // Gold whose latch has not caught yet. Never 「あと0」: with the streak
+        // already there, the next clean answer on the prefecture sets it.
+        return .streak(max(1, rainbowStreak - streak))
+    }
+
     // MARK: - Card draw
 
     enum CardDraw: Hashable, Sendable {
@@ -164,7 +211,7 @@ nonisolated enum GameRules {
         case new(SpecialtyCard)
         /// Another copy of a card they had. `stars` is the count afterwards.
         case star(SpecialtyCard, stars: Int)
-        /// Already at five stars — nothing left to gain on this one.
+        /// Already at the star cap — nothing left to gain on this one.
         case duplicate(SpecialtyCard)
 
         var card: SpecialtyCard {
@@ -194,7 +241,7 @@ nonisolated enum GameRules {
     /// Unowned cards come first so the collection fills up quickly. After that
     /// the draw is among the cards that can still take a star, which is what
     /// keeps a cleared prefecture worth playing (CLAUDE.md §5) — drawing from
-    /// all of them instead would spend wins on cards already at five while
+    /// all of them instead would spend wins on cards already at the cap while
     /// others sat at one.
     static func drawCard(
         from cards: [SpecialtyCard],

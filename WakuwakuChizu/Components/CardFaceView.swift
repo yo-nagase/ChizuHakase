@@ -21,8 +21,11 @@ struct CardFaceView: View {
     /// The result screen and the enlarged card do name it — there, nothing else
     /// does.
     let prefecture: Prefecture?
-    /// 0 = not collected yet, then one per copy won, to five.
+    /// 0 = not collected yet, then one per copy won, to fifteen.
     let stars: Int
+    /// Latched on the save when the card was gold through a fifteen-streak.
+    /// Display-only here — the face never decides it.
+    var rainbow: Bool = false
     var metrics: Metrics = .full
     /// Live yaw in degrees, which the foil highlight follows. Only the enlarged
     /// card has a gesture behind it; every other caller leaves this at zero.
@@ -42,9 +45,9 @@ struct CardFaceView: View {
     /// Trading-card proportions, at every size.
     static let aspectRatio: CGFloat = 0.7
 
-    private var tier: CardTier { CardTier(stars: stars) }
+    private var tier: CardTier { CardTier(stars: stars, rainbow: rainbow) }
     private var isOwned: Bool { tier != .none }
-    /// Silver and gold are foil; plain board and an empty slot are not.
+    /// Silver, gold and rainbow are foil; plain board and an empty slot are not.
     private var isMetal: Bool { tier.isSpecial }
 
     /// The painted card, shown from silver up (CLAUDE.md §4).
@@ -72,10 +75,13 @@ struct CardFaceView: View {
         var emojiSize: CGFloat
         var windowRadius: CGFloat
         var plateVerticalPadding: CGFloat
-        /// How thick the card is, in points. Exaggerated — a real trading card at
-        /// 300pt wide would be under 2pt, which reads as paper rather than as an
-        /// object you can turn over. Zero on a chip: a card lying on the album
-        /// page shows its thickness as the sticker shadow already.
+        /// How thick the card is, in points. Still more than scale — a real
+        /// trading card at 300pt wide would be under 2pt, which reads as paper
+        /// rather than as an object you can turn over — but only just enough to
+        /// show an edge. It was three times this and the card turned into a
+        /// slab: past a certain depth what it stops looking like is a card.
+        /// Zero on a chip: a card lying on the album page shows its thickness
+        /// as the sticker shadow already.
         var thickness: CGFloat
         /// The description and the collector number.
         var showsSmallPrint: Bool
@@ -87,7 +93,7 @@ struct CardFaceView: View {
         static let full = Metrics(
             border: 11, outerRadius: 12, panelRadius: 7, panelPadding: 12,
             spacing: 8, categorySize: 15, prefectureSize: 16, nameSize: 21,
-            emojiSize: 88, windowRadius: 5, plateVerticalPadding: 7, thickness: 9,
+            emojiSize: 88, windowRadius: 5, plateVerticalPadding: 7, thickness: 3,
             showsSmallPrint: true,
             shadowColor: .black.opacity(0.35), shadowRadius: 20, shadowY: 12)
 
@@ -135,8 +141,7 @@ struct CardFaceView: View {
             // only the metals get the rim.
             if isMetal {
                 RoundedRectangle(cornerRadius: metrics.outerRadius, style: .continuous)
-                    .strokeBorder(tier == .gold ? Palette.foilEdge : Palette.silverEdge,
-                                  lineWidth: 1)
+                    .strokeBorder(rimColour, lineWidth: 1)
             }
         }
         .background { edge }
@@ -185,7 +190,7 @@ struct CardFaceView: View {
     /// identifying the card rather than competing with its rarity.
     @ViewBuilder private var stock: some View {
         if isMetal {
-            LinearGradient(stops: tier == .gold ? Palette.foilRamp : Palette.silverRamp,
+            LinearGradient(stops: foilRamp,
                            startPoint: .topLeading, endPoint: .bottomTrailing)
                 .overlay { glint }
         } else if isOwned {
@@ -194,6 +199,22 @@ struct CardFaceView: View {
         } else {
             LinearGradient(colors: [Palette.emptyBoard, Palette.emptyBoardDeep],
                            startPoint: .top, endPoint: .bottom)
+        }
+    }
+
+    private var foilRamp: [Gradient.Stop] {
+        switch tier {
+        case .rainbow: Palette.rainbowRamp
+        case .gold: Palette.foilRamp
+        default: Palette.silverRamp
+        }
+    }
+
+    private var rimColour: Color {
+        switch tier {
+        case .rainbow: Palette.rainbowEdge
+        case .gold: Palette.foilEdge
+        default: Palette.silverEdge
         }
     }
 
@@ -236,12 +257,13 @@ struct CardFaceView: View {
             // Rarity, in the corner where a card keeps it: one star per copy
             // won. A slot with nothing in it has none to state yet.
             if isOwned {
-                // Small: five of them next to a six-character prefecture name
-                // is a lot of top row, and at the old size the name was the
-                // thing that got cut.
-                Text(String(repeating: "★", count: stars))
+                // One star and a count, not a row of glyphs: the scale runs to
+                // fifteen now, and fifteen stars beside a six-character
+                // prefecture name is not a top row, it is a fence.
+                Text(verbatim: "★\(stars)")
                     .font(AppFont.rounded(metrics.prefectureSize * 0.68,
                                           relativeTo: .caption))
+                    .monospacedDigit()
                     .foregroundStyle(starColour)
                     .lineLimit(1)
                     .minimumScaleFactor(0.6)
@@ -251,6 +273,7 @@ struct CardFaceView: View {
 
     private var starColour: Color {
         switch tier {
+        case .rainbow: Palette.rainbowMark
         case .gold: Palette.gold
         case .silver: Palette.silverMark
         default: Palette.ink.opacity(0.28)
@@ -332,9 +355,11 @@ struct CardFaceView: View {
     /// how much they shone rather than by whether they shone — and "less shiny"
     /// is a comparison a child can only make with both cards side by side.
     ///
-    /// Gold refracts a rainbow; silver returns white. That is what the two
+    /// Gold refracts a rainbow; silver returns white — that is what the two
     /// metals do, and it keeps the tiers apart at a glance even where the stock
-    /// itself is hidden behind the picture.
+    /// itself is hidden behind the picture. Rainbow returns white too: its
+    /// stock already carries every colour, and a rainbow shine on a rainbow
+    /// card just reads as noise.
     @ViewBuilder private var sheen: some View {
         if isMetal {
             let shift = tilt.width / Self.maxTilt
@@ -358,13 +383,16 @@ struct CardFaceView: View {
                              nameKana: "かに", nameKanji: "蟹", category: .food,
                              description: "つめたい うみで そだつよ")
     return VStack(spacing: 16) {
-        // Empty slot, one star, silver, gold.
+        // Empty slot, one star, silver, gold, rainbow.
         HStack(spacing: 10) {
-            ForEach([0, 1, 3, 5], id: \.self) { stars in
+            ForEach([0, 1, GameRules.silverStars, GameRules.maxCardStars], id: \.self) { stars in
                 CardFaceView(card: card, prefecture: nil, stars: stars, metrics: .chip)
             }
+            CardFaceView(card: card, prefecture: nil, stars: GameRules.maxCardStars,
+                         rainbow: true, metrics: .chip)
         }
-        CardFaceView(card: card, prefecture: nil, stars: GameRules.maxCardStars)
+        CardFaceView(card: card, prefecture: nil, stars: GameRules.maxCardStars,
+                     rainbow: true)
             .frame(maxWidth: 240)
     }
     .padding()

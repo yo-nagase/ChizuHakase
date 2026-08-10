@@ -15,6 +15,11 @@ struct CardDetailView: View {
     let card: SpecialtyCard
     let prefecture: Prefecture?
     let stars: Int
+    /// From the save's rainbow latch — see `CardFaceView.rainbow`.
+    var rainbow: Bool = false
+    /// The prefecture's current streak, for the 「あと◯れんぞく」 line under a
+    /// gold card. Zero is a fine default for callers that predate streaks.
+    var streak: Int = 0
 
     /// Live tilt, in degrees. x is pitch, y is yaw.
     @State private var tilt: CGSize = .zero
@@ -56,7 +61,7 @@ struct CardDetailView: View {
                 Spacer(minLength: 8)
 
                 CardFaceView(card: card, prefecture: prefecture,
-                             stars: stars, tilt: tilt)
+                             stars: stars, rainbow: rainbow, tilt: tilt)
                     .frame(maxWidth: 300)
                     // Pinch to look closer and drag to choose what you are
                     // looking closer at, on the same terms as the map: the zoom
@@ -79,6 +84,17 @@ struct CardDetailView: View {
                     // move is to say at what — and a card leaning at 26° while
                     // magnified three times is not a view of anything.
                     .simultaneousGesture(ZoomPan.isZoomed(zoom) ? nil : tiltGesture)
+
+                // What this card becomes next, right under the thing it is
+                // about. The one place the ladder is spelled out (CLAUDE.md §5).
+                if let goal = GameRules.nextGoal(stars: stars, streak: streak,
+                                                 isRainbow: rainbow) {
+                    Text(mode.nextGoalLabel(goal))
+                        .font(AppFont.rounded(16, relativeTo: .subheadline))
+                        .foregroundStyle(.white.opacity(0.92))
+                        .padding(.top, 16)
+                        .opacity(appeared ? 1 : 0)
+                }
 
                 Spacer(minLength: 18)
 

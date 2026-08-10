@@ -50,6 +50,9 @@ final class QuizViewModel {
     private(set) var ruledOut: Set<Int> = []
 
     private var firstTryByPrefecture: [Int: Bool] = [:]
+    /// Each asking's clean flag in the order asked, per prefecture — what the
+    /// streak is fed from. Recorded once per question, when it is answered.
+    private var outcomesByPrefecture: [Int: [Bool]] = [:]
     private var draws: [GameRules.CardDraw] = []
     /// Save-data card counts plus whatever this stage has already awarded, so a
     /// single run cannot hand out the same unowned card twice.
@@ -152,6 +155,7 @@ final class QuizViewModel {
         // first, which is the opposite of what asking twice is for.
         firstTryByPrefecture[target.code] =
             (firstTryByPrefecture[target.code] ?? true) && firstTry
+        outcomesByPrefecture[target.code, default: []].append(firstTry)
         answeredCodes.insert(target.code)
 
         let draw = GameRules.earnsCard(afterMisses: attempts)
@@ -205,6 +209,7 @@ final class QuizViewModel {
                     score: score,
                     stars: stars,
                     firstTryByPrefecture: firstTryByPrefecture,
-                    cardDraws: draws)
+                    cardDraws: draws,
+                    outcomesByPrefecture: outcomesByPrefecture)
     }
 }

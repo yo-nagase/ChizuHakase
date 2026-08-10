@@ -343,6 +343,26 @@ struct QuizViewModelTests {
         #expect(result.stageIndex == 0)
     }
 
+    /// The streak needs to know each asking's outcome *in order*: a prefecture
+    /// fumbled first and clean second ends the stage on a run of one, while the
+    /// collapsed first-try flag would call both askings dirty.
+    @Test func resultCarriesEachAskingInOrder() throws {
+        let quiz = makeQuiz(stageIndex: 0)
+        // Fumble the very first question, then answer it; play the rest clean.
+        let fumbled = try #require(quiz.target).code
+        let wrong = try #require(quiz.order.first { $0 != fumbled })
+        quiz.answer(wrong)
+        quiz.answer(fumbled)
+        quiz.advance()
+        playPerfectly(quiz)
+
+        let result = quiz.makeResult()
+        #expect(result.outcomesByPrefecture[fumbled] == [false, true])
+        for (code, outcomes) in result.outcomesByPrefecture where code != fumbled {
+            #expect(outcomes == [true, true], "prefecture \(code) was played clean")
+        }
+    }
+
     @Test func advancingPastTheEndIsSafe() {
         let quiz = makeQuiz(stageIndex: 0)
         playPerfectly(quiz)
