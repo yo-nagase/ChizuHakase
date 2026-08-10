@@ -75,18 +75,31 @@ extension SpeechService {
         var quality: AVSpeechSynthesisVoiceQuality
         var isNovelty = false
         var isPersonal = false
+
+        /// Eloquence voices are formant-synthesised screen-reader voices —
+        /// the gravel-voiced Eddy, Grandpa and friends. They report the same
+        /// default quality as the compact voice and carry no novelty trait,
+        /// so the name prefix is the only thing that tells them apart. Left
+        /// in, the identifier tie-break chose them *over* the compact voice
+        /// (`eloquence` < `voice` alphabetically) on every device without a
+        /// downloaded enhanced voice.
+        var isEloquence: Bool { identifier.hasPrefix("com.apple.eloquence.") }
     }
 
     /// The best Japanese voice among `options`, or nil to let the system decide.
     ///
     /// Highest quality wins. Ties break on the identifier so a device reads in
     /// the same voice every launch rather than picking whatever the list handed
-    /// back first. Novelty voices are jokes, and a personal voice belongs to
-    /// whoever recorded it — neither is what a five-year-old should be handed by
-    /// a quiz about Aichi.
+    /// back first. Novelty voices are jokes, a personal voice belongs to
+    /// whoever recorded it, and an Eloquence voice is a screen reader's robot —
+    /// none of them is what a five-year-old should be handed by a quiz about
+    /// Aichi.
     nonisolated static func pick(from options: [VoiceOption]) -> VoiceOption? {
         options
-            .filter { $0.language.hasPrefix("ja") && !$0.isNovelty && !$0.isPersonal }
+            .filter {
+                $0.language.hasPrefix("ja")
+                    && !$0.isNovelty && !$0.isPersonal && !$0.isEloquence
+            }
             .sorted {
                 $0.quality.rawValue == $1.quality.rawValue
                     ? $0.identifier < $1.identifier

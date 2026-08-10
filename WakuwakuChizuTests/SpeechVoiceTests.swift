@@ -59,6 +59,22 @@ struct SpeechVoiceTests {
         #expect(SpeechService.pick(from: [novelty, personal]) == nil)
     }
 
+    /// The regression that shipped a robot. Eloquence voices (Eddy, Grandpa, …)
+    /// are formant-synthesised screen-reader voices: they report the same
+    /// default quality as the compact voice, carry no novelty trait, and their
+    /// identifiers sort ahead of `com.apple.voice.…` — so on any device without
+    /// a downloaded enhanced voice, the tie-break read every question in Eddy.
+    /// Real identifiers on purpose: the only way to tell them apart is by name.
+    @Test func eloquenceVoicesAreNeverPicked() {
+        let eddy = Option(identifier: "com.apple.eloquence.ja-JP.Eddy",
+                          language: "ja-JP", quality: .default)
+        let kyoko = Option(identifier: "com.apple.voice.super-compact.ja-JP.Kyoko",
+                           language: "ja-JP", quality: .default)
+        #expect(SpeechService.pick(from: [eddy, kyoko]) == kyoko)
+        #expect(SpeechService.pick(from: [eddy]) == nil,
+                "with only Eloquence installed, the system default is still the better reader")
+    }
+
     /// Nil means "no opinion", which leaves `AVSpeechSynthesisVoice(language:)`
     /// to answer. Reading in the system default is far better than not reading.
     @Test func noJapaneseVoiceLeavesTheChoiceToTheSystem() {
