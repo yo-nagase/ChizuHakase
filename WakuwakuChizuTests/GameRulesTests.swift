@@ -138,24 +138,38 @@ struct GameRulesTests {
     // MARK: - Stars
 
     @Test func perfectRunEarnsThreeStars() {
-        #expect(GameRules.stars(missedPrefectures: 0, questionCount: 7) == 3)
-        #expect(GameRules.stars(missedPrefectures: 0, questionCount: 47) == 3)
+        #expect(GameRules.stars(missedPrefectures: 0, prefectureCount: 7) == 3)
+        #expect(GameRules.stars(missedPrefectures: 0, prefectureCount: 47) == 3)
     }
 
-    /// Two-star band is ceil(questions / 4).
+    /// Two-star band is ceil(prefectures / 4). Counted in prefectures on both
+    /// sides — the numbers below are stage sizes, not question counts, and a
+    /// regional stage asks each of its prefectures twice.
     @Test(arguments: [
         (7, 2, 2), (7, 1, 2), (7, 3, 1),      // ceil(7/4) = 2
         (47, 12, 2), (47, 13, 1),             // ceil(47/4) = 12
         (8, 2, 2), (8, 3, 1),                 // ceil(8/4) = 2
         (9, 3, 2), (9, 4, 1),                 // ceil(9/4) = 3
     ])
-    func starBands(questions: Int, missed: Int, expected: Int) {
-        #expect(GameRules.stars(missedPrefectures: missed, questionCount: questions) == expected,
-                "\(missed) missed of \(questions) should be \(expected) stars")
+    func starBands(prefectures: Int, missed: Int, expected: Int) {
+        #expect(GameRules.stars(missedPrefectures: missed,
+                                prefectureCount: prefectures) == expected,
+                "\(missed) missed of \(prefectures) should be \(expected) stars")
+    }
+
+    /// The band a real regional stage lands on, pinned because it is the one
+    /// the naming got wrong: 「ほっかいどう・とうほく」 is seven prefectures asked
+    /// fourteen times, and the allowance follows the seven.
+    @Test func aRegionalStageIsBandedOnItsPrefecturesNotItsQuestions() {
+        let stage = Stage.all[0]
+        #expect(stage.questionCount == 14)
+        #expect(GameRules.stars(missedPrefectures: 3,
+                                prefectureCount: stage.codes.count) == 1,
+                "three of seven prefectures missed is a one-star run, not two")
     }
 
     @Test func emptyStageDoesNotDivideByZero() {
-        #expect(GameRules.stars(missedPrefectures: 0, questionCount: 0) == 3)
+        #expect(GameRules.stars(missedPrefectures: 0, prefectureCount: 0) == 3)
     }
 
     // MARK: - Mastery
@@ -300,6 +314,26 @@ struct GameRulesTests {
         #expect(GameRules.nextGoal(stars: 15, streak: 40, isRainbow: false) == .streak(1),
                 "a still-gold card never shows 「あと0」 — the latch just has not caught yet")
         #expect(GameRules.nextGoal(stars: 15, streak: 0, isRainbow: true) == .done)
+    }
+
+    /// The little bar under the 「あと◯」 line: how far along the *current rung*
+    /// is, derived from the same goal as the label so the two cannot disagree.
+    /// Each rung starts empty — progress toward silver does not carry into the
+    /// gold rung, or the bar would spend the whole game nearly full.
+    @Test func theGoalBarFillsTheCurrentRung() {
+        func fraction(stars: Int, streak: Int = 0, rainbow: Bool = false) -> Double? {
+            GameRules.nextGoal(stars: stars, streak: streak, isRainbow: rainbow)?.fraction
+        }
+        #expect(fraction(stars: 0) == nil)
+        #expect(fraction(stars: 1) == 0.2)
+        #expect(fraction(stars: 4) == 0.8)
+        #expect(fraction(stars: 5) == 0, "a fresh rung starts empty")
+        #expect(fraction(stars: 14) == 0.9)
+        #expect(fraction(stars: 15) == 0)
+        #expect(fraction(stars: 15, streak: 12) == 0.8)
+        #expect(fraction(stars: 15, streak: 40) == 14.0 / 15.0,
+                "the bar never reads full while the latch has not caught")
+        #expect(fraction(stars: 15, rainbow: true) == 1)
     }
 
     /// Applying the same draw twice is what happens when a stage result is

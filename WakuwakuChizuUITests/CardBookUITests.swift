@@ -29,7 +29,7 @@ final class CardBookUITests: XCTestCase {
     /// with the nine somewhere inside it.
     func testTheKiraCountOpensTheBookAlreadyFiltered() {
         launch(at: "cardBook:special")
-        let chip = app.buttons["✨ キラキラ"]
+        let chip = app.buttons["✨ キラカード"]
         XCTAssertTrue(chip.waitForExistence(timeout: 10), "no キラキラ filter in the book")
         XCTAssertTrue(chip.isSelected, "the book did not open on the キラキラ filter")
     }

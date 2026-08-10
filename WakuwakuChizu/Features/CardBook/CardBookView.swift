@@ -94,7 +94,7 @@ struct CardBookView: View {
                      isOn: active == .all || isOpeningOneCard) { filter = .all }
                 // Ahead of the categories: it is the one a child arrives here
                 // looking for, and the one they will want to switch back to.
-                chip(title: "✨ \(mode.sparklingCount)", isOn: active == .special) {
+                chip(title: "✨ \(mode.sparklingCards)", isOn: active == .special) {
                     filter = active == .special ? .all : .special
                 }
                 ForEach(SpecialtyCard.Category.allCases, id: \.self) { c in
@@ -165,8 +165,8 @@ struct CardBookView: View {
 nonisolated enum CardFilter: Hashable, Sendable {
     case all
     case category(SpecialtyCard.Category)
-    /// Silver and gold — the payoff, and what the title screen's ✨ count is
-    /// counting.
+    /// Silver and up, rainbow included — the payoff, and what the ✨ count
+    /// inside the title screen's card tile is counting.
     case special
     /// Everything, opened straight onto one card. Debug only, for looking at
     /// the detail view without tapping through the book to find it.

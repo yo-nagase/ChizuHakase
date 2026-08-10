@@ -80,7 +80,8 @@ struct SaveStoreTests {
         for _ in 0..<4 {
             announcements.append(store.applyStageResult(
                 StageResult(mode: .findOnMap, stageIndex: 0, score: 100, stars: 3,
-                            firstTryByPrefecture: [5: true], cardDraws: []), catalog: .empty))
+                            firstTryByPrefecture: [5: true], cardDraws: []),
+                catalog: .empty).sparklingPrefectures)
         }
         // Levels 1, 2, then 3 (announced), then nothing further.
         #expect(announcements == [[], [], [5], []])
@@ -270,6 +271,49 @@ struct SaveStoreTests {
             result(outcomes: [1: [true]],
                    draws: [.star(card("01-1"), stars: GameRules.maxCardStars)]),
             catalog: catalog)
+        #expect(store.data.tier(of: "01-1") == .rainbow)
+    }
+
+    /// The latch has to say what it caught, or the rarest thing in the game
+    /// happens in silence: the streak crossing fifteen promotes every gold card
+    /// the prefecture holds, including ones this stage never drew, so the
+    /// result screen cannot work it out from the draws.
+    @Test func theLatchReportsEveryCardItCaughtIncludingUndrawnOnes() throws {
+        let dir = try makeScratch()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let catalog = CardCatalog(cards: [card("01-1"), card("01-2"), card("01-3")])
+
+        let store = SaveStore(directory: dir)
+        // Two of the three at gold, then a fifteenth clean answer in a stage
+        // that draws nothing at all.
+        store.applyStageResult(
+            result(outcomes: [1: Array(repeating: true, count: 14)],
+                   draws: [.star(card("01-1"), stars: GameRules.maxCardStars),
+                           .star(card("01-2"), stars: GameRules.maxCardStars)]),
+            catalog: catalog)
+
+        let gains = store.applyStageResult(result(outcomes: [1: [true]]), catalog: catalog)
+        #expect(gains.rainbowCards == ["01-1", "01-2"],
+                "the latch caught cards the stage never drew and did not name them")
+        #expect(store.data.tier(of: "01-3") == .none)
+    }
+
+    /// Said once. A card that was already rainbow is not news, and repeating it
+    /// every stage would turn the peak of the game into wallpaper.
+    @Test func aRainbowIsAnnouncedOnlyOnTheStageThatEarnsIt() throws {
+        let dir = try makeScratch()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let catalog = CardCatalog(cards: [card("01-1")])
+
+        let store = SaveStore(directory: dir)
+        let earning = store.applyStageResult(
+            result(outcomes: [1: Array(repeating: true, count: GameRules.rainbowStreak)],
+                   draws: [.star(card("01-1"), stars: GameRules.maxCardStars)]),
+            catalog: catalog)
+        #expect(earning.rainbowCards == ["01-1"])
+
+        let after = store.applyStageResult(result(outcomes: [1: [true]]), catalog: catalog)
+        #expect(after.rainbowCards.isEmpty, "the same rainbow was announced twice")
         #expect(store.data.tier(of: "01-1") == .rainbow)
     }
 

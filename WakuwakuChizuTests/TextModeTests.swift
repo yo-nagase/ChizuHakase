@@ -104,6 +104,16 @@ struct TextModeTests {
         }
     }
 
+    /// ✨ marks two different things — a level-3 prefecture and a silver-or-up
+    /// card — and the title screen shows the card count next to a prefecture
+    /// count. The words have to carry the difference, because the emoji cannot.
+    @Test func theTwoSparklingCountsAreNamedApart() {
+        for mode in TextMode.allCases {
+            #expect(mode.sparklingCount != mode.sparklingCards,
+                    "prefectures and cards are both called 「\(mode.sparklingCount)」")
+        }
+    }
+
     @Test func categoryLabelsExistInBothModes() {
         for category in SpecialtyCard.Category.allCases {
             #expect(!category.label(.kids).isEmpty)
@@ -149,8 +159,10 @@ extension TextMode {
          cardWonNew, cardWonStar, cardWonSilver, cardWonGold, cardWonDuplicate,
          specialtyCards, notCollectedYet,
          allCategories,
-         points, bestScore, playAgain, chooseStage, becameSparkling, starCount(3),
-         sparklingCount, learnedCount, stickerCount, resetZoom,
+         points, bestScore, playAgain, chooseStage, becameSparkling, becameRainbow,
+         starCount(3),
+         sparklingCount, sparklingCards, learnedPrefectures, ownedCards,
+         learnedCount, stickerCount, resetZoom,
          eraseEverything, eraseConfirm1, eraseConfirm2, eraseCancel, eraseNext,
          eraseConfirmAction,
          soundSection, soundEffects, speech, voiceSection, voiceOnDeviceNote, micDenied,

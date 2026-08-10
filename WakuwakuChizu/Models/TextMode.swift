@@ -106,12 +106,29 @@ nonisolated extension TextMode {
     var playAgain: String { isKids ? "もういちど" : "もう一度" }
     var chooseStage: String { isKids ? "ステージを えらぶ" : "ステージを選ぶ" }
     var becameSparkling: String { isKids ? "✨ キラキラに なった けん!" : "✨ キラキラになった県" }
+    /// The rarest thing in the game, and the only one a child can reach without
+    /// drawing anything — so it has to be said out loud here or it happens in
+    /// silence.
+    var becameRainbow: String { isKids ? "🌈 にじいろに なった カード!" : "🌈 にじいろになったカード" }
     func starCount(_ count: Int) -> String {
         isKids ? "ほし \(count) こ" : "星 \(count) 個"
     }
 
     // My map
+    /// 「キラキラ」 counts *prefectures* at level 3 — the my-map, the stage list
+    /// and the result screen all mean that by it. Cards have their own word
+    /// below, because ✨ alone cannot say which of the two is being counted and
+    /// the title screen shows a card count next to a prefecture count.
     var sparklingCount: String { isKids ? "キラキラ" : "キラキラ" }
+    /// Silver and up, counted in cards. Katakana in both modes, like the tier
+    /// names it is summarising.
+    var sparklingCards: String { isKids ? "キラカード" : "キラカード" }
+
+    // Title tallies. Verbs, not bare nouns: 「けん」 and 「カード」 name the things
+    // rather than what the number says about them, and the title screen is
+    // where a child has the least context to guess from.
+    var learnedPrefectures: String { isKids ? "おぼえた けん" : "覚えた県" }
+    var ownedCards: String { isKids ? "もっている カード" : "持っているカード" }
     var learnedCount: String { isKids ? "おぼえた" : "覚えた" }
     var stickerCount: String { isKids ? "シール" : "シール" }
     var resetZoom: String { isKids ? "もとの おおきさ" : "元の大きさ" }

@@ -89,11 +89,15 @@ struct CardDetailView: View {
                 // about. The one place the ladder is spelled out (CLAUDE.md §5).
                 if let goal = GameRules.nextGoal(stars: stars, streak: streak,
                                                  isRainbow: rainbow) {
-                    Text(mode.nextGoalLabel(goal))
-                        .font(AppFont.rounded(16, relativeTo: .subheadline))
-                        .foregroundStyle(.white.opacity(0.92))
-                        .padding(.top, 16)
-                        .opacity(appeared ? 1 : 0)
+                    VStack(spacing: 7) {
+                        Text(mode.nextGoalLabel(goal))
+                            .font(AppFont.rounded(16, relativeTo: .subheadline))
+                            .foregroundStyle(.white.opacity(0.92))
+                        NextGoalBar(goal: goal, track: .white.opacity(0.25))
+                            .frame(width: 150)
+                    }
+                    .padding(.top, 16)
+                    .opacity(appeared ? 1 : 0)
                 }
 
                 Spacer(minLength: 18)

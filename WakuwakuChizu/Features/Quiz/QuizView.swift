@@ -131,10 +131,14 @@ struct QuizView: View {
                 .lineLimit(typeSize.isAccessibilitySize ? nil : 1)
                 .minimumScaleFactor(0.7)
                 .fixedSize(horizontal: false, vertical: true)
-            // Kanji stays secondary: the reading is what a 5-year-old uses.
+            // Kanji stays secondary: the reading is what a 5-year-old uses. Not
+            // caption-sized though — kanji packs many more strokes into the same
+            // em box than kana does, so 「宮城県」 set at the size that suits
+            // 「みやぎけん」 is a grey smudge rather than characters a child can
+            // start to recognise.
             Text(quiz.mode == .nameIt ? mode.nameItPrompt
                                       : (quiz.target?.secondaryName(mode) ?? ""))
-                .font(AppFont.rounded(13, relativeTo: .caption))
+                .font(AppFont.rounded(16, relativeTo: .subheadline))
                 .foregroundStyle(Palette.ink.opacity(0.5))
         }
     }

@@ -62,6 +62,21 @@ final class MyMapUITests: XCTestCase {
         }
     }
 
+    /// A prefecture's sheet carries the reading large and the kanji under it,
+    /// and the kanji is the half a child cannot yet decode on their own. Tuning
+    /// the sheet's type is an easy way to quietly lose it, so both are pinned.
+    func testThePrefectureSheetShowsTheReadingAndTheKanji() {
+        launchMyMap()
+        let hokkaido = app.buttons["北海道"]
+        XCTAssertTrue(hokkaido.waitForExistence(timeout: 10), "no tappable 北海道 on the map")
+        hokkaido.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+
+        XCTAssertTrue(app.staticTexts["ほっかいどう"].waitForExistence(timeout: 3),
+                      "the sheet did not open on the reading")
+        XCTAssertTrue(app.staticTexts["北海道"].exists,
+                      "the kanji line is gone from the prefecture sheet")
+    }
+
     /// The map sits in a scrolling column. A pan gesture that stayed live at
     /// rest would eat the scroll, so the rest of the screen has to stay
     /// reachable without zooming first.

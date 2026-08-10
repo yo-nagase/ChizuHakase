@@ -84,23 +84,45 @@ struct TitleView: View {
     /// complaint. The answer turned out not to be making them look inert but
     /// making them do the obvious thing: each one now opens the screen where
     /// the things it counts can be looked at.
+    /// Two tallies, because there are two collections: the country and the
+    /// cards.
+    ///
+    /// The silver-and-up count used to be a third tile of its own, and out of
+    /// three tiles it was the one nobody could place. It shares a denominator
+    /// with the card count and is a *subset* of it, but sitting side by side at
+    /// equal weight the two read as unrelated collections — and 「5/141」 next
+    /// to 「38/141」 gives a child no way to see that the five are among the
+    /// thirty-eight. Inside the card tile the nesting is the layout.
     private var progressLine: some View {
         HStack(spacing: 10) {
             tally("🗾", app.save.data.mastery.values.filter { $0 > 0 }.count, 47,
-                  mode.isKids ? "けん" : "県", Palette.learned, action: onMyMap)
-            // Silver and gold *cards*, not キラキラ prefectures. Both were called キラ and
-            // the map already counts the prefectures on its own screen; here,
-            // between a prefecture count and a card count, out of 141 says
-            // plainly which one this is.
-            //
-            // It opens the book already filtered to them. The count is what the
-            // child is proud of; making them find those nine again among 141
-            // would be the app forgetting what they just tapped.
-            tally("✨", app.save.data.specialCardCount, max(app.cards.count, 1), "キラ",
-                  Palette.gold) { onCardBook(.special) }
-            tally("🃏", app.save.data.totalOwnedCards, max(app.cards.count, 1), "カード",
-                  Palette.collected) { onCardBook(.all) }
+                  mode.learnedPrefectures, Palette.learned, action: onMyMap)
+            // Opens the book unfiltered now rather than straight onto the キラ
+            // cards, which the third tile used to do. One tile cannot lead two
+            // places, and the book's own ✨ chip is the first thing above the
+            // grid — one tap further, in the room where the cards already are.
+            tally("🃏", app.save.data.totalOwnedCards, max(app.cards.count, 1),
+                  mode.ownedCards, Palette.collected,
+                  note: TallyNote(emoji: "✨", label: mode.sparklingCards,
+                                  count: app.save.data.specialCardCount)) {
+                onCardBook(.all)
+            }
         }
+        // Holds the row to its tallest tile instead of letting the flexible
+        // heights above stretch it down the screen.
+        .fixedSize(horizontal: false, vertical: true)
+    }
+
+    /// A second count that belongs *inside* the first.
+    ///
+    /// Only for genuine subsets — drawn under the meter, in the tile whose
+    /// number it is part of. Anything that is not a subset gets its own tile.
+    private struct TallyNote {
+        let emoji: String
+        let label: String
+        let count: Int
+
+        var text: String { "\(emoji) \(label) \(count)" }
     }
 
     /// Each count opens the place its things live: the two prefecture counts go
@@ -109,16 +131,19 @@ struct TitleView: View {
     /// "where can I see them?".
     private func tally(_ emoji: String, _ have: Int, _ total: Int,
                        _ label: String, _ tint: Color,
+                       note: TallyNote? = nil,
                        action: @escaping () -> Void) -> some View {
-        Button(action: action) { tallyFace(emoji, have, total, label, tint) }
+        Button(action: action) { tallyFace(emoji, have, total, label, tint, note) }
             .buttonStyle(TallyPressStyle())
             .accessibilityElement(children: .ignore)
-            .accessibilityLabel("\(label) \(have) / \(total)")
+            .accessibilityLabel(note.map { "\(label) \(have) / \(total)。\($0.label) \($0.count)" }
+                                ?? "\(label) \(have) / \(total)")
             .accessibilityAddTraits(.isButton)
     }
 
     private func tallyFace(_ emoji: String, _ have: Int, _ total: Int,
-                           _ label: String, _ tint: Color) -> some View {
+                           _ label: String, _ tint: Color,
+                           _ note: TallyNote?) -> some View {
         VStack(spacing: 5) {
             Text(emoji)
                 .font(.system(size: 15))
@@ -141,12 +166,44 @@ struct TitleView: View {
             Text(label)
                 .font(AppFont.rounded(11, relativeTo: .caption2))
                 .foregroundStyle(Palette.ink.opacity(0.55))
+                // Wraps rather than truncates. At the largest accessibility
+                // sizes a third of the screen holds about two characters, and
+                // 「カ…」 was already what 「カード」 became there — a label
+                // clipped to its first letter names nothing at all. Three lines
+                // because 「キラカード」 is five characters and needs them.
+                .lineLimit(3)
+                .multilineTextAlignment(.center)
+                .minimumScaleFactor(0.75)
+                // Without this the label takes the width it is offered and
+                // clips, instead of asking for the second line it was just
+                // allowed.
+                .fixedSize(horizontal: false, vertical: true)
 
             ProgressMeter(fraction: total > 0 ? Double(have) / Double(total) : 0, tint: tint)
+
+            // One Text rather than an HStack of three, so it wraps as a phrase
+            // instead of each piece being squeezed separately.
+            if let note {
+                Text(verbatim: note.text)
+                    .font(AppFont.rounded(10, relativeTo: .caption2))
+                    .foregroundStyle(Palette.ink.opacity(0.5))
+                    .monospacedDigit()
+                    .lineLimit(3)
+                    .multilineTextAlignment(.center)
+                    .minimumScaleFactor(0.75)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
         }
         .padding(.vertical, 10)
         .padding(.horizontal, 10)
-        .frame(maxWidth: .infinity)
+        // maxHeight so the two tiles match: only one of them carries a note, and
+        // a pair of cards at different heights reads as two unrelated things
+        // rather than as one row. The HStack pins the row to its tallest.
+        //
+        // Top-aligned so the spare height goes under the shorter tile instead of
+        // around it — otherwise the two meters sit at different heights and the
+        // pair stops scanning as one row again.
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .background(
             RoundedRectangle(cornerRadius: 20, style: .continuous)
                 .fill(.white)

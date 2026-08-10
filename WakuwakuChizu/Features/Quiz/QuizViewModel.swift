@@ -132,7 +132,7 @@ final class QuizViewModel {
 
     var stars: Int {
         GameRules.stars(missedPrefectures: missedPrefectureCount,
-                        questionCount: prefectureCount)
+                        prefectureCount: prefectureCount)
     }
 
     // MARK: - Playing

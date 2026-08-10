@@ -19,7 +19,7 @@ struct RootView: View {
         /// the destination before that state was visible to it, and finishing a
         /// real quiz pushed a blank screen. Data a destination needs belongs in
         /// the value that selects it.
-        case result(StageResult, sparkles: [Int])
+        case result(StageResult, gains: StageGains)
         case myMap
         case cardBook(filter: CardFilter)
     }
@@ -51,9 +51,9 @@ struct RootView: View {
         #if DEBUG
         let arguments = ProcessInfo.processInfo.arguments
         if arguments.contains("-resetSave") { app.save.eraseAll() }
-        // Enough of a collection to exercise the book: one plain card and one
-        // gold. Owning nothing hides every name behind 「？」, which is correct
-        // but leaves nothing to open.
+        // Enough of a collection to exercise the book: one plain card, one gold
+        // and one rainbow. Owning nothing hides every name behind 「？」, which
+        // is correct but leaves nothing to open.
         if arguments.contains("-grantCards") {
             app.save.applyStageResult(StageResult(
                 mode: .findOnMap, stageIndex: 0, score: 0, stars: 3,
@@ -63,7 +63,18 @@ struct RootView: View {
                 cardDraws: (app.cards["01-1"].map { [GameRules.CardDraw.new($0)] } ?? [])
                     + (app.cards["04-2"].map {
                         [GameRules.CardDraw.star($0, stars: GameRules.maxCardStars)]
-                    } ?? [])), catalog: app.cards)
+                    } ?? [])
+                    + (app.cards["13-2"].map {
+                        [GameRules.CardDraw.star($0, stars: GameRules.maxCardStars)]
+                    } ?? []),
+                // A clean fifteen on Tokyo, so 13-2 comes out of the real latch
+                // rather than being written in as rainbow — a debug state that
+                // stages itself keeps looking right after the rule breaks.
+                // 13-2 rather than 13-1 because it is illustrated, and a
+                // painting under rainbow foil is the state worth looking at.
+                outcomesByPrefecture: [13: Array(repeating: true,
+                                                 count: GameRules.rainbowStreak)]),
+                catalog: app.cards)
         }
         guard let index = arguments.firstIndex(of: "-startAt"),
               index + 1 < arguments.count else { return }
@@ -97,7 +108,14 @@ struct RootView: View {
                     + (illustrated.map {
                         [GameRules.CardDraw.star($0, stars: GameRules.silverStars)]
                     } ?? []))
-            path = [.stageSelect, .result(demo, sparkles: [13, 14])]
+            // Every panel at once, which no single honest run produces — that
+            // is the point of the route. The rainbow slot takes a card from a
+            // prefecture the sparkle list already names, so the screen reads
+            // as one stage's worth of luck rather than as a sampler.
+            let gains = StageGains(
+                sparklingPrefectures: [13, 14],
+                rainbowCards: app.cards.cards(for: 13).first.map { [$0.id] } ?? [])
+            path = [.stageSelect, .result(demo, gains: gains)]
         default: break
         }
         #endif
@@ -118,11 +136,11 @@ struct RootView: View {
                 }
             }
 
-        case .result(let result, let sparkles):
+        case .result(let result, let gains):
             if let stage = Stage.stage(at: result.stageIndex) {
                 ResultView(stage: stage,
                            result: result,
-                           newlySparkling: sparkles,
+                           gains: gains,
                            onReplay: { replay(stage) },
                            onExit: { backToStageSelect() })
             }
@@ -148,8 +166,8 @@ struct RootView: View {
 
     /// Persist once, at stage end (CLAUDE.md §6), then show the result.
     private func finish(_ result: StageResult, stage: Stage) {
-        let sparkles = app.save.applyStageResult(result, catalog: app.cards)
-        path = [.stageSelect, .result(result, sparkles: sparkles)]
+        let gains = app.save.applyStageResult(result, catalog: app.cards)
+        path = [.stageSelect, .result(result, gains: gains)]
     }
 
     private func replay(_ stage: Stage) {

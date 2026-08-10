@@ -142,10 +142,15 @@ nonisolated enum GameRules {
     /// Stars for a finished stage, judged on how many *prefectures* were
     /// missed — not how many wrong taps happened. Repeatedly fumbling one
     /// prefecture should not cost more than getting one wrong.
-    static func stars(missedPrefectures: Int, questionCount: Int) -> Int {
-        guard questionCount > 0 else { return 3 }
+    ///
+    /// Both sides of the comparison are prefectures. A regional stage asks each
+    /// one twice, so measuring the band against the question count instead
+    /// would quietly double the allowance there while leaving the national
+    /// stage — where the two counts are equal — looking correct.
+    static func stars(missedPrefectures: Int, prefectureCount: Int) -> Int {
+        guard prefectureCount > 0 else { return 3 }
         if missedPrefectures <= 0 { return 3 }
-        let twoStarLimit = Int((Double(questionCount) / 4).rounded(.up))
+        let twoStarLimit = Int((Double(prefectureCount) / 4).rounded(.up))
         return missedPrefectures <= twoStarLimit ? 2 : 1
     }
 
@@ -190,6 +195,23 @@ nonisolated enum GameRules {
         case streak(Int)
         /// Rainbow — nothing above it left to count toward.
         case done
+
+        /// How far along the current rung is, 0...1 — the little bar under the
+        /// 「あと◯」 line. Derived from the same goal as the label so the two
+        /// cannot disagree. Each rung starts empty: progress toward silver does
+        /// not carry into the gold rung, or the bar would spend most of the
+        /// game nearly full and stop meaning anything.
+        var fraction: Double {
+            switch self {
+            case .wins(let remaining, let tier):
+                let span = tier == .gold ? maxCardStars - silverStars : silverStars
+                return Double(max(0, span - remaining)) / Double(span)
+            case .streak(let remaining):
+                return Double(max(0, rainbowStreak - remaining)) / Double(rainbowStreak)
+            case .done:
+                return 1
+            }
+        }
     }
 
     /// The next thing this card can become. Nil for a card not yet owned:

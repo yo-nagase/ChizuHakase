@@ -96,15 +96,16 @@ final class SaveStore {
     // MARK: - Mutations
 
     /// Apply one finished stage: best-of record, mastery gains, cards won,
-    /// streaks moved and any rainbow latched. Returns the prefectures that
-    /// reached level 3 so the result screen can call them out individually.
+    /// streaks moved and any rainbow latched. Returns what crossed a threshold
+    /// this run, so the result screen can call each one out individually.
     ///
     /// The catalog is how a streak finds the rest of its prefecture's cards —
     /// without it gold can never turn rainbow, so only tests that are not
     /// about cards pass `.empty`.
     @discardableResult
-    func applyStageResult(_ result: StageResult, catalog: CardCatalog) -> [Int] {
+    func applyStageResult(_ result: StageResult, catalog: CardCatalog) -> StageGains {
         var newlySparkling: [Int] = []
+        var newlyRainbow: [String] = []
 
         for (code, firstTry) in result.firstTryByPrefecture {
             let before = data.masteryLevel(of: code)
@@ -132,7 +133,11 @@ final class SaveStore {
             for card in catalog.cards(for: code)
             where GameRules.qualifiesForRainbow(stars: data.stars(of: card.id),
                                                 streak: streak) {
-                data.rainbow.insert(card.id)
+                // Only the cards the latch actually caught this time. A card
+                // that was already rainbow is not news, and re-announcing it
+                // every stage would turn the rarest thing in the game into
+                // wallpaper.
+                if data.rainbow.insert(card.id).inserted { newlyRainbow.append(card.id) }
             }
         }
 
@@ -145,7 +150,11 @@ final class SaveStore {
                 new: record)
 
         save()
-        return newlySparkling.sorted()
+        // Both sorted: the loops above walk dictionary keys, and a celebration
+        // that lists the same two prefectures in a different order each run
+        // reads as two different events.
+        return StageGains(sparklingPrefectures: newlySparkling.sorted(),
+                          rainbowCards: newlyRainbow.sorted())
     }
 
     func updateSettings(_ transform: (inout Settings) -> Void) {
@@ -164,7 +173,23 @@ final class SaveStore {
     }
 }
 
-/// What one finished stage produced. Built by the quiz, consumed by the store,
+/// What one finished stage pushed over a line, for the result screen to make
+/// a fuss about.
+///
+/// Everything here is a *promotion*, not a standing total: what the child did
+/// not have before this run and has now. The screen already shows the totals,
+/// and a celebration that fires for something the child earned last week is
+/// not a celebration.
+nonisolated struct StageGains: Sendable, Hashable {
+    /// Prefecture codes that reached mastery level 3.
+    var sparklingPrefectures: [Int] = []
+    /// Card IDs the rainbow latch caught. Can name cards this run never drew:
+    /// crossing a fifteen-streak promotes every gold card the prefecture has
+    /// at once, which is the whole point of it being the streak's medal.
+    var rainbowCards: [String] = []
+}
+
+/// The finished stage, handed from the quiz to the store and the result screen,
 /// so the scoring rules stay out of the persistence layer.
 nonisolated struct StageResult: Sendable, Hashable {
     let mode: QuizMode

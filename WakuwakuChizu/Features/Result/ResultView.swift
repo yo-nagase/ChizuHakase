@@ -12,8 +12,8 @@ struct ResultView: View {
 
     let stage: Stage
     let result: StageResult
-    /// Prefectures that hit level 3 in this run, from `SaveStore`.
-    let newlySparkling: [Int]
+    /// What crossed a threshold in this run, from `SaveStore`.
+    let gains: StageGains
     var onReplay: () -> Void
     var onExit: () -> Void
 
@@ -29,6 +29,10 @@ struct ResultView: View {
     private struct WonCard: Identifiable {
         let card: SpecialtyCard
         let stars: Int
+        /// Rainbow as of this run: the save's standing latch, or the promotion
+        /// this very stage caused. Carried rather than looked up again at each
+        /// use, so a chip and the card that opens from it cannot disagree.
+        var rainbow: Bool = false
         var id: String { card.id }
     }
 
@@ -42,10 +46,32 @@ struct ResultView: View {
         for draw in result.cardDraws {
             if case .duplicate = draw { continue }
             if let existing = best[draw.card.id], existing.stars >= draw.stars { continue }
-            best[draw.card.id] = WonCard(card: draw.card, stars: draw.stars)
+            best[draw.card.id] = WonCard(card: draw.card, stars: draw.stars,
+                                         rainbow: isRainbow(draw.card.id))
         }
         // Walked in draw order, so the cards appear in the order they were won.
         return result.cardDraws.compactMap { best.removeValue(forKey: $0.card.id) }
+    }
+
+    /// The cards the rainbow latch caught this run.
+    ///
+    /// Shown at the top of the ladder by construction rather than by reading
+    /// the save: the latch only fires on a card already at `maxCardStars`, and
+    /// building the count from the rule keeps the debug route — which reaches
+    /// this screen without persisting — honest about what it is showing.
+    private var rainbowCards: [WonCard] {
+        gains.rainbowCards.compactMap { id in
+            app.cards[id].map {
+                WonCard(card: $0, stars: GameRules.maxCardStars, rainbow: true)
+            }
+        }
+    }
+
+    /// Rainbow as this run left it. `gains` is checked first because the save
+    /// is the long-run truth and the run is the news — and on the debug route
+    /// nothing was ever written, so the save alone would say no.
+    private func isRainbow(_ cardID: String) -> Bool {
+        gains.rainbowCards.contains(cardID) || app.save.data.isRainbow(cardID)
     }
 
     /// The card's next goal, from the save — which the result has already been
@@ -55,7 +81,7 @@ struct ResultView: View {
     private func nextGoal(for won: WonCard) -> GameRules.NextGoal? {
         GameRules.nextGoal(stars: won.stars,
                            streak: app.save.data.streak(of: won.card.prefectureCode),
-                           isRainbow: app.save.data.isRainbow(won.card.id))
+                           isRainbow: won.rainbow)
     }
 
     /// Opens with the cover's own slide suppressed, on the same terms as the
@@ -79,7 +105,12 @@ struct ResultView: View {
                     stars
                     scoreCard
 
-                    if !newlySparkling.isEmpty { sparklePanel }
+                    // Rainbow leads. It is the rarest thing the game has, and
+                    // unlike everything else on this screen it can happen
+                    // without the child drawing anything — so it must not be
+                    // read as a footnote to the card tally underneath it.
+                    if !rainbowCards.isEmpty { rainbowPanel }
+                    if !gains.sparklingPrefectures.isEmpty { sparklePanel }
                     if !wonCards.isEmpty { cardPanel }
 
                     buttons
@@ -101,7 +132,7 @@ struct ResultView: View {
             CardDetailView(card: won.card,
                            prefecture: app.mapData[won.card.prefectureCode],
                            stars: won.stars,
-                           rainbow: app.save.data.isRainbow(won.card.id),
+                           rainbow: won.rainbow,
                            streak: app.save.data.streak(of: won.card.prefectureCode))
                 .environment(\.textMode, mode)
                 .presentationBackground(.clear)
@@ -156,7 +187,7 @@ struct ResultView: View {
                 .font(AppFont.rounded(19, relativeTo: .headline))
                 .foregroundStyle(Palette.ink)
             FlowRow(spacing: 8) {
-                ForEach(newlySparkling, id: \.self) { code in
+                ForEach(gains.sparklingPrefectures, id: \.self) { code in
                     Text(app.mapData[code]?.displayName(mode) ?? "")
                         .font(AppFont.rounded(15, relativeTo: .subheadline))
                         .foregroundStyle(Palette.ink)
@@ -173,6 +204,51 @@ struct ResultView: View {
         .stickerCard(cornerRadius: 24, isHolographic: true)
     }
 
+    /// The rainbow cards themselves rather than their names.
+    ///
+    /// The sparkle panel above can get away with capsules because a prefecture
+    /// turning gold is a thing the child watched happen on the map. A rainbow
+    /// card is a foil they have never seen before, and the foil *is* the
+    /// reward — writing 「にゅうせいひん」 in a bubble hands over none of it.
+    private var rainbowPanel: some View {
+        VStack(spacing: 10) {
+            Text(mode.becameRainbow)
+                .font(AppFont.rounded(19, relativeTo: .headline))
+                .foregroundStyle(Palette.ink)
+                .multilineTextAlignment(.center)
+
+            // Centred while they fit on one row, which is the usual case — one
+            // prefecture crossing fifteen promotes the two or three cards it
+            // holds. A grid would pin a lone card to the left and leave two
+            // thirds of the foil empty beside it, reading as a gap where more
+            // cards should have been rather than as the one that was earned.
+            if rainbowCards.count < typeSize.cardColumns {
+                HStack(spacing: 10) {
+                    ForEach(rainbowCards) { chip($0) }
+                }
+            } else {
+                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10),
+                                         count: typeSize.cardColumns), spacing: 10) {
+                    ForEach(rainbowCards) { chip($0) }
+                }
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .padding(16)
+        .stickerCard(cornerRadius: 24, isHolographic: true)
+    }
+
+    /// Held to roughly the width a grid cell would give it, so a centred row
+    /// and a full grid draw the card at the same size.
+    private func chip(_ won: WonCard) -> some View {
+        CardChipView(card: won.card,
+                     prefecture: app.mapData[won.card.prefectureCode],
+                     stars: won.stars,
+                     rainbow: won.rainbow,
+                     onOpen: { open(won) })
+            .frame(maxWidth: 108)
+    }
+
     private var cardPanel: some View {
         VStack(spacing: 10) {
             Text(mode.specialtyCards)
@@ -186,7 +262,7 @@ struct ResultView: View {
                         CardChipView(card: won.card,
                                      prefecture: app.mapData[won.card.prefectureCode],
                                      stars: won.stars,
-                                     rainbow: app.save.data.isRainbow(won.card.id),
+                                     rainbow: won.rainbow,
                                      onOpen: { open(won) })
                         // 「あと◯」 — the reason to play this stage once more,
                         // said while the card is still in front of them.
@@ -196,6 +272,8 @@ struct ResultView: View {
                                 .foregroundStyle(Palette.ink.opacity(0.55))
                                 .lineLimit(1)
                                 .minimumScaleFactor(0.7)
+                            NextGoalBar(goal: goal)
+                                .padding(.horizontal, 10)
                         }
                     }
                 }
