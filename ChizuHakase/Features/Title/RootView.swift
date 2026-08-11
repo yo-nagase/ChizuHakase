@@ -51,6 +51,59 @@ struct RootView: View {
         #if DEBUG
         let arguments = ProcessInfo.processInfo.arguments
         if arguments.contains("-resetSave") { app.save.eraseAll() }
+        // A mid-journey collection for store screenshots: every mastery colour
+        // on the map at once, all four card tiers in the book, records on some
+        // stages and none on others. Built through the real rules — like
+        // -grantCards below — so it keeps looking right after a rule changes.
+        if arguments.contains("-demoSave") {
+            app.save.eraseAll()
+            func visit(stage index: Int, times: Int, score: Int, stars: Int) {
+                guard let stage = Stage.stage(at: index) else { return }
+                for _ in 0..<times {
+                    app.save.applyStageResult(StageResult(
+                        mode: .findOnMap, stageIndex: index, score: score,
+                        stars: stars,
+                        firstTryByPrefecture: Dictionary(uniqueKeysWithValues:
+                            stage.codes.map { ($0, true) }),
+                        cardDraws: []), catalog: app.cards)
+                }
+            }
+            // Learning radiates out from 関東: gold there, deep green next
+            // door, light green further out, and 九州 untouched — grey
+            // prefectures and an empty record slot are part of an honest
+            // mid-journey.
+            visit(stage: 0, times: 2, score: 890, stars: 2)
+            visit(stage: 1, times: 5, score: 1460, stars: 3)
+            visit(stage: 2, times: 4, score: 1310, stars: 3)
+            visit(stage: 3, times: 3, score: 1050, stars: 2)
+            visit(stage: 4, times: 1, score: 620, stars: 1)
+            // Silver and up are illustrated cards, so the tier that shows art
+            // is the tier being shown off. 13-2 goes rainbow through the real
+            // latch: gold stars here, the clean streak below.
+            let collection: [(String, Int)] = [
+                ("01-2", 7), ("02-1", 5), ("08-1", 6), ("14-2", 9),
+                ("23-1", 5), ("26-2", 8), ("40-1", 5),
+                ("04-2", 15), ("27-1", 15), ("13-2", 15),
+                ("03-1", 3), ("05-1", 2), ("07-1", 4), ("10-1", 1),
+                ("12-1", 2), ("15-1", 1), ("19-3", 1), ("22-1", 3),
+                ("28-3", 2), ("34-1", 1), ("43-3", 2), ("47-2", 4),
+            ]
+            app.save.applyStageResult(StageResult(
+                mode: .findOnMap, stageIndex: 1, score: 1460, stars: 3,
+                firstTryByPrefecture: [:],
+                cardDraws: collection.compactMap { id, stars in
+                    app.cards[id].map { card -> GameRules.CardDraw in
+                        stars == 1 ? .new(card) : .star(card, stars: stars)
+                    }
+                },
+                outcomesByPrefecture: [13: Array(repeating: true,
+                                                 count: GameRules.rainbowStreak)]),
+                catalog: app.cards)
+            // One nameIt record so the stage list shows the per-mode split.
+            app.save.applyStageResult(StageResult(
+                mode: .nameIt, stageIndex: 1, score: 1180, stars: 2,
+                firstTryByPrefecture: [:], cardDraws: []), catalog: app.cards)
+        }
         // Enough of a collection to exercise the book: one plain card, one gold
         // and one rainbow. Owning nothing hides every name behind 「？」, which
         // is correct but leaves nothing to open.
