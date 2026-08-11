@@ -278,7 +278,7 @@ private struct SeededSequence {
     ZStack {
         Palette.page.ignoresSafeArea()
         VStack(spacing: 26) {
-            Text("わくわく ちずクイズ").stickerText(30, relativeTo: .largeTitle)
+            Text("めざせ! ちずはかせ").stickerText(30, relativeTo: .largeTitle)
             Text("1120").stickerText(46, relativeTo: .largeTitle, color: Palette.orange)
             HStack(spacing: 14) {
                 Text("ふつう").padding(20).stickerCard()

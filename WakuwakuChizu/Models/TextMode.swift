@@ -36,8 +36,8 @@ nonisolated enum TextMode: String, Codable, Sendable, CaseIterable {
 nonisolated extension TextMode {
 
     // Title & navigation
-    var appTitleTop: String { isKids ? "わくわく" : "わくわく" }
-    var appTitleMain: String { isKids ? "ちずクイズ" : "地図クイズ" }
+    var appTitleTop: String { isKids ? "めざせ!" : "めざせ!" }
+    var appTitleMain: String { isKids ? "ちずはかせ" : "地図博士" }
     var play: String { isKids ? "あそぶ" : "はじめる" }
     var myMap: String { isKids ? "マイマップ" : "マイマップ" }
     /// The screen's own name, for its title bar.
