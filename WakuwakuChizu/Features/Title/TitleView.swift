@@ -47,7 +47,7 @@ struct TitleView: View {
                     HStack(spacing: 12) {
                         Button(mode.myMap) { onMyMap() }
                             .buttonStyle(.bouncy(Palette.teal, fontSize: 17))
-                        Button(mode.cardBook) { onCardBook(.all) }
+                        Button(mode.viewCards) { onCardBook(.all) }
                             .buttonStyle(.bouncy(Palette.teal, fontSize: 17))
                     }
                 }
@@ -95,7 +95,11 @@ struct TitleView: View {
     /// thirty-eight. Inside the card tile the nesting is the layout.
     private var progressLine: some View {
         HStack(spacing: 10) {
-            tally("🗾", app.save.data.mastery.values.filter { $0 > 0 }.count, 47,
+            // 「おぼえた」 is claimed at the top of the mastery ladder, not on
+            // the first clean answer — counting first answers filled the bar
+            // to 47/47 while the map was still mostly green, and a full meter
+            // over an unfinished map called the child done when they were not.
+            tally("🗾", app.save.data.sparklingPrefectureCount, 47,
                   mode.learnedPrefectures, Palette.learned, action: onMyMap)
             // Opens the book unfiltered now rather than straight onto the キラ
             // cards, which the third tile used to do. One tile cannot lead two
@@ -262,14 +266,19 @@ enum MasteryStyle {
     ///
     /// The legend draws from this same function, so the two cannot drift again.
     ///
-    /// CLAUDE.md §5 asked for 33% / 73% / solid. On the real map 33% sat close
-    /// enough to the unlearned grey that a child could not tell at a glance
-    /// which prefectures they had answered.
+    /// Four visual states for a five-level ladder: grey, light green (1–2),
+    /// deep green (3–4), gold. Six swatches a child must tell apart is not a
+    /// legend, and greens 14% of white apart are not tellable on a map — the
+    /// extra levels slow the climb, they do not need their own colours.
+    ///
+    /// CLAUDE.md §5 originally asked for 33% / 73% / solid. On the real map 33%
+    /// sat close enough to the unlearned grey that a child could not tell at a
+    /// glance which prefectures they had answered.
     static func fill(level: Int) -> Color {
         switch level {
         case ..<1: Palette.unlearned
-        case 1: Color(hex: Palette.learnedHex, mixedWithWhite: 0.42)
-        case 2: Color(hex: Palette.learnedHex, mixedWithWhite: 0.18)
+        case 1...2: Color(hex: Palette.learnedHex, mixedWithWhite: 0.42)
+        case 3...4: Color(hex: Palette.learnedHex, mixedWithWhite: 0.18)
         default: Palette.gold
         }
     }
@@ -292,9 +301,9 @@ enum MasteryStyle {
     static func label(level: Int) -> String {
         switch level {
         case ..<1: "まだ"
-        case 1: "すこし おぼえた"
-        case 2: "おぼえてきた"
-        default: "キラキラ"
+        case 1...2: "すこし おぼえた"
+        case 3...4: "おぼえてきた"
+        default: "おぼえた"
         }
     }
 }

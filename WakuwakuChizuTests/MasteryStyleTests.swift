@@ -49,13 +49,19 @@ struct MasteryStyleTests {
                 == rgba(MasteryStyle.appearance(for: 13, save: save).fill))
     }
 
-    @Test func everyStepIsDistinct() {
-        let colours = (0...GameRules.maxMastery).map { rgba(MasteryStyle.fill(level: $0)) }
-        for (i, a) in colours.enumerated() {
-            for (j, b) in colours.enumerated() where j > i {
-                #expect(a != b, "levels \(i) and \(j) are the same colour")
+    /// Six swatches a child must tell apart is not a legend. The ladder has
+    /// five levels but the map keeps four *states* — grey, light green, deep
+    /// green, gold — and the extra levels just slow the climb. So the states
+    /// are pinned distinct, and the levels inside a state pinned identical.
+    @Test func theFourVisualStatesAreDistinctAndLevelsShareThem() {
+        let states = [0, 1, 3, GameRules.maxMastery].map { rgba(MasteryStyle.fill(level: $0)) }
+        for (i, a) in states.enumerated() {
+            for (j, b) in states.enumerated() where j > i {
+                #expect(a != b, "visual states \(i) and \(j) are the same colour")
             }
         }
+        #expect(rgba(MasteryStyle.fill(level: 1)) == rgba(MasteryStyle.fill(level: 2)))
+        #expect(rgba(MasteryStyle.fill(level: 3)) == rgba(MasteryStyle.fill(level: 4)))
     }
 
     /// キラキラ is flat gold, the same gold the legend chip uses.

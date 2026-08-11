@@ -75,6 +75,37 @@ nonisolated struct MapEffect: Equatable {
     var id: Int
 }
 
+/// The animation triggers one prefecture is carrying.
+///
+/// `keyframeAnimator` replays whenever its trigger changes — in either
+/// direction, and it cannot know which way is meaningful. Deriving the trigger
+/// straight from the current effect therefore fired twice: once when the effect
+/// arrived, and again when it moved on and the value fell back to the sentinel.
+/// Missing 青森 and then missing 岩手 shook 青森 a second time, and the map
+/// twitched in places nobody had touched.
+///
+/// So the triggers are remembered rather than derived. An effect aimed at
+/// another prefecture is not news here and leaves them alone; only one aimed at
+/// this one advances anything. The values are opaque — all that matters is that
+/// they change exactly once per event.
+nonisolated struct EffectTriggers: Equatable {
+    private(set) var pop = 0
+    private(set) var shake = 0
+
+    /// - Parameter effect: the effect aimed at *this* prefecture, or nil when
+    ///   the live one is aimed elsewhere or there is none.
+    mutating func apply(_ effect: MapEffect?) {
+        guard let effect else { return }
+        switch effect.kind {
+        // Counted rather than copied from `effect.id`: the ids restart with each
+        // quiz, and a remembered id colliding with a fresh one would swallow an
+        // animation.
+        case .pop: pop += 1
+        case .shake: shake += 1
+        }
+    }
+}
+
 /// Draws a set of prefectures and resolves taps (CLAUDE.md §3).
 ///
 /// Shared by the quiz and the my-map screen so the shape, the fit and the hit
@@ -218,6 +249,10 @@ private struct PrefectureLayer: View {
     let effect: MapEffect?
     let reduceMotion: Bool
 
+    /// Survives every effect aimed at another prefecture, which is the whole
+    /// point — see `EffectTriggers`.
+    @State private var triggers = EffectTriggers()
+
     private var path: Path {
         PrefectureGeometry.path(for: prefecture, transform: transform)
     }
@@ -250,10 +285,13 @@ private struct PrefectureLayer: View {
 
     var body: some View {
         shape
-            .modifier(PopEffect(trigger: triggerID(for: .pop), anchor: anchor,
+            .modifier(PopEffect(trigger: triggers.pop, anchor: anchor,
                                 enabled: !reduceMotion))
-            .modifier(ShakeEffect(trigger: triggerID(for: .shake),
+            .modifier(ShakeEffect(trigger: triggers.shake,
                                   enabled: !reduceMotion))
+            // The effect is already filtered to this prefecture upstream, so nil
+            // means "not mine" — and not-mine must not move anything.
+            .onChange(of: effect) { _, new in triggers.apply(new) }
             .overlay(alignment: .topLeading) { badge }
             // The drawing itself is decorative; the labelled element is the
             // proxy below, which is the only one with a meaningful frame.
@@ -333,12 +371,6 @@ private struct PrefectureLayer: View {
         }
     }
 
-    /// Only the targeted prefecture sees a changing trigger, so the others
-    /// stay still.
-    private func triggerID(for kind: MapEffect.Kind) -> Int {
-        guard let effect, effect.kind == kind else { return 0 }
-        return effect.id
-    }
 }
 
 // MARK: - Effects

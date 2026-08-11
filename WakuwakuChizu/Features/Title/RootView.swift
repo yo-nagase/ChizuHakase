@@ -76,6 +76,17 @@ struct RootView: View {
                                                  count: GameRules.rainbowStreak)]),
                 catalog: app.cards)
         }
+        // Every prefecture of one regional stage answered cleanly, which is the
+        // state the stage list's 「おぼえた ◯ / ◯」 has to show as full. Its own
+        // flag rather than a rider on -grantCards: that one is about the book,
+        // and a test asking about progress should say so.
+        if arguments.contains("-learnFirstStage"), let stage = Stage.all.first {
+            app.save.applyStageResult(StageResult(
+                mode: .findOnMap, stageIndex: stage.index, score: 0, stars: 3,
+                firstTryByPrefecture: Dictionary(uniqueKeysWithValues:
+                    stage.codes.map { ($0, true) }),
+                cardDraws: []), catalog: app.cards)
+        }
         guard let index = arguments.firstIndex(of: "-startAt"),
               index + 1 < arguments.count else { return }
         switch arguments[index + 1] {

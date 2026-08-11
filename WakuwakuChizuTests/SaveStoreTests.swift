@@ -58,12 +58,12 @@ struct SaveStoreTests {
         #expect(store.data.record(forStage: 1, mode: .findOnMap) == StageRecord(stars: 3, score: 800))
     }
 
-    @Test func masteryAccumulatesAcrossPlaysAndCapsAtThree() throws {
+    @Test func masteryAccumulatesAcrossPlaysAndCapsAtTheTop() throws {
         let dir = try makeScratch()
         defer { try? FileManager.default.removeItem(at: dir) }
 
         let store = SaveStore(directory: dir)
-        for _ in 0..<5 {
+        for _ in 0..<(GameRules.maxMastery + 2) {
             store.applyStageResult(StageResult(mode: .findOnMap, stageIndex: 0, score: 100, stars: 3,
                                                firstTryByPrefecture: [1: true],
                                                cardDraws: []), catalog: .empty)
@@ -71,20 +71,20 @@ struct SaveStoreTests {
         #expect(store.data.masteryLevel(of: 1) == GameRules.maxMastery)
     }
 
-    @Test func reachingLevelThreeIsReportedOnceOnly() throws {
+    @Test func reachingTheTopIsReportedOnceOnly() throws {
         let dir = try makeScratch()
         defer { try? FileManager.default.removeItem(at: dir) }
 
         let store = SaveStore(directory: dir)
         var announcements: [[Int]] = []
-        for _ in 0..<4 {
+        for _ in 0..<(GameRules.maxMastery + 1) {
             announcements.append(store.applyStageResult(
                 StageResult(mode: .findOnMap, stageIndex: 0, score: 100, stars: 3,
                             firstTryByPrefecture: [5: true], cardDraws: []),
                 catalog: .empty).sparklingPrefectures)
         }
-        // Levels 1, 2, then 3 (announced), then nothing further.
-        #expect(announcements == [[], [], [5], []])
+        // Climbs quietly, announced once on reaching the top, then nothing.
+        #expect(announcements == [[], [], [], [], [5], []])
     }
 
     @Test func wrongAnswersDoNotReduceStoredMastery() throws {
@@ -368,8 +368,9 @@ struct SaveMigrationTests {
         #expect(data.record(forStage: 1, mode: .findOnMap) == StageRecord(stars: 2, score: 400))
         #expect(data.record(forStage: 0, mode: .nameIt) == nil,
                 "a mode that did not exist cannot have records")
-        // The rest of the file has to survive the move.
-        #expect(data.masteryLevel(of: 1) == 3)
+        // The rest of the file has to survive the move. Mastery 3 was キラキラ
+        // on the old ladder, so it arrives at the top of this one.
+        #expect(data.masteryLevel(of: 1) == GameRules.maxMastery)
         // Two was the top of version 1's scale, so the card arrives at the top
         // of this one rather than as a two-star plain card.
         #expect(data.tier(of: "01-1") == .gold)
@@ -419,6 +420,31 @@ struct SaveMigrationTests {
         #expect(data.tier(of: "b") == .silver)
         #expect(data.tier(of: "c") == .silver)
         #expect(data.tier(of: "d") == .gold)
+    }
+
+    /// 4 → 5 stretched mastery: キラキラ moved from three clean answers to
+    /// five. Levels move so that neither the colour on the map nor the distance
+    /// to the next state gets worse: old 1 → 2 (light green, one step from
+    /// deep), old 2 → 4 (deep green, one step from gold), キラキラ stays キラキラ.
+    @Test func versionFourMasteryIsLiftedToTheNewLadder() throws {
+        let data = try load("""
+        {"version":4,"mastery":{"1":1,"2":2,"3":3,"4":0}}
+        """)
+        #expect(data.masteryLevel(of: 1) == 2)
+        #expect(data.masteryLevel(of: 2) == 4)
+        #expect(data.masteryLevel(of: 3) == GameRules.maxMastery)
+        #expect(data.masteryLevel(of: 4) == 0)
+    }
+
+    /// The lift must not run twice: a version 5 file already speaks the new
+    /// ladder, and a two there is a two.
+    @Test func aVersionFiveFileKeepsItsMasteryLevels() throws {
+        let data = try load("""
+        {"version":5,"mastery":{"1":2,"2":4,"3":5}}
+        """)
+        #expect(data.masteryLevel(of: 1) == 2)
+        #expect(data.masteryLevel(of: 2) == 4)
+        #expect(data.masteryLevel(of: 3) == 5)
     }
 
     /// Migration lifts stars, never grants rainbow: rainbow is the streak's

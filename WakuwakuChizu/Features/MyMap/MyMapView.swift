@@ -53,7 +53,9 @@ struct MyMapView: View {
             onTap: { prefecture, _ in selected = prefecture })
         .aspectRatio(PrefectureGeometry.aspectRatio(of: app.mapData.prefectures),
                      contentMode: .fit)
-        .zoomPan(scale: $zoom, offset: $pan)
+        // Same gesture as the quiz map: a child who learns it on one country
+        // should not find it missing on the other.
+        .zoomPan(scale: $zoom, offset: $pan, oneFingerZoom: true)
         // Clipped to its own card: a zoomed map must not spill over the legend
         // or the buttons underneath it.
         .clipShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
@@ -95,12 +97,15 @@ struct MyMapView: View {
     }
 
     /// Reads its colours from the same function the map does, so a swatch
-    /// cannot promise a colour the country does not use. The 「キラキラ」 chip is
-    /// flat gold with no border, because that is exactly what a Lv3 prefecture
-    /// now looks like.
+    /// cannot promise a colour the country does not use. The 「おぼえた」 chip
+    /// is flat gold with no border, because that is exactly what a top-level
+    /// prefecture looks like.
     private var legend: some View {
         HStack(spacing: 10) {
-            ForEach(0...GameRules.maxMastery, id: \.self) { level in
+            // One swatch per visual *state*, not per level: 2 shares 1's colour
+            // and 4 shares 3's, so listing all six would show the same swatch
+            // twice with the same word under it.
+            ForEach([0, 1, 3, GameRules.maxMastery], id: \.self) { level in
                 HStack(spacing: 5) {
                     RoundedRectangle(cornerRadius: 4)
                         .fill(MasteryStyle.fill(level: level))
@@ -113,10 +118,13 @@ struct MyMapView: View {
         }
     }
 
+    /// One stat, not two: 「おぼえた」 *means* reaching the top of the ladder
+    /// now, so a second count beside this one was the same number wearing
+    /// another name. The word matches the legend's gold swatch and the title's
+    /// 「おぼえた けん」 tile — one measurement, one name, wherever it appears.
     private var summary: some View {
         HStack(spacing: 12) {
-            stat("✨ \(mode.sparklingCount)", "\(save.sparklingPrefectureCount) / 47")
-            stat("🗾 \(mode.learnedCount)", "\(save.mastery.values.filter { $0 > 0 }.count) / 47")
+            stat("✨ \(mode.learnedCount)", "\(save.sparklingPrefectureCount) / 47")
         }
     }
 

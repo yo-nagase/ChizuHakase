@@ -104,14 +104,26 @@ struct TextModeTests {
         }
     }
 
-    /// ✨ marks two different things — a level-3 prefecture and a silver-or-up
-    /// card — and the title screen shows the card count next to a prefecture
-    /// count. The words have to carry the difference, because the emoji cannot.
+    /// ✨ marks two different things — a fully-learned prefecture and a
+    /// silver-or-up card — and the title screen shows the card count next to a
+    /// prefecture count. The words have to carry the difference, because the
+    /// emoji cannot.
     @Test func theTwoSparklingCountsAreNamedApart() {
         for mode in TextMode.allCases {
-            #expect(mode.sparklingCount != mode.sparklingCards,
-                    "prefectures and cards are both called 「\(mode.sparklingCount)」")
+            #expect(mode.learnedCount != mode.sparklingCards,
+                    "prefectures and cards are both called 「\(mode.learnedCount)」")
         }
+    }
+
+    /// The mastery ladder ends on the word it climbs toward: まだ → すこし
+    /// おぼえた → おぼえてきた → おぼえた. The top used to be 「キラキラ」, which
+    /// broke the word family — and made the title's 「おぼえた けん」 read as a
+    /// different measurement from the map's gold.
+    @Test func theMasteryLadderEndsOnLearned() {
+        #expect(TextMode.kids.masteryLabel(GameRules.maxMastery) == "おぼえた")
+        #expect(TextMode.adult.masteryLabel(GameRules.maxMastery) == "覚えた")
+        #expect(TextMode.kids.becameSparkling == "✨ おぼえた けん!")
+        #expect(!TextMode.adult.becameSparkling.contains("キラキラ"))
     }
 
     @Test func categoryLabelsExistInBothModes() {
@@ -153,7 +165,8 @@ struct TextModeTests {
 /// newly added one.
 extension TextMode {
     var allInterfaceStrings: [String] {
-        [appTitleTop, appTitleMain, play, myMap, cardBook, settings, stages, close, quit,
+        [appTitleTop, appTitleMain, play, myMap, cardBook, viewCards,
+         settings, stages, close, quit,
          questionSuffix, readAloud, answerByVoice, listening, hintNudge, combo,
          questionCounter(1, 7),
          cardWonNew, cardWonStar, cardWonSilver, cardWonGold, cardWonDuplicate,
@@ -161,13 +174,14 @@ extension TextMode {
          allCategories,
          points, bestScore, playAgain, chooseStage, becameSparkling, becameRainbow,
          starCount(3),
-         sparklingCount, sparklingCards, learnedPrefectures, ownedCards,
+         sparklingCards, learnedPrefectures, ownedCards,
          learnedCount, stickerCount, resetZoom,
          eraseEverything, eraseConfirm1, eraseConfirm2, eraseCancel, eraseNext,
          eraseConfirmAction,
          soundSection, soundEffects, speech, voiceSection, voiceOnDeviceNote, micDenied,
          displaySection,
          masteryLabel(0), masteryLabel(1), masteryLabel(2), masteryLabel(3),
+         masteryLabel(4), masteryLabel(5),
          cardTierName(.silver) ?? "", cardTierName(.gold) ?? "",
          cardTierName(.rainbow) ?? "",
          nextGoalLabel(.wins(3, to: .silver)), nextGoalLabel(.wins(10, to: .gold)),

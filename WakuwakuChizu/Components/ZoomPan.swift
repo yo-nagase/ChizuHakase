@@ -27,6 +27,31 @@ nonisolated enum ZoomPan {
 
     static func isZoomed(_ scale: CGFloat) -> Bool { scale > minScale + 0.01 }
 
+    /// How long a finger sits still before a slide means zoom rather than pan.
+    ///
+    /// A hold, not a double tap. The map answers the quiz on a tap, and a
+    /// double tap would either submit its first tap as an answer or make every
+    /// answer wait to see whether a second tap was coming — a wrong answer for
+    /// trying to zoom, or a lag on all 47 (CLAUDE.md §12). A hold is
+    /// distinguishable from a tap without either.
+    static let liftHold: TimeInterval = 0.3
+
+    /// How far the finger travels to double the map, in points.
+    ///
+    /// The whole 1×–4× range then fits in about 280pt — half a phone screen —
+    /// so a child can reach full zoom without lifting off and starting again.
+    static let liftDoubling: CGFloat = 140
+
+    /// The scale after sliding `dy` points from where the finger pressed,
+    /// positive upward.
+    ///
+    /// Exponential, so the same movement doubles the map wherever it starts. A
+    /// linear ramp crawls near 1× and lurches near 4×, which reads as the map
+    /// fighting the finger.
+    static func scale(_ scale: CGFloat, liftedBy dy: CGFloat) -> CGFloat {
+        clamp(scale: scale * pow(2, dy / liftDoubling))
+    }
+
     /// The offset that holds `anchor` still while the scale changes.
     ///
     /// Without this the map zooms about the centre of its frame, so pinching
@@ -58,6 +83,13 @@ nonisolated enum ZoomPan {
 struct ZoomPanModifier: ViewModifier {
     @Binding var scale: CGFloat
     @Binding var offset: CGSize
+    /// Hold, then slide up to grow the map and down to shrink it — zooming with
+    /// one hand, for a child who cannot yet pinch reliably.
+    ///
+    /// Off by default because a plain drag already means something elsewhere:
+    /// the enlarged card turns under one, and a hold-then-turn has to stay a
+    /// turn.
+    var oneFingerZoom = false
 
     /// Magnification and the point it is happening around, updated together
     /// because the offset correction needs both.
@@ -66,19 +98,35 @@ struct ZoomPanModifier: ViewModifier {
         var anchor: UnitPoint = .center
     }
 
+    /// A one-finger zoom in flight.
+    private struct Lift: Equatable {
+        var isActive = false
+        /// Points travelled since the press, positive upward.
+        var travel: CGFloat = 0
+        var anchor: UnitPoint = .center
+    }
+
     @State private var size: CGSize = .zero
     @GestureState private var pinch = Pinch()
     @GestureState private var drag: CGSize = .zero
+    @GestureState private var lift = Lift()
 
-    private var liveScale: CGFloat { ZoomPan.clamp(scale: scale * pinch.magnification) }
+    private var liveScale: CGFloat {
+        let pinched = ZoomPan.clamp(scale: scale * pinch.magnification)
+        guard lift.isActive else { return pinched }
+        return ZoomPan.scale(pinched, liftedBy: lift.travel)
+    }
 
     private var liveOffset: CGSize {
-        let anchored = ZoomPan.offset(offset, keeping: pinch.anchor, in: size,
-                                      from: scale, to: liveScale)
-        return ZoomPan.clamp(
-            offset: CGSize(width: anchored.width + drag.width,
-                           height: anchored.height + drag.height),
-            scale: liveScale, in: size)
+        let anchored = ZoomPan.offset(offset, keeping: lift.isActive ? lift.anchor : pinch.anchor,
+                                      in: size, from: scale, to: liveScale)
+        // The pan translation is dropped while holding: one finger is driving
+        // both, and adding them would slide the map sideways as it grows.
+        let panned = lift.isActive
+            ? anchored
+            : CGSize(width: anchored.width + drag.width,
+                     height: anchored.height + drag.height)
+        return ZoomPan.clamp(offset: panned, scale: liveScale, in: size)
     }
 
     func body(content: Content) -> some View {
@@ -89,7 +137,7 @@ struct ZoomPanModifier: ViewModifier {
             // rarely zoom without also sliding, and making them take turns is
             // what reads as the map sticking.
             .simultaneousGesture(magnify)
-            .simultaneousGesture(ZoomPan.isZoomed(scale) ? pan : nil)
+            .simultaneousGesture(oneFinger)
             .background {
                 GeometryReader { geo in
                     Color.clear
@@ -125,10 +173,65 @@ struct ZoomPanModifier: ViewModifier {
                     scale: scale, in: size)
             }
     }
+
+    /// Whatever one finger is allowed to do here.
+    ///
+    /// The hold takes precedence over the pan rather than running alongside it:
+    /// a zero-distance drag recognises the instant the finger moves and would
+    /// always win the race, so `exclusively` is what gives the hold its 0.3s.
+    /// Move straight away and you pan; wait first and you zoom.
+    ///
+    /// Nothing at all at rest, which is load-bearing: the maps sit in vertical
+    /// ScrollViews, and a live zero-distance drag there eats the scroll. The
+    /// hold is safe on its own — a scroll starts by moving immediately, so the
+    /// press never completes and the ScrollView keeps the gesture.
+    private var oneFinger: AnyGesture<Void>? {
+        switch (oneFingerZoom, ZoomPan.isZoomed(scale)) {
+        case (true, true): AnyGesture(holdZoom.exclusively(before: pan).map { _ in () })
+        case (true, false): AnyGesture(holdZoom.map { _ in () })
+        case (false, true): AnyGesture(pan.map { _ in () })
+        case (false, false): nil
+        }
+    }
+
+    private var holdZoom: some Gesture {
+        LongPressGesture(minimumDuration: ZoomPan.liftHold, maximumDistance: 10)
+            .sequenced(before: DragGesture(minimumDistance: 0))
+            .updating($lift) { value, state, _ in
+                guard case .second(true, let slide) = value else { return }
+                guard let slide else {
+                    // Held, not yet moved. Marked active so the pan stays out
+                    // of the way from the moment the hold lands.
+                    state = Lift(isActive: true)
+                    return
+                }
+                state = Lift(isActive: true,
+                             travel: -slide.translation.height,
+                             anchor: unitPoint(slide.startLocation))
+            }
+            .onEnded { value in
+                guard case .second(true, let slide?) = value else { return }
+                let ended = ZoomPan.scale(scale, liftedBy: -slide.translation.height)
+                let anchored = ZoomPan.offset(offset, keeping: unitPoint(slide.startLocation),
+                                              in: size, from: scale, to: ended)
+                scale = ended
+                offset = ZoomPan.clamp(offset: anchored, scale: ended, in: size)
+            }
+    }
+
+    /// Where the finger pressed, as a fraction of the frame — the form
+    /// `ZoomPan.offset(_:keeping:in:from:to:)` anchors on, so the map grows
+    /// around the spot being looked at instead of around its own middle.
+    private func unitPoint(_ point: CGPoint) -> UnitPoint {
+        guard size.width > 0, size.height > 0 else { return .center }
+        return UnitPoint(x: point.x / size.width, y: point.y / size.height)
+    }
 }
 
 extension View {
-    func zoomPan(scale: Binding<CGFloat>, offset: Binding<CGSize>) -> some View {
-        modifier(ZoomPanModifier(scale: scale, offset: offset))
+    func zoomPan(scale: Binding<CGFloat>, offset: Binding<CGSize>,
+                 oneFingerZoom: Bool = false) -> some View {
+        modifier(ZoomPanModifier(scale: scale, offset: offset,
+                                 oneFingerZoom: oneFingerZoom))
     }
 }

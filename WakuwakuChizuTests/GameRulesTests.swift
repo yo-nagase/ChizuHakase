@@ -179,15 +179,19 @@ struct GameRulesTests {
         #expect(GameRules.nextMastery(current: 2, firstTry: true) == 3)
     }
 
-    @Test func masteryCapsAtThree() {
-        #expect(GameRules.nextMastery(current: 3, firstTry: true) == 3)
-        #expect(GameRules.nextMastery(current: 99, firstTry: true) == 3)
+    /// キラキラ takes five clean answers — 「おぼえた」 has to mean something,
+    /// and one lucky tap is not it (CLAUDE.md §5).
+    @Test func masteryTopsOutAtFiveCleanAnswers() {
+        #expect(GameRules.maxMastery == 5)
+        #expect(GameRules.nextMastery(current: GameRules.maxMastery, firstTry: true)
+                == GameRules.maxMastery)
+        #expect(GameRules.nextMastery(current: 99, firstTry: true) == GameRules.maxMastery)
     }
 
     /// The explicit product decision in CLAUDE.md §5: getting it wrong never
     /// takes progress away.
     @Test func masteryNeverDecreases() {
-        for level in 0...3 {
+        for level in 0...GameRules.maxMastery {
             #expect(GameRules.nextMastery(current: level, firstTry: false) == level)
             #expect(GameRules.nextMastery(current: level, firstTry: true) >= level)
         }

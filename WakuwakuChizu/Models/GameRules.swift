@@ -6,7 +6,10 @@ nonisolated enum GameRules {
 
     // MARK: - Constants
 
-    static let maxMastery = 3
+    /// Clean answers to キラキラ. Five, up from three: 「おぼえた」 is claimed
+    /// only at the top of this ladder now, and three lucky taps spread over a
+    /// week is not having learned a prefecture (CLAUDE.md §5).
+    static let maxMastery = 5
 
     /// A card's stars: one per copy won. Five make it silver, fifteen make it
     /// gold, and fifteen is the cap (CLAUDE.md §5).

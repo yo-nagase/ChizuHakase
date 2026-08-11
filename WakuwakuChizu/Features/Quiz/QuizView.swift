@@ -191,7 +191,7 @@ struct QuizView: View {
             onTap: { handleTap($0, at: .point($1), quiz: quiz) })
         .aspectRatio(PrefectureGeometry.aspectRatio(
             of: app.mapData.prefectures(in: quiz.order)), contentMode: .fit)
-        .zoomPan(scale: $zoom, offset: $pan)
+        .zoomPan(scale: $zoom, offset: $pan, oneFingerZoom: true)
         .clipShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
         .background(Palette.seaGradient)
         .stickerCard(fill: .clear, cornerRadius: 26)

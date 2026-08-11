@@ -40,7 +40,12 @@ nonisolated extension TextMode {
     var appTitleMain: String { isKids ? "ちずクイズ" : "地図クイズ" }
     var play: String { isKids ? "あそぶ" : "はじめる" }
     var myMap: String { isKids ? "マイマップ" : "マイマップ" }
+    /// The screen's own name, for its title bar.
     var cardBook: String { isKids ? "ずかん" : "図鑑" }
+    /// The way in, for the button that opens it. A title bar names a place, but
+    /// a button is easier to press when it says what pressing it does — and
+    /// 「ずかん」 asks a five-year-old to already know that the cards live there.
+    var viewCards: String { isKids ? "カードを みる" : "カードを見る" }
     var settings: String { isKids ? "せってい" : "設定" }
     var stages: String { isKids ? "ステージ" : "ステージ" }
     var close: String { isKids ? "とじる" : "閉じる" }
@@ -105,7 +110,10 @@ nonisolated extension TextMode {
     var bestScore: String { isKids ? "さいこう" : "最高" }
     var playAgain: String { isKids ? "もういちど" : "もう一度" }
     var chooseStage: String { isKids ? "ステージを えらぶ" : "ステージを選ぶ" }
-    var becameSparkling: String { isKids ? "✨ キラキラに なった けん!" : "✨ キラキラになった県" }
+    /// The top of the mastery ladder is called 「おぼえた」, so reaching it is
+    /// announced in the same word — a celebration named 「キラキラ」 over a
+    /// legend that says 「おぼえた」 reads as two different achievements.
+    var becameSparkling: String { isKids ? "✨ おぼえた けん!" : "✨ 覚えた県" }
     /// The rarest thing in the game, and the only one a child can reach without
     /// drawing anything — so it has to be said out loud here or it happens in
     /// silence.
@@ -115,13 +123,10 @@ nonisolated extension TextMode {
     }
 
     // My map
-    /// 「キラキラ」 counts *prefectures* at level 3 — the my-map, the stage list
-    /// and the result screen all mean that by it. Cards have their own word
-    /// below, because ✨ alone cannot say which of the two is being counted and
-    /// the title screen shows a card count next to a prefecture count.
-    var sparklingCount: String { isKids ? "キラキラ" : "キラキラ" }
     /// Silver and up, counted in cards. Katakana in both modes, like the tier
-    /// names it is summarising.
+    /// names it is summarising. 「キラ」 is a card word only now — the fully
+    /// learned *prefecture* is called 「おぼえた」 (`learnedCount`), so ✨ next
+    /// to either count still reads unambiguously.
     var sparklingCards: String { isKids ? "キラカード" : "キラカード" }
 
     // Title tallies. Verbs, not bare nouns: 「けん」 and 「カード」 name the things
@@ -130,6 +135,10 @@ nonisolated extension TextMode {
     var learnedPrefectures: String { isKids ? "おぼえた けん" : "覚えた県" }
     var ownedCards: String { isKids ? "もっている カード" : "持っているカード" }
     var learnedCount: String { isKids ? "おぼえた" : "覚えた" }
+    /// The stage list's coverage count: prefectures answered at least once —
+    /// stickers stuck on that sheet. Deliberately *not* 「おぼえた」: that word
+    /// means the top of the mastery ladder now (§5), and one stuck sticker is
+    /// the first step, not the summit.
     var stickerCount: String { isKids ? "シール" : "シール" }
     var resetZoom: String { isKids ? "もとの おおきさ" : "元の大きさ" }
     var eraseEverything: String { isKids ? "きろくを ぜんぶ けす" : "記録をすべて消去" }
@@ -139,16 +148,20 @@ nonisolated extension TextMode {
     var eraseNext: String { isKids ? "つぎへ" : "次へ" }
     var eraseConfirmAction: String { isKids ? "けす" : "消去する" }
 
+    /// Grouped the way the map colours are: the ladder has five levels but
+    /// four visual states, and the words follow the states. The ladder ends on
+    /// the word it climbs toward — まだ → すこし おぼえた → おぼえてきた →
+    /// おぼえた. The gold still shimmers; it just is not *named* by its shimmer.
     func masteryLabel(_ level: Int) -> String {
         switch (level, isKids) {
         case (..<1, true): "まだ"
         case (..<1, false): "未学習"
-        case (1, true): "すこし おぼえた"
-        case (1, false): "少し覚えた"
-        case (2, true): "おぼえてきた"
-        case (2, false): "覚えてきた"
-        case (_, true): "キラキラ"
-        case (_, false): "キラキラ"
+        case (1...2, true): "すこし おぼえた"
+        case (1...2, false): "少し覚えた"
+        case (3...4, true): "おぼえてきた"
+        case (3...4, false): "覚えてきた"
+        case (_, true): "おぼえた"
+        case (_, false): "覚えた"
         }
     }
 

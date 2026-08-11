@@ -136,4 +136,43 @@ struct ZoomPanTests {
                                     scale: 2, in: .zero)
         #expect(clamped == .zero)
     }
+
+    // MARK: - Hold and slide
+
+    /// Up grows the map, down shrinks it — the direction a child expects from
+    /// pulling something toward them.
+    @Test func slidingUpZoomsInAndDownZoomsOut() {
+        #expect(ZoomPan.scale(2, liftedBy: 70) > 2)
+        #expect(ZoomPan.scale(2, liftedBy: -70) < 2)
+        #expect(ZoomPan.scale(2, liftedBy: 0) == 2)
+    }
+
+    /// One doubling distance doubles it, wherever it started. The whole point
+    /// of the exponent: 1×→2× and 2×→4× have to cost the same movement, or the
+    /// map crawls at the bottom of the range and lurches at the top.
+    @Test func oneDoublingDistanceDoublesTheMap() {
+        #expect(abs(ZoomPan.scale(1, liftedBy: ZoomPan.liftDoubling) - 2) < 0.001)
+        #expect(abs(ZoomPan.scale(2, liftedBy: ZoomPan.liftDoubling) - 4) < 0.001)
+    }
+
+    /// Sliding back down the same distance lands where it started, so an
+    /// abandoned zoom leaves nothing behind.
+    @Test func slidingBackReturnsToWhereItStarted() {
+        let out = ZoomPan.scale(2, liftedBy: 90)
+        #expect(abs(ZoomPan.scale(out, liftedBy: -90) - 2) < 0.001)
+    }
+
+    /// The same floor and ceiling as the pinch. A child who keeps sliding must
+    /// not be able to push the country out of its own frame.
+    @Test func slidingIsHeldToTheSameRangeAsPinching() {
+        #expect(ZoomPan.scale(1, liftedBy: -2000) == ZoomPan.minScale)
+        #expect(ZoomPan.scale(1, liftedBy: 2000) == ZoomPan.maxScale)
+    }
+
+    /// Long enough that answering never trips it, short enough not to read as
+    /// the map ignoring the finger.
+    @Test func theHoldIsShortButNotTapLength() {
+        #expect(ZoomPan.liftHold >= 0.25)
+        #expect(ZoomPan.liftHold <= 0.5)
+    }
 }

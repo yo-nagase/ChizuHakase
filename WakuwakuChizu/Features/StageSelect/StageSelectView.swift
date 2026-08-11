@@ -83,7 +83,8 @@ struct StageSelectView: View {
         stage.codes.filter { app.save.data.masteryLevel(of: $0) > 0 }.count
     }
 
-    /// How many have reached キラキラ (CLAUDE.md §5, level 3).
+    /// How many have reached the top of the mastery ladder — 「おぼえた」
+    /// (CLAUDE.md §5).
     private func sparklingCount(_ stage: Stage) -> Int {
         stage.codes.filter { app.save.data.masteryLevel(of: $0) >= GameRules.maxMastery }.count
     }
@@ -127,7 +128,13 @@ private struct StageSheet: View {
                         }
                     }
                     HStack(spacing: 8) {
-                        Text("\(mode.stickerCount) \(stuckCount) / \(stage.questionCount)")
+                        // Out of the stage's *prefectures*, which is what
+                        // `stuckCount` counts. Against `questionCount` a
+                        // regional stage could never pass half — every one of
+                        // them asks each prefecture twice — so a child who had
+                        // covered all of Kanto was shown 「7 / 14」 and told
+                        // they were halfway (CLAUDE.md §12).
+                        Text("\(mode.stickerCount) \(stuckCount) / \(stage.codes.count)")
                             .font(AppFont.rounded(12, relativeTo: .caption))
                             .foregroundStyle(Palette.ink.opacity(0.5))
                             .monospacedDigit()
@@ -136,7 +143,7 @@ private struct StageSheet: View {
                         // untouched stage would read as something missing
                         // rather than as something still to find.
                         if sparklingCount > 0 {
-                            Text("✨ \(mode.sparklingCount) \(sparklingCount)")
+                            Text("✨ \(mode.learnedCount) \(sparklingCount)")
                                 .font(AppFont.rounded(12, relativeTo: .caption))
                                 .foregroundStyle(Palette.gold)
                                 .monospacedDigit()
@@ -172,7 +179,7 @@ private struct StageSheet: View {
         var text = "\(stage.displayName(mode))。\(stage.questionCount) もん。"
             + "\(mode.starCount(record?.stars ?? 0))。"
             + "\(mode.stickerCount) \(stuckCount)"
-        if sparklingCount > 0 { text += "。\(mode.sparklingCount) \(sparklingCount)" }
+        if sparklingCount > 0 { text += "。\(mode.learnedCount) \(sparklingCount)" }
         return text
     }
 }

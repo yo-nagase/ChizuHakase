@@ -28,11 +28,12 @@ nonisolated struct Settings: Codable, Sendable, Equatable {
 }
 
 nonisolated struct SaveData: Codable, Sendable, Equatable {
-    /// 4 stretched the stars to fifteen and added the prefecture streaks with
-    /// their rainbow latch. 3 gave every card five stars instead of a
-    /// plain/キラ pair. 2 split the stage records per quiz mode. Version 1 had
-    /// one mode and wrote a flat `stages` dictionary.
-    static let currentVersion = 4
+    /// 5 stretched mastery to five clean answers. 4 stretched the stars to
+    /// fifteen and added the prefecture streaks with their rainbow latch. 3
+    /// gave every card five stars instead of a plain/キラ pair. 2 split the
+    /// stage records per quiz mode. Version 1 had one mode and wrote a flat
+    /// `stages` dictionary.
+    static let currentVersion = 5
 
     var version: Int = SaveData.currentVersion
     /// prefecture code -> 0...3.
@@ -87,6 +88,9 @@ nonisolated struct SaveData: Codable, Sendable, Equatable {
         if stored < 4 {
             cards = cards.mapValues(Self.liftV3Stars)
         }
+        if stored < 5 {
+            mastery = mastery.mapValues(Self.liftV4Mastery)
+        }
         rainbow = try c.decodeIfPresent(Set<String>.self, forKey: .rainbow) ?? []
         streaks = try c.decodeIfPresent([Int: Int].self, forKey: .streaks) ?? [:]
         records = try c.decodeIfPresent([String: [Int: StageRecord]].self,
@@ -115,6 +119,21 @@ nonisolated struct SaveData: Codable, Sendable, Equatable {
         case 3: GameRules.silverStars
         case 4: 10
         default: GameRules.maxCardStars
+        }
+    }
+
+    /// Version 4 → 5 stretched mastery: キラキラ moved from three clean answers
+    /// to five. The map draws four visual states (grey, light green, deep
+    /// green, gold), and a level moves so that neither its colour nor its
+    /// distance to the next state gets worse (CLAUDE.md §12): old 1 → 2 (light,
+    /// one step from deep), old 2 → 4 (deep, one step from gold), and a
+    /// キラキラ that was earned stays キラキラ.
+    private static func liftV4Mastery(_ level: Int) -> Int {
+        switch level {
+        case ..<1: 0
+        case 1: 2
+        case 2: 4
+        default: GameRules.maxMastery
         }
     }
 
