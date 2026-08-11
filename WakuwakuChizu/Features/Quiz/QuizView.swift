@@ -59,6 +59,7 @@ struct QuizView: View {
         }
         .padding(.horizontal, 16)
         .padding(.bottom, 10)
+        .pageColumn()
     }
 
     private func header(_ quiz: QuizViewModel) -> some View {

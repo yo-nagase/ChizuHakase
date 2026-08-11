@@ -31,6 +31,7 @@ struct StageSelectView: View {
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 18)
+            .pageColumn()
         }
         .background(AlbumPage())
         .navigationTitle(mode.stages)

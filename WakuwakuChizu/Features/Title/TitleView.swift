@@ -61,6 +61,7 @@ struct TitleView: View {
                     .padding(.bottom, 6)
             }
             .padding(.horizontal, 24)
+            .pageColumn()
         }
     }
 

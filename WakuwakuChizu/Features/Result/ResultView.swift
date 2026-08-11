@@ -116,6 +116,7 @@ struct ResultView: View {
                     buttons
                 }
                 .padding(20)
+                .pageColumn()
             }
             if celebrating {
                 ConfettiView()

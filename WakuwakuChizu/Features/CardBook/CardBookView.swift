@@ -61,6 +61,7 @@ struct CardBookView: View {
                 }
             }
             .padding(16)
+            .pageColumn()
         }
         .background(AlbumPage())
         .navigationTitle(mode.cardBook)

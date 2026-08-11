@@ -28,6 +28,7 @@ struct MyMapView: View {
                 eraseSection
             }
             .padding(16)
+            .pageColumn()
         }
         // While zoomed the map owns dragging, or the column would scroll away
         // underneath a child trying to move around Kyushu. The reset button is
