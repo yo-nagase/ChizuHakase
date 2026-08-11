@@ -120,9 +120,12 @@ private struct StageSheet: View {
                             StarBadge(filled: i <= (record?.stars ?? 0), size: 19)
                         }
                         if let record, record.score > 0 {
-                            Text(verbatim: "\(record.score)")
+                            // With its unit, and dark enough to read on every
+                            // stock — a bare pale number floating by the stars
+                            // read as debug output.
+                            Text(verbatim: "\(record.score) \(mode.points)")
                                 .font(AppFont.rounded(13, relativeTo: .caption))
-                                .foregroundStyle(Palette.ink.opacity(0.5))
+                                .foregroundStyle(Palette.ink.opacity(0.62))
                                 .monospacedDigit()
                                 .padding(.leading, 4)
                         }
@@ -134,21 +137,20 @@ private struct StageSheet: View {
                         // them asks each prefecture twice — so a child who had
                         // covered all of Kanto was shown 「7 / 14」 and told
                         // they were halfway (CLAUDE.md §12).
-                        Text("\(mode.stickerCount) \(stuckCount) / \(stage.codes.count)")
-                            .font(AppFont.rounded(12, relativeTo: .caption))
-                            .foregroundStyle(Palette.ink.opacity(0.5))
-                            .monospacedDigit()
+                        countChip("\(mode.stickerCount) \(stuckCount) / \(stage.codes.count)",
+                                  tint: Palette.ink.opacity(0.75),
+                                  border: Palette.ink.opacity(0.10))
 
                         // Only once there is one to show. A 「✨ 0 / 9」 on every
                         // untouched stage would read as something missing
                         // rather than as something still to find.
                         if sparklingCount > 0 {
-                            Text("✨ \(mode.learnedCount) \(sparklingCount)")
-                                .font(AppFont.rounded(12, relativeTo: .caption))
-                                .foregroundStyle(Palette.gold)
-                                .monospacedDigit()
+                            countChip("✨ \(mode.learnedCount) \(sparklingCount)",
+                                      tint: Palette.goldInk,
+                                      border: Palette.gold.opacity(0.65))
                         }
                     }
+                    .padding(.top, 2)
                 }
 
                 Spacer(minLength: 4)
@@ -163,6 +165,25 @@ private struct StageSheet: View {
         }
         .buttonStyle(SheetPressStyle())
         .accessibilityLabel(accessibilityText)
+    }
+
+    /// A count on its own small white label, stuck to the sheet.
+    ///
+    /// The sheets come in seven pastels and the counts used to sit straight on
+    /// them — gold lettering on the pale-yellow 中部 sheet was invisible. A
+    /// white base under the text makes the contrast independent of whichever
+    /// stock is behind it, and a little white label on a coloured sheet is
+    /// already this app's visual language.
+    private func countChip(_ text: String, tint: Color, border: Color) -> some View {
+        Text(text)
+            .font(AppFont.rounded(13, relativeTo: .caption))
+            .foregroundStyle(tint)
+            .monospacedDigit()
+            .padding(.horizontal, 9)
+            .padding(.vertical, 4)
+            .background(.white, in: Capsule())
+            .overlay(Capsule().strokeBorder(border, lineWidth: 1))
+            .shadow(color: Palette.stickerShadow, radius: 0, y: 1)
     }
 
     /// The region, drawn as the sticker it will become.

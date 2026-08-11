@@ -133,6 +133,12 @@ nonisolated enum Palette {
         .init(color: Color(hex: 0x6B5AA0), location: 1.00),
     ]
 
+    /// Gold as *text*. The token gold is a surface colour — as lettering on
+    /// white it washes out, and on the pale-yellow card stock it disappears
+    /// outright — so counts that mean gold write in this darker cut of the
+    /// same hue, borrowed from the foil ramp's shadow stop.
+    static let goldInk = Color(hex: 0xA97318)
+
     /// The lit edge of cut foil.
     static let foilEdge = Color(hex: 0xFFF6D2)
     static let silverEdge = Color(hex: 0xF7FAFC)
