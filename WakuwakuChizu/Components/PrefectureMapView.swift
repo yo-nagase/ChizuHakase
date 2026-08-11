@@ -169,6 +169,7 @@ struct PrefectureMapView: View {
                         isHinted: hintCode == prefecture.code,
                         effect: effect?.code == prefecture.code ? effect : nil,
                         reduceMotion: reduceMotion)
+                        .zIndex(zIndex(for: prefecture.code))
                 }
             }
             .frame(width: geo.size.width, height: geo.size.height)
@@ -208,6 +209,20 @@ struct PrefectureMapView: View {
                 PrefectureGeometry.screenCentroid(of: $0, transform: transform)
             }
         }
+    }
+
+    /// Stacking order. The layers draw in `codes` order, so without this a
+    /// prefecture mid-pop slid *under* every neighbour drawn after it — the
+    /// celebration, the floating specialty emoji and all. The addressee of the
+    /// live effect rides on top; the blinking answer sits above the crowd too,
+    /// or a later neighbour's die-cut carves into its outline. The effect
+    /// outranks the hint because it is the one actually moving, and the two
+    /// can point at different prefectures — a wrong tap shakes one while the
+    /// answer blinks elsewhere.
+    func zIndex(for code: Int) -> Double {
+        if effect?.code == code { return 2 }
+        if hintCode == code { return 1 }
+        return 0
     }
 
     /// Combined outline of everything currently stuck down.

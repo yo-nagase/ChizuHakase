@@ -70,4 +70,27 @@ struct MapEffectTests {
         triggers.apply(shake(2))
         #expect(triggers.shake != first, "the second miss on the same prefecture was silent")
     }
+
+    /// The layers stack in `codes` order, so an animating prefecture used to
+    /// slide *under* every neighbour drawn after it — the pop, the floating
+    /// specialty emoji and all, half-swallowed by the next shape over. The
+    /// addressee of the live effect must ride above its siblings, and the
+    /// blinking answer above the crowd, or a neighbour's die-cut carves into
+    /// its outline.
+    @Test func theAnimatingPrefectureRisesAboveItsNeighbours() {
+        let view = PrefectureMapView(
+            mapData: MapDataTests.map,
+            codes: Array(1...47),
+            appearance: { PrefectureAppearance.slot(for: $0.code) },
+            hintCode: 13,
+            effect: MapEffect(code: 5, kind: .pop, id: 1))
+        #expect(view.zIndex(for: 5) > view.zIndex(for: 6),
+                "the popping prefecture is not lifted above its neighbours")
+        #expect(view.zIndex(for: 13) > view.zIndex(for: 6),
+                "the hinted answer's outline can be cut by a later neighbour")
+        #expect(view.zIndex(for: 5) > view.zIndex(for: 13),
+                "the thing moving right now outranks the thing blinking")
+        #expect(view.zIndex(for: 6) == view.zIndex(for: 7),
+                "everyone else stays flat")
+    }
 }
