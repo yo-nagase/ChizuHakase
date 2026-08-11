@@ -1,7 +1,7 @@
 import Foundation
 import Testing
 
-@testable import WakuwakuChizu
+@testable import ChizuHakase
 
 /// CLAUDE.md §5: the question loop.
 @MainActor

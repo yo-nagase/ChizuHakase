@@ -10,7 +10,7 @@
 | 項目 | 内容 |
 | --- | --- |
 | 名前 | **めざせ! ちずはかせ**。ホーム画面は「ちずはかせ」(9 文字はアイコン下で切れる)。英語ストア表記は *Chizu Hakase: Japan Map Quiz for Kids*(UI は日本語のみなので、英訳ブランドで英語アプリに見せない) |
-| 内部名 | `WakuwakuChizu` / `com.wakuwaku.chizu` のまま。表示名と独立で、改名しても利益がない(旧名「わくわく ちずクイズ」の名残) |
+| 内部名 | `ChizuHakase` / `com.wakuwaku.chizuhakase`。未公開のうちに新名称へ揃えた(bundle ID は一度公開すると永久に固定)。公開後の改名は不可 |
 | プラットフォーム | iOS 17.0+ / iPadOS 17.0+ |
 | 言語・UI | Swift 6, SwiftUI |
 | 主対象 | 5〜9歳(ひらがなが読めるかどうか怪しい層を含む) |
@@ -44,13 +44,13 @@
 ## 2. ディレクトリ構成
 
 ```
-wakuwaku-chizu/
+wakuwaku-mapquiz/
 ├── CLAUDE.md
 ├── tools/
 │   └── build_map_data.py          # GeoJSON → PrefectureShapes.json
-├── WakuwakuChizu/
+├── ChizuHakase/
 │   ├── App/
-│   │   ├── WakuwakuChizuApp.swift
+│   │   ├── ChizuHakaseApp.swift
 │   │   └── AppState.swift          # @Observable ルート状態
 │   ├── Models/
 │   │   ├── Prefecture.swift        # 県マスタ(形状 + メタ)
@@ -89,7 +89,7 @@ wakuwaku-chizu/
 │       ├── PrefectureShapes.json   # 生成物(コミットする)
 │       ├── SpecialtyCards.json     # 生成物(コミットする)
 │       └── Assets.xcassets
-└── WakuwakuChizuTests/
+└── ChizuHakaseTests/
 ```
 
 ---
@@ -109,7 +109,7 @@ npx mapshaper japan.geojson \
   -simplify visvalingam 5% keep-shapes -clean \
   -o japan_simplified.geojson format=geojson
 python3 build_map_data.py
-mv PrefectureShapes.json ../WakuwakuChizu/Resources/
+mv PrefectureShapes.json ../ChizuHakase/Resources/
 ```
 
 出典表記が必要。タイトル画面フッターに以下を残すこと。
@@ -219,7 +219,7 @@ python3 tools/build_card_art.py
   ゴールド(★15)まで隠すと、同じ札 15 枚ぶん引くまで絵が出ないことになる
 - 絵が無い札は絵文字のまま。プレースホルダを出さない
 - 原画（`assets/`）は **git にもアプリにも入れない。** ローカル限定。
-  アプリターゲットのソースは `WakuwakuChizu/` のみなので、
+  アプリターゲットのソースは `ChizuHakase/` のみなので、
   ビルドが誤って拾うことはない
 - 絵に対応する札が無い場合、**公開前に限り**同じ県・同じカテゴリの札を
   絵の題材へ書き換えてよい。公開後は `id` がセーブキーなので不可（上記）

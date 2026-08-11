@@ -3,7 +3,7 @@ import Foundation
 import SwiftUI
 import Testing
 
-@testable import WakuwakuChizu
+@testable import ChizuHakase
 
 /// CLAUDE.md §10 phase 1: every prefecture must produce a non-empty Path, and
 /// `contains` must be true at its centroid.

@@ -9,7 +9,7 @@ import OSLog
 @Observable
 final class SaveStore {
 
-    private static let log = Logger(subsystem: "com.wakuwaku.chizu", category: "SaveStore")
+    private static let log = Logger(subsystem: "com.wakuwaku.chizuhakase", category: "SaveStore")
     private static let fileName = "savedata.json"
 
     private(set) var data: SaveData

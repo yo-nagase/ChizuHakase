@@ -10,7 +10,7 @@ import OSLog
 /// hiragana yet (CLAUDE.md §7).
 nonisolated enum AudioSession {
 
-    private static let log = Logger(subsystem: "com.wakuwaku.chizu", category: "Audio")
+    private static let log = Logger(subsystem: "com.wakuwaku.chizuhakase", category: "Audio")
 
     /// Ambient and mixing: the app is a toy, so it plays alongside whatever
     /// else is going on and stays quiet when the ring switch says quiet.

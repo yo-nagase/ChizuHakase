@@ -3,7 +3,7 @@ import Foundation
 import SwiftUI
 import Testing
 
-@testable import WakuwakuChizu
+@testable import ChizuHakase
 
 /// CLAUDE.md §3: fitting and tap resolution.
 @MainActor

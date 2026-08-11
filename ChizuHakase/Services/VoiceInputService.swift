@@ -13,7 +13,7 @@ import Speech
 @Observable
 final class VoiceInputService {
 
-    private static let log = Logger(subsystem: "com.wakuwaku.chizu", category: "VoiceInput")
+    private static let log = Logger(subsystem: "com.wakuwaku.chizuhakase", category: "VoiceInput")
 
     enum Availability: Equatable {
         case available

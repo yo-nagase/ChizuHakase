@@ -1,7 +1,7 @@
 import SwiftUI
 import Testing
 
-@testable import WakuwakuChizu
+@testable import ChizuHakase
 
 /// The my-map colour ramp (CLAUDE.md §5).
 ///

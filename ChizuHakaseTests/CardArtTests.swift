@@ -2,7 +2,7 @@ import Foundation
 import Testing
 import UIKit
 
-@testable import WakuwakuChizu
+@testable import ChizuHakase
 
 /// The painted specialty cards (CLAUDE.md §4).
 ///

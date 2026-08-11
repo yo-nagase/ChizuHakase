@@ -2,7 +2,7 @@ import CoreGraphics
 import SwiftUI
 import Testing
 
-@testable import WakuwakuChizu
+@testable import ChizuHakase
 
 /// Pinch-to-zoom limits on the my-map screen.
 ///

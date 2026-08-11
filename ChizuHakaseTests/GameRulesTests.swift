@@ -1,7 +1,7 @@
 import Foundation
 import Testing
 
-@testable import WakuwakuChizu
+@testable import ChizuHakase
 
 /// CLAUDE.md §5. These are the rules a child experiences as fairness, so they
 /// are pinned exactly.

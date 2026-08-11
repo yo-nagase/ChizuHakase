@@ -1,7 +1,7 @@
 import Foundation
 import Testing
 
-@testable import WakuwakuChizu
+@testable import ChizuHakase
 
 /// 「なまえを あてる」: the same stages and scoring, asked the other way round.
 @MainActor

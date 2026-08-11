@@ -1,4 +1,4 @@
-name: WakuwakuChizu
+name: ChizuHakase
 
 options:
   bundleIdPrefix: com.wakuwaku
@@ -24,19 +24,19 @@ settings:
     GCC_WARN_ABOUT_RETURN_TYPE: "YES_ERROR"
 
 targets:
-  WakuwakuChizu:
+  ChizuHakase:
     type: application
     platform: iOS
     deploymentTarget: "17.0"
     sources:
-      - path: WakuwakuChizu
+      - path: ChizuHakase
     settings:
       base:
         GENERATE_INFOPLIST_FILE: "YES"
-        PRODUCT_BUNDLE_IDENTIFIER: com.wakuwaku.chizu
+        PRODUCT_BUNDLE_IDENTIFIER: com.wakuwaku.chizuhakase
         # Executable/bundle name stays ASCII (TEST_HOST and codesign paths
         # depend on it); the Japanese name users see is the display name.
-        PRODUCT_NAME: WakuwakuChizu
+        PRODUCT_NAME: ChizuHakase
         MARKETING_VERSION: "1.0"
         CURRENT_PROJECT_VERSION: "1"
         # Five characters: 「めざせ!ちずはかせ」 truncates under a home-screen
@@ -62,46 +62,46 @@ targets:
         INFOPLIST_KEY_NSMicrophoneUsageDescription: こえで こたえるモードで つかいます。こえは この iPhone の なかだけで しらべます。
         INFOPLIST_KEY_NSSpeechRecognitionUsageDescription: こえで こたえるモードで つかいます。こえは この iPhone の なかだけで しらべます。
 
-  WakuwakuChizuTests:
+  ChizuHakaseTests:
     type: bundle.unit-test
     platform: iOS
     deploymentTarget: "17.0"
     sources:
-      - path: WakuwakuChizuTests
+      - path: ChizuHakaseTests
     dependencies:
-      - target: WakuwakuChizu
+      - target: ChizuHakase
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.wakuwaku.chizu.tests
+        PRODUCT_BUNDLE_IDENTIFIER: com.wakuwaku.chizuhakase.tests
         GENERATE_INFOPLIST_FILE: "YES"
 
-  WakuwakuChizuUITests:
+  ChizuHakaseUITests:
     type: bundle.ui-testing
     platform: iOS
     deploymentTarget: "17.0"
     sources:
-      - path: WakuwakuChizuUITests
+      - path: ChizuHakaseUITests
     dependencies:
-      - target: WakuwakuChizu
+      - target: ChizuHakase
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.wakuwaku.chizu.uitests
+        PRODUCT_BUNDLE_IDENTIFIER: com.wakuwaku.chizuhakase.uitests
         GENERATE_INFOPLIST_FILE: "YES"
         # XCTestCase's overrides are nonisolated, so the app target's
         # MainActor-by-default does not apply here.
         SWIFT_DEFAULT_ACTOR_ISOLATION: nonisolated
 
 schemes:
-  WakuwakuChizu:
+  ChizuHakase:
     build:
       targets:
-        WakuwakuChizu: all
-        WakuwakuChizuTests: [test]
-        WakuwakuChizuUITests: [test]
+        ChizuHakase: all
+        ChizuHakaseTests: [test]
+        ChizuHakaseUITests: [test]
     test:
       targets:
-        - WakuwakuChizuTests
-        - WakuwakuChizuUITests
+        - ChizuHakaseTests
+        - ChizuHakaseUITests
       gatherCoverageData: true
     run:
       config: Debug

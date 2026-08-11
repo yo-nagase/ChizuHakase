@@ -1,6 +1,6 @@
 import Testing
 
-@testable import WakuwakuChizu
+@testable import ChizuHakase
 
 /// What each prefecture does with the one effect the map broadcasts.
 ///

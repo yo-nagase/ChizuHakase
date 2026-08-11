@@ -1,7 +1,7 @@
 import Foundation
 import Testing
 
-@testable import WakuwakuChizu
+@testable import ChizuHakase
 
 /// CLAUDE.md §7: voice answers must survive the ways a child and a recogniser
 /// will actually spell a prefecture.

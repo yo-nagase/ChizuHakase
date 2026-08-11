@@ -9,7 +9,7 @@ import OSLog
 /// bad; a crash on launch is worse.
 nonisolated enum MapDataLoader {
 
-    private static let log = Logger(subsystem: "com.wakuwaku.chizu", category: "MapDataLoader")
+    private static let log = Logger(subsystem: "com.wakuwaku.chizuhakase", category: "MapDataLoader")
 
     // MARK: - Wire format
 

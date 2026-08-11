@@ -1,7 +1,7 @@
 import Foundation
 import Testing
 
-@testable import WakuwakuChizu
+@testable import ChizuHakase
 
 /// Child mode is the product (CLAUDE.md §1); adult mode is an accommodation on
 /// top of it. These pin that the default never drifts and that neither mode

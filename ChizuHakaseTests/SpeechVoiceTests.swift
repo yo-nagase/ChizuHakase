@@ -1,7 +1,7 @@
 import AVFoundation
 import Testing
 
-@testable import WakuwakuChizu
+@testable import ChizuHakase
 
 /// Which voice reads the questions (CLAUDE.md §7).
 ///

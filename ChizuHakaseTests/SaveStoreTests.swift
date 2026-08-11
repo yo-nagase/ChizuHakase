@@ -1,7 +1,7 @@
 import Foundation
 import Testing
 
-@testable import WakuwakuChizu
+@testable import ChizuHakase
 
 /// CLAUDE.md §6. The overriding requirement is that nothing here can crash the
 /// app or silently destroy a child's progress.
@@ -11,7 +11,7 @@ struct SaveStoreTests {
     /// Fresh scratch directory per test so runs cannot interfere.
     private func makeScratch() throws -> URL {
         let dir = FileManager.default.temporaryDirectory
-            .appendingPathComponent("wakuwaku-tests-\(UUID().uuidString)")
+            .appendingPathComponent("chizuhakase-tests-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         return dir
     }

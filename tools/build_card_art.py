@@ -11,8 +11,8 @@ Run from the repository root, only when the illustrations change:
     python3 tools/build_card_art.py
 
 Writes:
-    WakuwakuChizu/Resources/Assets.xcassets/CardArt/card-<id>.imageset/
-    WakuwakuChizu/Resources/SpecialtyCards.json   ("art" field)
+    ChizuHakase/Resources/Assets.xcassets/CardArt/card-<id>.imageset/
+    ChizuHakase/Resources/SpecialtyCards.json   ("art" field)
 """
 
 from __future__ import annotations
@@ -25,8 +25,8 @@ from PIL import Image
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SOURCE_DIR = os.path.join(ROOT, "assets", "meisanhin-cards")
-CATALOG = os.path.join(ROOT, "WakuwakuChizu", "Resources", "Assets.xcassets", "CardArt")
-CARDS_JSON = os.path.join(ROOT, "WakuwakuChizu", "Resources", "SpecialtyCards.json")
+CATALOG = os.path.join(ROOT, "ChizuHakase", "Resources", "Assets.xcassets", "CardArt")
+CARDS_JSON = os.path.join(ROOT, "ChizuHakase", "Resources", "SpecialtyCards.json")
 
 # Card art is only ever shown at chip size, so 480px covers a 160pt chip on a
 # 3x screen with room to spare.

@@ -1,7 +1,7 @@
 import AVFoundation
 import Testing
 
-@testable import WakuwakuChizu
+@testable import ChizuHakase
 
 /// Who owns the audio session, and who has to give it back.
 ///

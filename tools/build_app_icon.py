@@ -12,8 +12,8 @@ import os
 
 from PIL import Image, ImageDraw
 
-SRC = "../WakuwakuChizu/Resources/PrefectureShapes.json"
-DST = "../WakuwakuChizu/Resources/Assets.xcassets/AppIcon.appiconset/icon-1024.png"
+SRC = "../ChizuHakase/Resources/PrefectureShapes.json"
+DST = "../ChizuHakase/Resources/Assets.xcassets/AppIcon.appiconset/icon-1024.png"
 
 SIZE = 1024
 SUPERSAMPLE = 4  # draw big, downscale: gives clean edges without any AA library
