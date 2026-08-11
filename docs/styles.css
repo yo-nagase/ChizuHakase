@@ -83,6 +83,37 @@ a:hover {
   padding: 3rem 0;
 }
 
+.hero--support {
+  background: linear-gradient(135deg, #a9e2f5 0%, #5dc0e1 48%, #1687bc 100%);
+}
+
+.site-nav {
+  position: absolute;
+  z-index: 2;
+  top: 1rem;
+  right: max(1rem, calc((100% - 860px) / 2));
+  display: flex;
+  gap: 0.35rem;
+  padding: 0.3rem;
+  border: 1px solid rgba(255, 255, 255, 0.65);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.45);
+  backdrop-filter: blur(10px);
+}
+
+.site-nav a {
+  padding: 0.35rem 0.8rem;
+  border-radius: 999px;
+  color: var(--plum);
+  font-size: 0.82rem;
+  text-decoration: none;
+}
+
+.site-nav a[aria-current="page"] {
+  color: #fff;
+  background: var(--plum);
+}
+
 .app-icon {
   flex: 0 0 auto;
   border: 4px solid rgba(255, 255, 255, 0.85);
@@ -224,6 +255,163 @@ main {
   color: var(--orange);
 }
 
+.support-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+  margin-bottom: 3rem;
+}
+
+.support-card {
+  padding: 1.4rem;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  background: var(--paper);
+  box-shadow: var(--shadow);
+}
+
+.support-card__icon {
+  display: grid;
+  width: 3rem;
+  height: 3rem;
+  place-items: center;
+  border-radius: 15px;
+  color: #fff;
+  background: var(--blue);
+  font-size: 0.95rem;
+  font-weight: 900;
+}
+
+.support-card h2 {
+  margin: 0.9rem 0 0.35rem;
+  color: var(--plum);
+  font-size: 1.1rem;
+}
+
+.support-card p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.93rem;
+  line-height: 1.7;
+}
+
+.faq-section {
+  margin-bottom: 3rem;
+}
+
+.section-heading {
+  margin-bottom: 1.2rem;
+}
+
+.section-heading .eyebrow,
+.contact-card .eyebrow {
+  color: var(--blue);
+  font-size: 0.78rem;
+  letter-spacing: 0.18em;
+}
+
+.section-heading h2,
+.contact-card h2 {
+  margin: 0.15rem 0 0;
+  color: var(--plum);
+  font-size: clamp(1.55rem, 4vw, 2.2rem);
+  line-height: 1.4;
+}
+
+.faq-list {
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 22px;
+  background: var(--paper);
+  box-shadow: var(--shadow);
+}
+
+.faq-list details + details {
+  border-top: 1px solid var(--border);
+}
+
+.faq-list summary {
+  position: relative;
+  padding: 1.35rem 3.4rem 1.35rem 1.5rem;
+  color: var(--plum);
+  cursor: pointer;
+  font-weight: 800;
+  list-style: none;
+}
+
+.faq-list summary::-webkit-details-marker {
+  display: none;
+}
+
+.faq-list summary::after {
+  position: absolute;
+  top: 50%;
+  right: 1.4rem;
+  width: 1.8rem;
+  height: 1.8rem;
+  border-radius: 50%;
+  color: #fff;
+  background: var(--blue);
+  content: "+";
+  line-height: 1.7rem;
+  text-align: center;
+  transform: translateY(-50%);
+}
+
+.faq-list details[open] summary::after {
+  content: "−";
+}
+
+.faq-list summary:focus-visible {
+  outline: 3px solid rgba(22, 135, 188, 0.35);
+  outline-offset: -3px;
+}
+
+.faq-answer {
+  padding: 0 1.5rem 1.4rem;
+  color: var(--muted);
+}
+
+.faq-answer p,
+.faq-answer ol {
+  margin: 0;
+}
+
+.faq-answer ol {
+  padding-left: 1.4rem;
+}
+
+.faq-answer li + li {
+  margin-top: 0.35rem;
+}
+
+.contact-card {
+  padding: clamp(1.5rem, 5vw, 2.5rem);
+  border: 2px solid #8ccce7;
+  border-radius: 24px;
+  background: linear-gradient(145deg, #effaff, #dff4fc);
+  box-shadow: var(--shadow);
+}
+
+.contact-card > p:not(.eyebrow) {
+  margin: 0.7rem 0 1.25rem;
+}
+
+.button-link {
+  display: inline-block;
+  padding: 0.75rem 1.15rem;
+  border-radius: 14px;
+  color: #fff;
+  background: var(--blue);
+  box-shadow: 0 6px 0 #075d83;
+  text-decoration: none;
+}
+
+.button-link:hover {
+  color: #fff;
+  background: #0f78a9;
+}
+
 footer {
   padding: 1.75rem 1rem 2.5rem;
   color: var(--muted);
@@ -235,11 +423,25 @@ footer p {
   margin: 0;
 }
 
+.footer-links {
+  margin-top: 0.35rem;
+}
+
+.footer-links a {
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
 @media (max-width: 560px) {
   .hero__inner {
     align-items: flex-start;
     min-height: 230px;
     padding: 2.25rem 0;
+  }
+
+  .site-nav {
+    top: 0.7rem;
+    right: 0.7rem;
   }
 
   .app-icon {
@@ -269,6 +471,18 @@ footer p {
 
   .policy section {
     padding-block: 1.5rem;
+  }
+
+  .support-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .faq-list summary {
+    padding-left: 1.2rem;
+  }
+
+  .faq-answer {
+    padding-inline: 1.2rem;
   }
 }
 
