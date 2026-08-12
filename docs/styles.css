@@ -703,8 +703,9 @@ footer p {
   display: grid;
   justify-self: center;
   width: min(410px, 100%);
+  aspect-ratio: 4 / 5;
   padding: 2.3rem 3.8rem 0;
-  place-items: end center;
+  place-items: start center;
   overflow: hidden;
   border-radius: 3rem;
   box-shadow: var(--shadow);
