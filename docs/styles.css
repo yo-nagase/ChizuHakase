@@ -1086,13 +1086,17 @@ footer p {
 @media (max-width: 560px) {
   .hero__inner {
     align-items: flex-start;
-    min-height: 230px;
-    padding: 2.25rem 0;
+    min-height: 300px;
+    padding: 6rem 0 2.25rem;
   }
 
   .site-nav {
-    top: 0.7rem;
-    right: 0.7rem;
+    top: 0.75rem;
+    right: auto;
+    left: 50%;
+    width: max-content;
+    max-width: calc(100% - 1rem);
+    transform: translateX(-50%);
   }
 
   .site-nav a {
