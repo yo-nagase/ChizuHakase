@@ -497,26 +497,37 @@ footer p {
 
 .marketing-hero h1 {
   margin: 1.6rem 0 1rem;
-  max-width: 11em;
+  max-width: none;
   color: #fff;
-  font-size: clamp(3rem, 7vw, 5.4rem);
+  font-size: clamp(3rem, 4.6vw, 4.2rem);
   line-height: 1.08;
   letter-spacing: 0.01em;
   text-shadow: 0 5px 0 rgba(76, 41, 66, 0.18);
 }
 
-.marketing-hero h1 span {
+.hero-title-kicker,
+.hero-title-main {
+  display: block;
+  white-space: nowrap;
+}
+
+.marketing-hero h1 .hero-title-kicker {
   color: var(--plum);
   font-size: 0.55em;
   text-shadow: none;
 }
 
 .marketing-hero__lead {
-  max-width: 37rem;
+  max-width: 39rem;
   margin: 0;
   font-size: clamp(1rem, 2vw, 1.18rem);
   font-weight: 700;
   line-height: 1.9;
+  text-wrap: balance;
+}
+
+.marketing-hero__lead span {
+  display: block;
 }
 
 .trust-row {
@@ -1037,6 +1048,10 @@ footer p {
     margin-left: auto;
   }
 
+  .marketing-hero h1 {
+    font-size: clamp(2.8rem, 11vw, 4rem);
+  }
+
   .hero-phone {
     margin-top: 1rem;
   }
@@ -1144,8 +1159,9 @@ footer p {
   }
 
   .marketing-hero h1 {
-    font-size: clamp(2.75rem, 16vw, 4.2rem);
+    font-size: clamp(2.45rem, 11vw, 3rem);
   }
+
 
   .hero-phone__burst {
     right: -0.8rem;
