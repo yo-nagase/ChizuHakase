@@ -546,6 +546,26 @@ footer p {
   font-weight: 900;
 }
 
+.store-cta {
+  margin-top: 1.4rem;
+}
+
+.store-badge {
+  display: inline-block;
+  line-height: 0;
+  transition: transform 0.15s ease;
+}
+
+.store-badge:hover {
+  transform: translateY(-2px);
+}
+
+.store-badge img {
+  display: block;
+  width: auto;
+  height: 60px;
+}
+
 .hero-phone {
   position: relative;
   justify-self: center;
@@ -1020,6 +1040,13 @@ footer p {
   margin: 0 0 1.2rem;
   color: var(--muted);
   font-weight: 600;
+}
+
+.closing-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.9rem 1.1rem;
 }
 
 .button-link--orange {

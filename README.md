@@ -8,6 +8,8 @@
 
 5〜9さい向けの都道府県学習アプリ(iOS / iPadOS)
 
+<a href="https://apps.apple.com/jp/app/%E3%82%81%E3%81%96%E3%81%9B-%E3%81%A1%E3%81%9A%E3%81%AF%E3%81%8B%E3%81%9B/id6800378835"><img src="docs/appstore-badge-ja.svg" height="50" alt="App Storeでダウンロード" /></a>
+
 </div>
 
 <p align="center">

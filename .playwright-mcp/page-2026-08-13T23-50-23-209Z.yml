@@ -1,0 +1,151 @@
+- generic [active] [ref=e1]:
+  - banner [ref=e2]:
+    - navigation "ページ" [ref=e3]:
+      - link "アプリ紹介" [ref=e4] [cursor=pointer]:
+        - /url: ./
+      - link "プライバシー" [ref=e5] [cursor=pointer]:
+        - /url: ../
+      - link "サポート" [ref=e6] [cursor=pointer]:
+        - /url: ../support/
+    - generic [ref=e7]:
+      - generic [ref=e8]:
+        - generic [ref=e9]:
+          - img "めざせ！ちずはかせのアプリアイコン" [ref=e10]
+          - paragraph [ref=e11]: 子ども向け都道府県学習アプリ
+        - heading "あそんで おぼえる、 にほんの ちず。" [level=1] [ref=e12]:
+          - generic [ref=e13]: あそんで おぼえる、
+          - generic [ref=e14]: にほんの ちず。
+        - paragraph [ref=e15]:
+          - generic [ref=e16]: 地図をタップしてクイズに挑戦。
+          - generic [ref=e17]: 正解してご当地カードを集めながら、
+          - generic [ref=e18]: 47都道府県を楽しく身につけよう。
+        - generic "アプリの特徴" [ref=e19]:
+          - generic [ref=e20]: 広告なし
+          - generic [ref=e21]: 課金なし
+          - generic [ref=e22]: オフライン
+        - link [ref=e24] [cursor=pointer]:
+          - /url: https://apps.apple.com/jp/app/%E3%82%81%E3%81%96%E3%81%9B-%E3%81%A1%E3%81%9A%E3%81%AF%E3%81%8B%E3%81%9B/id6800378835
+          - img "App Storeでダウンロード" [ref=e25]
+      - generic "アプリのクイズ画面" [ref=e26]:
+        - generic [ref=e27]: 47 都道府県
+        - img "日本地図から都道府県を探すクイズ画面" [ref=e28]
+  - main [ref=e30]:
+    - region [ref=e31]:
+      - paragraph [ref=e32]: LEARN & PLAY
+      - heading "できた！が、つぎの 「やってみたい」になる" [level=2] [ref=e33]
+      - paragraph [ref=e34]: シンプルな地図クイズと、集めるほど変化するカード。小さな達成感を重ねながら、都道府県への興味を育てます。
+    - region "アプリの主な特徴" [ref=e35]:
+      - article [ref=e36]:
+        - generic [ref=e37]:
+          - generic [ref=e38]: "01"
+          - paragraph [ref=e39]: MAP QUIZ
+          - heading "見て、聞いて、 地図をタップ" [level=2] [ref=e40]: 見て、聞いて、地図をタップ
+          - paragraph [ref=e41]: 「北海道はどこ？」に地図で答えるクイズと、光った県の名前を答えるクイズを収録。地方ごとから全国チャレンジまで、自分のペースで取り組めます。
+        - img "都道府県を地図から探すクイズ" [ref=e43]
+      - article [ref=e44]:
+        - generic [ref=e45]:
+          - generic [ref=e46]: "02"
+          - paragraph [ref=e47]: MY MAP
+          - heading "がんばりが見える 全国マイマップ" [level=2] [ref=e48]: がんばりが見える全国マイマップ
+          - paragraph [ref=e49]: 覚えた都道府県や得意な場所が、色と星でひと目でわかります。「つぎはここ！」を見つけやすく、少しずつ全国制覇を目指せます。
+        - img "都道府県の習熟度がわかる全国マイマップ" [ref=e51]
+      - article [ref=e52]:
+        - generic [ref=e53]:
+          - generic [ref=e54]: "03"
+          - paragraph [ref=e55]: COLLECT CARDS
+          - heading "ご当地カードを 集めて育てよう" [level=2] [ref=e56]: ご当地カードを集めて育てよう
+          - paragraph [ref=e57]: 正解すると、その土地の名物や名所を描いたカードをゲット。全141枚のカードは、挑戦を重ねるとシルバー、ゴールド、にじいろへと輝きます。
+        - img "にじいろに育ったご当地カード" [ref=e59]
+    - region [ref=e60]:
+      - text: ✦
+      - generic [ref=e61]:
+        - paragraph [ref=e62]: A LITTLE SUCCESS STORY
+        - heading "「地図、ちょっと苦手…」から 「100点とれた！」へ" [level=2] [ref=e63]: 「地図、ちょっと苦手…」から「100点とれた！」へ
+        - paragraph [ref=e64]: これは、アプリで遊ぶうちに地図が好きになった、ある小学生のサクセスストーリーです。
+      - figure "苦手だった地図も、遊びながら繰り返すうちに少しずつ得意に。" [ref=e65]:
+        - img "地図のテストが苦手だった小学生が、めざせ！ちずはかせで遊びながら覚え、次のテストで100点を取るまでを描いた4コマ漫画" [ref=e66]
+      - list "漫画のストーリー" [ref=e68]:
+        - listitem [ref=e69]:
+          - generic [ref=e70]: "1"
+          - generic [ref=e71]:
+            - strong [ref=e72]: 地図のテストが苦手
+            - paragraph [ref=e73]: 県の場所がなかなか覚えられず、ちょっぴり自信をなくしていました。
+        - listitem [ref=e74]:
+          - generic [ref=e75]: "2"
+          - generic [ref=e76]:
+            - strong [ref=e77]: 毎日ちょっとずつ遊ぶ
+            - paragraph [ref=e78]: 地図をタップして答えるから、勉強というよりゲームの感覚で続けられます。
+        - listitem [ref=e79]:
+          - generic [ref=e80]: "3"
+          - generic [ref=e81]:
+            - strong [ref=e82]: カードを集めて夢中に
+            - paragraph [ref=e83]: 正解するたびにご当地カードが育ち、「もう一回！」が自然に増えていきます。
+        - listitem [ref=e84]:
+          - generic [ref=e85]: "4"
+          - generic [ref=e86]:
+            - strong [ref=e87]: つぎのテストで100点！
+            - paragraph [ref=e88]: 遊びながら何度も地図に触れたことで、自信をもって答えられました。
+      - paragraph [ref=e89]: ※ 漫画は本アプリの学習体験をもとにしたフィクションです。学習成果には個人差があり、テストの得点を保証するものではありません。
+      - text: ✦
+    - region [ref=e90]:
+      - generic [ref=e91]:
+        - paragraph [ref=e92]: REAL APP SCREENS
+        - heading "実際のアプリ画面" [level=2] [ref=e93]
+        - paragraph [ref=e94]: 漫画に登場した、クイズ・マイマップ・カード・結果画面をそのままご覧いただけます。
+      - generic [ref=e95]:
+        - figure "地図クイズ 地図をタップして回答" [ref=e96]:
+          - img "都道府県を地図から探す実際のクイズ画面" [ref=e98]
+          - generic [ref=e99]:
+            - strong [ref=e100]: 地図クイズ
+            - generic [ref=e101]: 地図をタップして回答
+        - figure "全国マイマップ 覚えた県がひと目でわかる" [ref=e102]:
+          - img "学習の進み具合がわかる実際の全国マイマップ画面" [ref=e104]
+          - generic [ref=e105]:
+            - strong [ref=e106]: 全国マイマップ
+            - generic [ref=e107]: 覚えた県がひと目でわかる
+        - figure "ご当地カード 集めて、育てて、もっと挑戦" [ref=e108]:
+          - img "にじいろになった実際のご当地カード画面" [ref=e110]
+          - generic [ref=e111]:
+            - strong [ref=e112]: ご当地カード
+            - generic [ref=e113]: 集めて、育てて、もっと挑戦
+        - figure "結果画面 がんばった成果をお祝い" [ref=e114]:
+          - img "星や覚えた県が表示される実際の結果画面" [ref=e116]
+          - generic [ref=e117]:
+            - strong [ref=e118]: 結果画面
+            - generic [ref=e119]: がんばった成果をお祝い
+    - region [ref=e120]:
+      - generic [ref=e121]:
+        - paragraph [ref=e122]: FOR KIDS & FAMILY
+        - heading "子どもの「ひとりでできた」を 安心して見守れる" [level=2] [ref=e123]: 子どもの「ひとりでできた」を安心して見守れる
+      - generic [ref=e124]:
+        - article [ref=e125]:
+          - generic [ref=e126]: あ
+          - heading "読み上げ対応" [level=3] [ref=e127]
+          - paragraph [ref=e128]: 問題や選択肢を音声で読み上げ。ひらがなを読む途中のお子さまも遊べます。
+        - article [ref=e129]:
+          - generic [ref=e130]: ⌁
+          - heading "通信なし" [level=3] [ref=e131]
+          - paragraph [ref=e132]: すべて端末の中で動作。移動中や通信環境がない場所でも楽しめます。
+        - article [ref=e133]:
+          - generic [ref=e134]: ✓
+          - heading "広告・課金なし" [level=3] [ref=e135]
+          - paragraph [ref=e136]: 広告表示もアプリ内課金もありません。すべての問題を最初から遊べます。
+    - region [ref=e137]:
+      - generic [ref=e138]:
+        - paragraph [ref=e139]: めざせ！ちずはかせ
+        - heading "日本地図を、 もっと身近に。" [level=2] [ref=e140]: 日本地図を、もっと身近に。
+        - paragraph [ref=e141]: iOS 17以降のiPhone、iPadOS 17以降のiPadに対応。
+        - generic [ref=e142]:
+          - link [ref=e143] [cursor=pointer]:
+            - /url: https://apps.apple.com/jp/app/%E3%82%81%E3%81%96%E3%81%9B-%E3%81%A1%E3%81%9A%E3%81%AF%E3%81%8B%E3%81%9B/id6800378835
+            - img "App Storeでダウンロード" [ref=e144]
+          - link "サポート情報を見る" [ref=e145] [cursor=pointer]:
+            - /url: ../support/
+  - contentinfo [ref=e146]:
+    - paragraph [ref=e147]: © 2026 めざせ！ちずはかせ
+    - paragraph [ref=e148]:
+      - link "プライバシーポリシー" [ref=e149] [cursor=pointer]:
+        - /url: ../
+      - text: ・
+      - link "サポート" [ref=e150] [cursor=pointer]:
+        - /url: ../support/
