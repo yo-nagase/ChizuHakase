@@ -1,6 +1,9 @@
 ## macOS
 .DS_Store
 
+## Playwright MCP scratch output (page snapshots / screenshots from local checks)
+.playwright-mcp/
+
 ## Xcode
 build/
 DerivedData/

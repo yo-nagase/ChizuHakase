@@ -1257,6 +1257,7 @@ footer p {
   }
 
   .closing-section {
+    flex-direction: column;
     align-items: flex-start;
     border-radius: 2rem;
   }
