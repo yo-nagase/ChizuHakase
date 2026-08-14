@@ -37,9 +37,9 @@ nonisolated struct SpecialtyCard: Identifiable, Sendable, Hashable, Codable {
     /// Asset name of the painted card, for the ones that have been drawn.
     ///
     /// Only キラカード show it (CLAUDE.md §5): the plain card stays an emoji, so
-    /// promoting one to キラ turns it into a picture. Optional because 20 of the
-    /// 141 are illustrated so far — a card without art simply stays an emoji
-    /// rather than showing a placeholder.
+    /// promoting one to キラ turns it into a picture. Optional while the full
+    /// set of illustrations is produced in stages — a card without art simply
+    /// stays an emoji rather than showing a placeholder.
     var art: String?
 }
 

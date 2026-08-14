@@ -48,18 +48,31 @@ PALETTE_COLOURS = 192
 # safe before release: after it, an id is a save key (§4) and its card must
 # stay the same card.
 ART_FOR_CARD = {
+    "hokkaido-kani": "01-1",         # 蟹
     "hokkaido-dairy": "01-2",        # 乳製品
+    "hokkaido-lavender": "01-3",     # ラベンダー
     "aomori-ringo": "02-1",          # 林檎
+    "aomori-nebuta": "02-2",         # ねぶた
+    "aomori-hotate": "02-3",         # 帆立
     "iwate-wankosoba": "03-1",       # わんこそば
+    "iwate-nanbu-tekki": "03-2",      # 南部鉄器
+    "iwate-ryusendo": "03-3",         # 龍泉洞
+    "miyagi-gyutan": "04-1",          # 牛タン
     "miyagi-zundamochi": "04-2",     # ずんだ餅
+    "miyagi-matsushima": "04-3",      # 松島
     "akita-kiritanpo": "05-1",       # きりたんぽ
+    "akita-namahage": "05-2",         # なまはげ
+    "akita-inu": "05-3",              # 秋田犬
     "yamagata-sakuranbo": "06-1",    # さくらんぼ
+    "yamagata-imoni": "06-2",         # 芋煮
     "fukushima-momo": "07-1",        # 桃
     "ibaraki-natto": "08-1",         # 納豆
     "tochigi-ichigo": "09-1",        # 苺
+    "tochigi-gyoza": "09-3",         # 餃子
     "gunma-konnyaku": "10-1",        # 蒟蒻
     "saitama-soka-senbei": "11-1",   # 草加せんべい
     "chiba-rakkasei": "12-1",        # 落花生
+    "tokyo-tower": "13-1",           # 東京タワー
     "tokyo-edomae-sushi": "13-2",    # 江戸前寿司
     "kanagawa-shirasu": "14-2",      # しらす
     "niigata-koshihikari": "15-1",   # こしひかり
@@ -67,6 +80,8 @@ ART_FOR_CARD = {
     "toyama-masuzushi": "16-3",      # ます寿司
     "ishikawa-kinpaku": "17-3",      # 金箔
     "fukui-echizen-gani": "18-1",    # 越前がに
+    "fukui-kyoryu": "18-2",          # 恐竜
+    "yamanashi-fujisan": "19-2",     # 富士山
     "yamanashi-hoto": "19-3",        # ほうとう
     "nagano-shinshu-soba": "20-1",   # 蕎麦
     "gifu-hidagyu": "21-3",          # 飛騨牛
@@ -78,16 +93,19 @@ ART_FOR_CARD = {
     "mie-ise-udon": "24-3",          # 伊勢うどん
     "shiga-funazushi": "25-3",       # 鮒ずし
     "kyoto-uji-matcha": "26-2",      # 抹茶
+    "kyoto-nishijin-ori": "26-3",    # 西陣織
     "osaka-takoyaki": "27-1",        # たこ焼き
     "hyogo-akashiyaki": "28-3",      # 明石焼
     "nara-kakinoha-zushi": "29-3",   # 柿の葉寿司
     "wakayama-umeboshi": "30-1",     # 梅干し
+    "tottori-sakkyu": "31-1",        # 鳥取砂丘
     "tottori-nijisseiki-nashi": "31-2",  # 梨
     "shimane-izumo-soba": "32-2",    # 出雲そば
     "okayama-hakuto": "33-3",        # 白桃
     "hiroshima-momiji-manju": "34-1",  # もみじ饅頭
     "hiroshima-kaki": "34-3",        # 牡蠣
     "yamaguchi-fugu": "35-1",        # 河豚
+    "tokushima-awa-odori": "36-1",   # 阿波踊り
     "tokushima-sudachi": "36-2",     # 酢橘
     "kagawa-sanuki-udon": "37-1",    # 讃岐うどん
     "ehime-mikan": "38-1",           # 蜜柑
@@ -125,7 +143,19 @@ def build_imageset(slug: str, card_id: str) -> int:
 
     filename = f"{name}.png"
     out = os.path.join(folder, filename)
-    reduced.save(out, optimize=True)
+    # Pillow versions disagree about whether a 192-colour indexed PNG should
+    # carry a 192- or 256-entry palette. The decoded pixels are identical, but
+    # blindly saving again rewrites every existing card and creates a noisy
+    # binary diff. Preserve the committed file whenever the rendered RGBA
+    # pixels have not actually changed.
+    should_write = True
+    if os.path.isfile(out):
+        with Image.open(out) as existing:
+            should_write = (existing.size != reduced.size
+                            or existing.convert("RGBA").tobytes()
+                            != reduced.convert("RGBA").tobytes())
+    if should_write:
+        reduced.save(out, optimize=True)
 
     with open(os.path.join(folder, "Contents.json"), "w") as f:
         json.dump({

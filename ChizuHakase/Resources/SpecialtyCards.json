@@ -7,7 +7,8 @@
       "nameKana": "かに",
       "nameKanji": "蟹",
       "category": "food",
-      "description": "つめたい うみで そだつよ"
+      "description": "つめたい うみで そだつよ",
+      "art": "card-01-1"
     },
     {
       "id": "01-2",
@@ -26,7 +27,8 @@
       "nameKana": "らべんだー",
       "nameKanji": "ラベンダー",
       "category": "nature",
-      "description": "むらさきの はなの うみ"
+      "description": "むらさきの はなの うみ",
+      "art": "card-01-3"
     },
     {
       "id": "02-1",
@@ -45,7 +47,8 @@
       "nameKana": "ねぶた",
       "nameKanji": "ねぶた",
       "category": "landmark",
-      "description": "ひかる おおきな にんぎょう"
+      "description": "ひかる おおきな にんぎょう",
+      "art": "card-02-2"
     },
     {
       "id": "02-3",
@@ -54,7 +57,8 @@
       "nameKana": "ほたて",
       "nameKanji": "帆立",
       "category": "food",
-      "description": "うみの なかで そだつ かい"
+      "description": "うみの なかで そだつ かい",
+      "art": "card-02-3"
     },
     {
       "id": "03-1",
@@ -73,7 +77,8 @@
       "nameKana": "なんぶてっき",
       "nameKanji": "南部鉄器",
       "category": "craft",
-      "description": "くろくて おもい てつの うつわ"
+      "description": "くろくて おもい てつの うつわ",
+      "art": "card-03-2"
     },
     {
       "id": "03-3",
@@ -82,7 +87,8 @@
       "nameKana": "りゅうせんどう",
       "nameKanji": "龍泉洞",
       "category": "nature",
-      "description": "あおい みずの どうくつ"
+      "description": "あおい みずの どうくつ",
+      "art": "card-03-3"
     },
     {
       "id": "04-1",
@@ -91,7 +97,8 @@
       "nameKana": "ぎゅうたん",
       "nameKanji": "牛タン",
       "category": "food",
-      "description": "やいて たべると おいしい"
+      "description": "やいて たべると おいしい",
+      "art": "card-04-1"
     },
     {
       "id": "04-2",
@@ -110,7 +117,8 @@
       "nameKana": "まつしま",
       "nameKanji": "松島",
       "category": "landmark",
-      "description": "しまが たくさん うかぶ うみ"
+      "description": "しまが たくさん うかぶ うみ",
+      "art": "card-04-3"
     },
     {
       "id": "05-1",
@@ -129,7 +137,8 @@
       "nameKana": "なまはげ",
       "nameKanji": "なまはげ",
       "category": "landmark",
-      "description": "おおごえで やってくる おに"
+      "description": "おおごえで やってくる おに",
+      "art": "card-05-2"
     },
     {
       "id": "05-3",
@@ -138,7 +147,8 @@
       "nameKana": "あきたいぬ",
       "nameKanji": "秋田犬",
       "category": "nature",
-      "description": "もふもふの おおきな いぬ"
+      "description": "もふもふの おおきな いぬ",
+      "art": "card-05-3"
     },
     {
       "id": "06-1",
@@ -157,7 +167,8 @@
       "nameKana": "いもに",
       "nameKanji": "芋煮",
       "category": "food",
-      "description": "かわらで みんなで つくる なべ"
+      "description": "かわらで みんなで つくる なべ",
+      "art": "card-06-2"
     },
     {
       "id": "06-3",
@@ -250,7 +261,8 @@
       "nameKana": "ぎょうざ",
       "nameKanji": "餃子",
       "category": "food",
-      "description": "やいて ぱりぱり"
+      "description": "やいて ぱりぱり",
+      "art": "card-09-3"
     },
     {
       "id": "10-1",
@@ -343,7 +355,8 @@
       "nameKana": "とうきょうたわー",
       "nameKanji": "東京タワー",
       "category": "landmark",
-      "description": "あかと しろの たかい とう"
+      "description": "あかと しろの たかい とう",
+      "art": "card-13-1"
     },
     {
       "id": "13-2",
@@ -493,7 +506,8 @@
       "nameKana": "きょうりゅう",
       "nameKanji": "恐竜",
       "category": "nature",
-      "description": "ほねが たくさん みつかった"
+      "description": "ほねが たくさん みつかった",
+      "art": "card-18-2"
     },
     {
       "id": "18-3",
@@ -520,7 +534,8 @@
       "nameKana": "ふじさん",
       "nameKanji": "富士山",
       "category": "nature",
-      "description": "にほんで いちばん たかい やま"
+      "description": "にほんで いちばん たかい やま",
+      "art": "card-19-2"
     },
     {
       "id": "19-3",
@@ -726,7 +741,8 @@
       "nameKana": "にしじんおり",
       "nameKanji": "西陣織",
       "category": "craft",
-      "description": "いとで もようを おりこむ"
+      "description": "いとで もようを おりこむ",
+      "art": "card-26-3"
     },
     {
       "id": "27-1",
@@ -847,7 +863,8 @@
       "nameKana": "とっとりさきゅう",
       "nameKanji": "鳥取砂丘",
       "category": "nature",
-      "description": "すなが やまのように つづく"
+      "description": "すなが やまのように つづく",
+      "art": "card-31-1"
     },
     {
       "id": "31-2",
@@ -988,7 +1005,8 @@
       "nameKana": "あわおどり",
       "nameKanji": "阿波踊り",
       "category": "landmark",
-      "description": "まちじゅうで おどる まつり"
+      "description": "まちじゅうで おどる まつり",
+      "art": "card-36-1"
     },
     {
       "id": "36-2",
