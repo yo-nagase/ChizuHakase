@@ -180,10 +180,20 @@ struct QuizView: View {
             .fixedSize(horizontal: false, vertical: true)
     }
 
+    /// Only in 「ちずで さがす」, where there is a question to re-hear — it
+    /// carries a different prefecture name every time. In 「なまえを あてる」
+    /// the button could only repeat the fixed instruction: it must not name
+    /// the target (that is the answer) and reading the four choices says
+    /// nothing about which one is right, so the mode has nothing worth a
+    /// speaker button. The answering there is *reading*; a child who cannot
+    /// read the choices answers by voice instead.
+    @ViewBuilder
     private func speakButton(_ quiz: QuizViewModel) -> some View {
-        Button { speak(quiz) } label: { Text("🔊") }
-            .buttonStyle(CircleIconButtonStyle(diameter: 44))
-            .accessibilityLabel(mode.readAloud)
+        if quiz.mode == .findOnMap {
+            Button { speak(quiz) } label: { Text("🔊") }
+                .buttonStyle(CircleIconButtonStyle(diameter: 44))
+                .accessibilityLabel(mode.readAloud)
+        }
     }
 
     @ViewBuilder
@@ -443,11 +453,10 @@ struct QuizView: View {
         speak(quiz)
     }
 
-    /// The 🔊 button, which is always a deliberate press.
-    ///
-    /// In 「なまえを あてる」 it must never say the target's name — that *is* the
-    /// answer — so it reads the instruction, which is what a child who cannot
-    /// read the screen actually needs from it (CLAUDE.md §7).
+    /// The 🔊 button's press, and the auto-announcement — 「ちずで さがす」
+    /// only, where the sentence carries the question (CLAUDE.md §7). It must
+    /// never run in 「なまえを あてる」: the only true thing it could say there
+    /// is the target's name, which is the answer.
     private func speak(_ quiz: QuizViewModel) {
         guard app.save.data.settings.speechEnabled else { return }
         // The microphone gives way to the announcement: holding the session
@@ -455,11 +464,6 @@ struct QuizView: View {
         // not something it should be listening to. The isSpeaking observer
         // re-arms it afterwards if the mode is on.
         if app.voice.isListening { app.voice.stop() }
-        if quiz.mode == .nameIt {
-            // Two phrases, not one string: the question and the instruction are
-            // separate things to hear.
-            return SpeechService.shared.speak([mode.nameItQuestion, mode.nameItPrompt])
-        }
         guard let target = quiz.target else { return }
         SpeechService.shared.speak("\(target.kana)は、どこかな?")
     }
