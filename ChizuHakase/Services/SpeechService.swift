@@ -6,19 +6,29 @@ import Foundation
 /// `AVSpeechSynthesizer` runs entirely on device, so this costs nothing and
 /// sends nothing anywhere. It is a free feature and must stay one: a child who
 /// cannot read hiragana yet has no way to play without it.
+// Explicit @MainActor: inheriting NSObject would otherwise pull the class to
+// its superclass's (non-)isolation instead of the project default.
 @Observable
-final class SpeechService {
+@MainActor
+final class SpeechService: NSObject {
     static let shared = SpeechService()
 
     private let synthesizer = AVSpeechSynthesizer()
+
+    /// Whether an announcement is still being spoken, mirrored into observable
+    /// state. The quiz holds the microphone back until this goes false: armed
+    /// any earlier, the recogniser hears the app say the answer's own name.
+    private(set) var isSpeaking = false
 
     /// Resolved once, at first use. A voice downloaded while the app is running
     /// is picked up the next launch, which is soon enough for something nobody
     /// changes twice.
     private let voice: AVSpeechSynthesisVoice?
 
-    private init() {
+    private override init() {
         voice = SpeechService.bestJapaneseVoice()
+        super.init()
+        synthesizer.delegate = self
     }
 
     func speak(_ text: String) {
@@ -51,13 +61,37 @@ final class SpeechService {
             utterance.postUtteranceDelay = index == phrases.count - 1 ? 0 : 0.3
             synthesizer.speak(utterance)
         }
+        isSpeaking = true
     }
 
     func stop() {
         synthesizer.stopSpeaking(at: .immediate)
+        isSpeaking = false
     }
 
     private var isCompact: Bool { (voice?.quality ?? .default) == .default }
+
+    /// Re-reads the synthesizer rather than counting utterances down: a queued
+    /// utterance that is cancelled without a callback would leave a counter
+    /// stuck above zero, and the mirror would say "speaking" forever.
+    private func refreshSpeaking() {
+        isSpeaking = synthesizer.isSpeaking
+    }
+}
+
+extension SpeechService: AVSpeechSynthesizerDelegate {
+    // Delivered on the synthesizer's queue, so both are non-isolated and only
+    // the main-actor hop touches state — same shape as the recognition
+    // handler in VoiceInputService.
+    nonisolated func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer,
+                                       didFinish utterance: AVSpeechUtterance) {
+        Task { @MainActor [weak self] in self?.refreshSpeaking() }
+    }
+
+    nonisolated func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer,
+                                       didCancel utterance: AVSpeechUtterance) {
+        Task { @MainActor [weak self] in self?.refreshSpeaking() }
+    }
 }
 
 // MARK: - Choosing the voice

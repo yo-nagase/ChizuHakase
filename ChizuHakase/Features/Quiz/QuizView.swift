@@ -15,6 +15,12 @@ struct QuizView: View {
 
     @State private var quiz: QuizViewModel?
     @State private var advanceTask: Task<Void, Never>?
+    /// Voice mode is a switch, not push-to-talk: once on it stays on until the
+    /// button is pressed again. Each question still gets its own recognition
+    /// session — the observers in `body` re-arm the microphone whenever
+    /// whatever stopped it (an answer, an announcement) has passed.
+    @State private var voiceModeOn = false
+    @State private var rearmTask: Task<Void, Never>?
     @State private var zoom: CGFloat = 1
     @State private var pan: CGSize = .zero
     @State private var comboBurst: ComboBurst?
@@ -42,7 +48,26 @@ struct QuizView: View {
             // is the question they cannot start.
             announce(model)
         }
-        .onDisappear { advanceTask?.cancel() }
+        // The microphone never simply runs: it is stopped around every answer
+        // (for audible feedback and a fresh transcript) and around every
+        // announcement (open during one, it hears the app say the answer's own
+        // name). These two observers are what bring it back afterwards, so the
+        // mode outlives each individual recognition session.
+        .onChange(of: app.voice.isListening) { _, listening in
+            guard !listening, let quiz else { return }
+            scheduleVoiceRearm(quiz)
+        }
+        .onChange(of: SpeechService.shared.isSpeaking) { _, speaking in
+            guard !speaking, let quiz else { return }
+            rearmVoice(quiz)
+        }
+        .onDisappear {
+            advanceTask?.cancel()
+            rearmTask?.cancel()
+            // Finishing a stage can leave the mode on with a session open;
+            // the microphone must not follow onto the result screen.
+            if app.voice.isListening { app.voice.stop() }
+        }
     }
 
     // MARK: - Layout
@@ -164,13 +189,16 @@ struct QuizView: View {
     @ViewBuilder
     private func micButton(_ quiz: QuizViewModel) -> some View {
         if app.isVoiceModeAvailable {
-            Button { toggleListening(quiz) } label: {
-                Text(app.voice.isListening ? "🎙️" : "🎤")
+            // Keyed to the mode, not to isListening: the session drops for a
+            // beat between questions, and a button that flickered off there
+            // would look like the mode had turned itself off.
+            Button { toggleVoiceMode(quiz) } label: {
+                Text(voiceModeOn ? "🎙️" : "🎤")
             }
             .buttonStyle(CircleIconButtonStyle(
-                background: app.voice.isListening ? Palette.teal : .white,
+                background: voiceModeOn ? Palette.teal : .white,
                 diameter: 44))
-            .accessibilityLabel(app.voice.isListening ? mode.listening : mode.answerByVoice)
+            .accessibilityLabel(voiceModeOn ? mode.listening : mode.answerByVoice)
         }
     }
 
@@ -295,6 +323,11 @@ struct QuizView: View {
     private func handleTap(_ prefecture: Prefecture?, at anchor: ComboBurst.Anchor,
                            quiz: QuizViewModel) {
         guard let prefecture else { return }
+        // Whichever of finger or voice answered, an open session ends here:
+        // while it holds the audio for recording the feedback sound is
+        // inaudible, a lingering transcript pollutes the next match — and on a
+        // correct answer the next question is about to be read aloud.
+        if app.voice.isListening { app.voice.stop() }
         switch quiz.answer(prefecture.code) {
         case .correct:
             SoundService.shared.play(.correct, enabled: app.save.data.settings.soundEnabled)
@@ -330,18 +363,34 @@ struct QuizView: View {
                 onFinish(quiz.makeResult())
             } else {
                 announce(quiz)
+                // When nothing was announced (「なまえを あてる」, or speech
+                // switched off) the next question's session starts right here;
+                // with an announcement, the isSpeaking observer starts it once
+                // the reading ends.
+                rearmVoice(quiz)
             }
         }
     }
 
     /// Voice answering is an alternative to tapping, never a replacement:
     /// the map stays live the whole time (CLAUDE.md §7).
-    private func toggleListening(_ quiz: QuizViewModel) {
+    private func toggleVoiceMode(_ quiz: QuizViewModel) {
         guard app.isVoiceModeAvailable else { return }
-        if app.voice.isListening {
+        if voiceModeOn {
+            voiceModeOn = false
+            rearmTask?.cancel()
             app.voice.stop()
-            return
+        } else {
+            voiceModeOn = true
+            // If a question is mid-announcement this does nothing, and the
+            // isSpeaking observer arms the microphone when the reading ends —
+            // opening it during one would let it hear the answer's name.
+            rearmVoice(quiz)
         }
+    }
+
+    /// One recognition session, scoped to the current question.
+    private func startListening(_ quiz: QuizViewModel) {
         // Only the names actually on offer: in 「なまえを あてる」 a child saying
         // a prefecture that is not one of the four has not answered the
         // question, and scoring it would be scoring the wrong thing.
@@ -349,9 +398,30 @@ struct QuizView: View {
         let candidates = app.mapData.prefectures(in: codes)
         app.voice.start { heard in
             guard let match = PrefectureNameMatcher.match(heard, among: candidates) else { return }
-            app.voice.stop()
             // A spoken answer has no fingertip to aim at.
             handleTap(match, at: .prefecture(match.code), quiz: quiz)
+        }
+    }
+
+    /// Bring the microphone back, if the mode is on and nothing is in its way.
+    private func rearmVoice(_ quiz: QuizViewModel) {
+        guard voiceModeOn, app.isVoiceModeAvailable,
+              quiz.phase == .asking,
+              !app.voice.isListening,
+              !SpeechService.shared.isSpeaking else { return }
+        startListening(quiz)
+    }
+
+    /// Re-arm after a beat rather than instantly. The pause lets the answer
+    /// feedback play before the session takes the audio back, and it keeps a
+    /// recogniser that gives up on silence from spinning in a restart loop.
+    private func scheduleVoiceRearm(_ quiz: QuizViewModel) {
+        guard voiceModeOn else { return }
+        rearmTask?.cancel()
+        rearmTask = Task {
+            try? await Task.sleep(for: .seconds(0.6))
+            guard !Task.isCancelled else { return }
+            rearmVoice(quiz)
         }
     }
 
@@ -375,6 +445,11 @@ struct QuizView: View {
     /// read the screen actually needs from it (CLAUDE.md §7).
     private func speak(_ quiz: QuizViewModel) {
         guard app.save.data.settings.speechEnabled else { return }
+        // The microphone gives way to the announcement: holding the session
+        // open would silence the reading — and in 「ちずで さがす」 the reading
+        // names the answer, which an open microphone would hear and score.
+        // The isSpeaking observer re-arms it afterwards if the mode is on.
+        if app.voice.isListening { app.voice.stop() }
         if quiz.mode == .nameIt {
             // Two phrases, not one string: the question and the instruction are
             // separate things to hear.
@@ -386,6 +461,7 @@ struct QuizView: View {
 
     private func leave() {
         advanceTask?.cancel()
+        rearmTask?.cancel()
         SpeechService.shared.stop()
         app.voice.stop()
         dismiss()

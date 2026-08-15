@@ -31,7 +31,24 @@ final class SoundService {
     private let player = AVAudioPlayerNode()
     private var started = false
 
-    private init() {}
+    private init() {
+        // The voice input mode flips the audio session to .record and back,
+        // which invalidates a running engine — afterwards it either reports
+        // stopped or keeps "running" with no output, and the correct-answer
+        // sound goes silently missing. Tear it down on the system's
+        // notification so the next play() rebuilds under the session as it
+        // is by then.
+        NotificationCenter.default.addObserver(
+            forName: .AVAudioEngineConfigurationChange, object: engine, queue: nil
+        ) { @Sendable [weak self] _ in
+            Task { @MainActor in self?.reset() }
+        }
+    }
+
+    private func reset() {
+        engine.stop()
+        started = false
+    }
 
     func play(_ cue: Cue, enabled: Bool) {
         guard enabled else { return }
