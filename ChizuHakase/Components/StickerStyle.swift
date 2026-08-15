@@ -95,12 +95,16 @@ extension View {
     }
 
     /// A panel cut out of the album page: white edge, lifted off the paper.
+    /// `edgeStyle` overrides the edge's colour — the card-win banner hands in
+    /// a tier's foil ramp so the border can be the metal itself.
     func stickerCard(fill: Color = .white,
                      cornerRadius: CGFloat = Sticker.cornerRadius,
                      edge: CGFloat = Palette.stickerEdgeWidth,
+                     edgeStyle: AnyShapeStyle? = nil,
                      isHolographic: Bool = false) -> some View {
         modifier(StickerCardModifier(fill: fill, cornerRadius: cornerRadius,
-                                     edge: edge, isHolographic: isHolographic))
+                                     edge: edge, edgeStyle: edgeStyle,
+                                     isHolographic: isHolographic))
     }
 }
 
@@ -108,6 +112,7 @@ struct StickerCardModifier: ViewModifier {
     var fill: Color
     var cornerRadius: CGFloat
     var edge: CGFloat
+    var edgeStyle: AnyShapeStyle?
     var isHolographic: Bool
 
     func body(content: Content) -> some View {
@@ -129,8 +134,10 @@ struct StickerCardModifier: ViewModifier {
             }
             .overlay {
                 RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                    .strokeBorder(isHolographic ? Palette.gold : Palette.dieCut,
-                                  lineWidth: isHolographic ? edge : edge)
+                    .strokeBorder(edgeStyle
+                                  ?? AnyShapeStyle(isHolographic ? Palette.gold
+                                                                 : Palette.dieCut),
+                                  lineWidth: edge)
             }
             .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
             .shadow(color: Palette.stickerShadow, radius: 0, y: Sticker.lift)

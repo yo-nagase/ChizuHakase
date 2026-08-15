@@ -499,6 +499,32 @@ private struct CardWinBanner: View {
 
     private var tier: CardTier { draw.tier }
 
+    /// The panel in the tier's own stock — the foil's lit stop, so silver
+    /// news arrives on silver and gold news on gold. Rainbow keeps the white
+    /// base its holographic wash needs.
+    private var stock: Color {
+        switch tier {
+        case .silver: Palette.silverStock
+        case .gold: Palette.goldStock
+        default: .white
+        }
+    }
+
+    /// The edge in the tier's foil ramp — the same metal the card face wears.
+    private var foil: AnyShapeStyle? {
+        let ramp: [Gradient.Stop]? = switch tier {
+        case .silver: Palette.silverRamp
+        case .gold: Palette.foilRamp
+        case .rainbow: Palette.rainbowRamp
+        default: nil
+        }
+        return ramp.map {
+            AnyShapeStyle(LinearGradient(stops: $0,
+                                         startPoint: .topLeading,
+                                         endPoint: .bottomTrailing))
+        }
+    }
+
     /// Crossing into silver or gold is the news; a star that lands inside a tier
     /// is still worth saying, and the stars underneath show how far it got.
     private var headline: String {
@@ -547,7 +573,13 @@ private struct CardWinBanner: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 10)
-        .stickerCard(cornerRadius: 18, isHolographic: tier.isSpecial)
+        // The banner wears the tier it announces — silver stock and silver
+        // foil for a silver card, gold for gold, the rainbow wash for
+        // rainbow. It used to give every special tier the same gold edge,
+        // which dressed a card as gold at the exact moment the text was
+        // saying it went silver.
+        .stickerCard(fill: stock, cornerRadius: 18, edgeStyle: foil,
+                     isHolographic: tier == .rainbow)
     }
 }
 

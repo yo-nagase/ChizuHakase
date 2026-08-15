@@ -145,6 +145,13 @@ nonisolated enum Palette {
     static let foilEdge = Color(hex: 0xFFF6D2)
     static let silverEdge = Color(hex: 0xF7FAFC)
     static let rainbowEdge = Color(hex: 0xEFE3FF)
+    /// Light cuts of the two metals, for a surface that carries a tier
+    /// without being a full card face — the quiz's card-win banner. Taken
+    /// from each ramp's lit stop so the panel reads as the same foil,
+    /// caught by the light, rather than as a new colour.
+    static let silverStock = Color(hex: 0xEDF2F6)
+    static let goldStock = Color(hex: 0xFFEDB0)
+
     /// Stars on a silver card. Darker than the metal: they sit on the white
     /// panel, where the metal's own tone would disappear.
     static let silverMark = Color(hex: 0x8A939B)
