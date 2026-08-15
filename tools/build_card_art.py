@@ -65,31 +65,61 @@ ART_FOR_CARD = {
     "akita-inu": "05-3",              # 秋田犬
     "yamagata-sakuranbo": "06-1",    # さくらんぼ
     "yamagata-imoni": "06-2",         # 芋煮
+    "yamagata-benibana": "06-3",      # 紅花
     "fukushima-momo": "07-1",        # 桃
+    "fukushima-akabeko": "07-2",     # 赤べこ
+    "fukushima-tsurugajo": "07-3",   # 鶴ヶ城
     "ibaraki-natto": "08-1",         # 納豆
+    "ibaraki-melon": "08-2",         # メロン
+    "ibaraki-tsukubasan": "08-3",    # 筑波山
     "tochigi-ichigo": "09-1",        # 苺
+    "tochigi-nikko-toshogu": "09-2", # 日光東照宮
     "tochigi-gyoza": "09-3",         # 餃子
     "gunma-konnyaku": "10-1",        # 蒟蒻
+    "gunma-daruma": "10-2",          # だるま
+    "gunma-kusatsu-onsen": "10-3",   # 草津温泉
     "saitama-soka-senbei": "11-1",   # 草加せんべい
+    "saitama-fukaya-negi": "11-2",   # 深谷ねぎ
+    "saitama-hina-ningyo": "11-3",   # 雛人形
     "chiba-rakkasei": "12-1",        # 落花生
+    "chiba-inubosaki": "12-2",       # 犬吠埼
+    "chiba-shoyu": "12-3",           # 醤油
     "tokyo-tower": "13-1",           # 東京タワー
     "tokyo-edomae-sushi": "13-2",    # 江戸前寿司
+    "tokyo-edo-kiriko": "13-3",      # 江戸切子
+    "kanagawa-kamakura-daibutsu": "14-1",  # 鎌倉大仏
     "kanagawa-shirasu": "14-2",      # しらす
+    "kanagawa-yosegi-zaiku": "14-3", # 寄木細工
     "niigata-koshihikari": "15-1",   # こしひかり
+    "niigata-nishikigoi": "15-2",    # 錦鯉
+    "niigata-sasa-dango": "15-3",    # 笹団子
+    "toyama-hotaru-ika": "16-1",     # ホタルイカ
+    "toyama-kurobe-dam": "16-2",     # 黒部ダム
     # Two takes on ます寿司; this is the later one.
     "toyama-masuzushi": "16-3",      # ます寿司
+    "ishikawa-kenrokuen": "17-1",    # 兼六園
+    "ishikawa-kutani-yaki": "17-2",  # 九谷焼
     "ishikawa-kinpaku": "17-3",      # 金箔
     "fukui-echizen-gani": "18-1",    # 越前がに
     "fukui-kyoryu": "18-2",          # 恐竜
+    "fukui-megane": "18-3",          # 眼鏡
+    "yamanashi-budo": "19-1",        # 葡萄
     "yamanashi-fujisan": "19-2",     # 富士山
     "yamanashi-hoto": "19-3",        # ほうとう
     "nagano-shinshu-soba": "20-1",   # 蕎麦
+    "nagano-matsumotojo": "20-2",    # 松本城
+    "nagano-kamikochi": "20-3",      # 上高地
+    "gifu-shirakawago": "21-1",      # 白川郷
+    "gifu-mino-washi": "21-2",       # 美濃和紙
     "gifu-hidagyu": "21-3",          # 飛騨牛
     "aichi-uiro": "23-1",            # ういろう
     # Two takes on Shizuoka tea exist. -ocha titles itself 「お茶」 and -cha
     # 「静岡茶」; the picture's own title is what a child reads, because an
     # illustrated chip drops the caption underneath (§4).
     "shizuoka-ocha": "22-1",         # 茶
+    "shizuoka-unagi": "22-2",        # 鰻
+    "shizuoka-miho-no-matsubara": "22-3",  # 三保松原
+    "aichi-nagoyajo": "23-2",        # 名古屋城
     "mie-ise-udon": "24-3",          # 伊勢うどん
     "shiga-funazushi": "25-3",       # 鮒ずし
     "kyoto-uji-matcha": "26-2",      # 抹茶
