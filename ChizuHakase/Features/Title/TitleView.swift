@@ -22,25 +22,20 @@ struct TitleView: View {
         ZStack {
             AlbumPage()
             VStack(spacing: 0) {
-                HStack {
-                    Spacer()
-                    Button { onSettings() } label: { Text("⚙️") }
-                        .buttonStyle(CircleIconButtonStyle(diameter: 40))
-                        .accessibilityLabel(mode.settings)
-                }
-                Spacer(minLength: 4)
-
-                Text(mode.appTitleTop)
-                    .stickerText(32, relativeTo: .largeTitle, color: Palette.orange,
-                                 outlineWidth: 3.5)
-                    .rotationEffect(.degrees(-4))
-                Text(mode.appTitleMain)
-                    .stickerText(46, relativeTo: .largeTitle, outlineWidth: 4)
-                    .rotationEffect(.degrees(1.5))
+                // The brand mark is artwork, shared by both text modes;
+                // VoiceOver still gets words, not a picture, via TextMode.
+                Image("TitleLogo")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(maxWidth: 300)
+                    .padding(.top, 4)
+                    .accessibilityLabel("\(mode.appTitleTop) \(mode.appTitleMain)")
+                    .accessibilityAddTraits(.isHeader)
 
                 miniMap
-                    .frame(maxHeight: 260)
-                    .padding(.vertical, 10)
+                    .frame(maxHeight: 380)
+                    .layoutPriority(1)
+                    .padding(.vertical, 8)
 
                 progressLine
 
@@ -48,14 +43,14 @@ struct TitleView: View {
 
                 VStack(spacing: 10) {
                     Button(action: onStart) {
-                        Image("TitlePlayButton")
+                        Image(mode.isKids ? "TitlePlayButton" : "TitlePlayButtonAdult")
                             .resizable()
                             .scaledToFit()
                             .accessibilityHidden(true)
                     }
                     .buttonStyle(TitleArtworkButtonStyle())
                     .accessibilityLabel(mode.play)
-                    .frame(maxWidth: 288)
+                    .frame(maxWidth: 256)
 
                     HStack(spacing: 10) {
                         Button(action: onMyMap) {
@@ -68,7 +63,7 @@ struct TitleView: View {
                         .accessibilityLabel(mode.myMap)
 
                         Button(action: { onCardBook(.all) }) {
-                            Image("TitleCardButton")
+                            Image(mode.isKids ? "TitleCardButton" : "TitleCardButtonAdult")
                                 .resizable()
                                 .scaledToFit()
                                 .accessibilityHidden(true)
@@ -77,7 +72,7 @@ struct TitleView: View {
                         .accessibilityLabel(mode.viewCards)
                     }
                 }
-                .frame(maxWidth: 360)
+                .frame(maxWidth: 320)
 
                 Spacer(minLength: 16)
 
@@ -99,6 +94,18 @@ struct TitleView: View {
             }
             .padding(.horizontal, 24)
             .pageColumn()
+
+            // The gear floats over the page corner instead of owning a row of
+            // the column — that row's 44pt was the map's missing headroom. The
+            // logo underneath keeps its transparent corner there, so the two
+            // never visually collide.
+            Button { onSettings() } label: { Text("⚙️") }
+                .buttonStyle(CircleIconButtonStyle(diameter: 40))
+                .accessibilityLabel(mode.settings)
+                .frame(maxWidth: .infinity, maxHeight: .infinity,
+                       alignment: .topTrailing)
+                .padding(.horizontal, 24)
+                .pageColumn()
         }
     }
 
@@ -137,13 +144,13 @@ struct TitleView: View {
             // the first clean answer — counting first answers filled the bar
             // to 47/47 while the map was still mostly green, and a full meter
             // over an unfinished map called the child done when they were not.
-            tally("🗾", app.save.data.sparklingPrefectureCount, 47,
+            tally("TitleLearnedHUD", app.save.data.sparklingPrefectureCount, 47,
                   mode.learnedPrefectures, Palette.learned, action: onMyMap)
             // Opens the book unfiltered now rather than straight onto the キラ
             // cards, which the third tile used to do. One tile cannot lead two
             // places, and the book's own ✨ chip is the first thing above the
             // grid — one tap further, in the room where the cards already are.
-            tally("🃏", app.save.data.totalOwnedCards, max(app.cards.count, 1),
+            tally("TitleCardsHUD", app.save.data.totalOwnedCards, max(app.cards.count, 1),
                   mode.ownedCards, Palette.collected,
                   note: TallyNote(emoji: "✨", label: mode.sparklingCards,
                                   count: app.save.data.specialCardCount)) {
@@ -153,6 +160,7 @@ struct TitleView: View {
         // Holds the row to its tallest tile instead of letting the flexible
         // heights above stretch it down the screen.
         .fixedSize(horizontal: false, vertical: true)
+        .frame(maxWidth: 360)
     }
 
     /// A second count that belongs *inside* the first.
@@ -171,11 +179,11 @@ struct TitleView: View {
     /// to the map, the card count to the book. A number a child is proud of
     /// should lead somewhere — and every one of these was already the answer to
     /// "where can I see them?".
-    private func tally(_ emoji: String, _ have: Int, _ total: Int,
+    private func tally(_ artwork: String, _ have: Int, _ total: Int,
                        _ label: String, _ tint: Color,
                        note: TallyNote? = nil,
                        action: @escaping () -> Void) -> some View {
-        Button(action: action) { tallyFace(emoji, have, total, label, tint, note) }
+        Button(action: action) { tallyFace(artwork, have, total, label, tint, note) }
             .buttonStyle(TallyPressStyle())
             .accessibilityElement(children: .ignore)
             .accessibilityLabel(note.map { "\(label) \(have) / \(total)。\($0.label) \($0.count)" }
@@ -183,77 +191,69 @@ struct TitleView: View {
             .accessibilityAddTraits(.isButton)
     }
 
-    private func tallyFace(_ emoji: String, _ have: Int, _ total: Int,
+    private func tallyFace(_ artwork: String, _ have: Int, _ total: Int,
                            _ label: String, _ tint: Color,
                            _ note: TallyNote?) -> some View {
-        VStack(spacing: 5) {
-            Text(emoji)
-                .font(.system(size: 15))
-                .frame(width: 28, height: 28)
-                .background(Circle().fill(tint.opacity(0.28)))
+        GeometryReader { geo in
+            ZStack {
+                // The frame, corner ornaments and collection icon are artwork;
+                // every value laid over it remains live SwiftUI content.
+                Image(artwork)
+                    .resizable()
+                    .scaledToFit()
+                    .accessibilityHidden(true)
 
-            HStack(alignment: .firstTextBaseline, spacing: 2) {
-                // Verbatim: SwiftUI's localised interpolation groups integers,
-                // and a child reading 「1,120」 has to parse a comma first.
-                Text(verbatim: "\(have)")
-                    .font(AppFont.rounded(21, relativeTo: .title3))
-                    .foregroundStyle(Palette.ink)
+                VStack(spacing: 0) {
+                    HStack(alignment: .firstTextBaseline, spacing: 2) {
+                        // Verbatim: SwiftUI's localised interpolation groups
+                        // integers, and a child reading 「1,120」 has to parse a
+                        // comma first.
+                        Text(verbatim: "\(have)")
+                            .font(AppFont.rounded(23, relativeTo: .title3))
+                            .foregroundStyle(Palette.ink)
+                        Text(verbatim: "/\(total)")
+                            .font(AppFont.rounded(11, relativeTo: .caption2))
+                            .foregroundStyle(Palette.ink.opacity(0.48))
+                    }
                     .monospacedDigit()
-                Text(verbatim: "/\(total)")
-                    .font(AppFont.rounded(11, relativeTo: .caption2))
-                    .foregroundStyle(Palette.ink.opacity(0.4))
-                    .monospacedDigit()
-            }
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
 
-            Text(label)
-                .font(AppFont.rounded(11, relativeTo: .caption2))
-                .foregroundStyle(Palette.ink.opacity(0.55))
-                // Wraps rather than truncates. At the largest accessibility
-                // sizes a third of the screen holds about two characters, and
-                // 「カ…」 was already what 「カード」 became there — a label
-                // clipped to its first letter names nothing at all. Three lines
-                // because 「キラカード」 is five characters and needs them.
-                .lineLimit(3)
-                .multilineTextAlignment(.center)
-                .minimumScaleFactor(0.75)
-                // Without this the label takes the width it is offered and
-                // clips, instead of asking for the second line it was just
-                // allowed.
-                .fixedSize(horizontal: false, vertical: true)
+                    Text(label)
+                        .font(AppFont.rounded(11, relativeTo: .caption2))
+                        .foregroundStyle(Palette.ink.opacity(0.78))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.62)
+                }
+                .frame(width: geo.size.width * 0.53)
+                .position(x: geo.size.width * 0.67,
+                          y: geo.size.height * 0.34)
 
-            ProgressMeter(fraction: total > 0 ? Double(have) / Double(total) : 0, tint: tint)
+                ProgressMeter(
+                    fraction: total > 0 ? Double(have) / Double(total) : 0,
+                    tint: tint
+                )
+                .frame(width: geo.size.width * 0.80,
+                       height: max(8, geo.size.height * 0.085))
+                .position(x: geo.size.width * 0.52,
+                          y: geo.size.height * 0.69)
 
-            // One Text rather than an HStack of three, so it wraps as a phrase
-            // instead of each piece being squeezed separately.
-            if let note {
-                Text(verbatim: note.text)
-                    .font(AppFont.rounded(10, relativeTo: .caption2))
-                    .foregroundStyle(Palette.ink.opacity(0.5))
-                    .monospacedDigit()
-                    .lineLimit(3)
-                    .multilineTextAlignment(.center)
-                    .minimumScaleFactor(0.75)
-                    .fixedSize(horizontal: false, vertical: true)
+                // One Text rather than an HStack of three, so the note remains
+                // one readable phrase while its count changes.
+                if let note {
+                    Text(verbatim: note.text)
+                        .font(AppFont.rounded(10, relativeTo: .caption2))
+                        .foregroundStyle(Palette.ink.opacity(0.72))
+                        .monospacedDigit()
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.68)
+                        .frame(width: geo.size.width * 0.72)
+                        .position(x: geo.size.width * 0.57,
+                                  y: geo.size.height * 0.84)
+                }
             }
         }
-        .padding(.vertical, 10)
-        .padding(.horizontal, 10)
-        // maxHeight so the two tiles match: only one of them carries a note, and
-        // a pair of cards at different heights reads as two unrelated things
-        // rather than as one row. The HStack pins the row to its tallest.
-        //
-        // Top-aligned so the spare height goes under the shorter tile instead of
-        // around it — otherwise the two meters sit at different heights and the
-        // pair stops scanning as one row again.
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-        .background(
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .fill(.white)
-                // A soft ambient shadow, not the solid offset one the buttons
-                // use. The difference is what says "sitting on the page" rather
-                // than "waiting to be pushed".
-                .shadow(color: Palette.ink.opacity(0.06), radius: 5, y: 2)
-        )
+        .aspectRatio(800 / 483, contentMode: .fit)
     }
 }
 
@@ -282,11 +282,20 @@ private struct ProgressMeter: View {
             let clamped = min(max(fraction, 0), 1)
             let width = max(geo.size.width * clamped, 6)
             ZStack(alignment: .leading) {
-                Capsule().fill(Palette.ink.opacity(0.08))
-                Capsule().fill(tint).frame(width: width)
+                Capsule()
+                    .fill(.white.opacity(0.75))
+                    .overlay {
+                        Capsule().stroke(Palette.ink.opacity(0.25), lineWidth: 1)
+                    }
+                Capsule()
+                    .fill(tint)
+                    .overlay {
+                        Capsule().stroke(.white.opacity(0.45), lineWidth: 1)
+                    }
+                    .frame(width: width)
+                    .padding(2)
             }
         }
-        .frame(height: 6)
     }
 }
 
