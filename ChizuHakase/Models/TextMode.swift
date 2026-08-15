@@ -141,8 +141,6 @@ nonisolated extension TextMode {
     /// the summit. It said 「シール」 for a while — a leftover from when the
     /// tiles were stickers, naming a thing the interface no longer shows.
     var clearedPrefectures: String { isKids ? "できた けん" : "正解した県" }
-    /// VoiceOver's name for the mode medal on a stage sheet — a no-miss clear.
-    var noMissClear: String { isKids ? "ノーミスで クリア" : "ノーミスでクリア" }
     var resetZoom: String { isKids ? "もとの おおきさ" : "元の大きさ" }
     var eraseEverything: String { isKids ? "きろくを ぜんぶ けす" : "記録をすべて消去" }
     var eraseConfirm1: String { isKids ? "ほんとうに けしても いい?" : "本当に消去しますか?" }
