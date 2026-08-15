@@ -11,6 +11,13 @@ struct TitleView: View {
     var onCardBook: (CardFilter) -> Void
     var onSettings: () -> Void
 
+    /// MARKETING_VERSION from project.yml, read through the generated
+    /// Info.plist — never hardcoded here, or the footer and the App Store
+    /// would drift apart on the first release that forgets one of them.
+    private var version: String? {
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String
+    }
+
     var body: some View {
         ZStack {
             AlbumPage()
@@ -54,11 +61,21 @@ struct TitleView: View {
 
                 Spacer(minLength: 16)
 
-                Text("ちずデータ: Global Map Japan (国土地理院) をもとに簡略化")
-                    .font(AppFont.rounded(10, relativeTo: .caption2))
-                    .foregroundStyle(Palette.ink.opacity(0.42))
-                    .multilineTextAlignment(.center)
-                    .padding(.bottom, 6)
+                VStack(spacing: 2) {
+                    Text("ちずデータ: Global Map Japan (国土地理院) をもとに簡略化")
+                        .font(AppFont.rounded(10, relativeTo: .caption2))
+                        .foregroundStyle(Palette.ink.opacity(0.42))
+                        .multilineTextAlignment(.center)
+                    if let version {
+                        // For the parent writing a support mail, not for the
+                        // child: the one string that says which build this is.
+                        Text(verbatim: "v\(version)")
+                            .font(AppFont.rounded(9, relativeTo: .caption2))
+                            .foregroundStyle(Palette.ink.opacity(0.32))
+                            .accessibilityLabel("バージョン \(version)")
+                    }
+                }
+                .padding(.bottom, 6)
             }
             .padding(.horizontal, 24)
             .pageColumn()
