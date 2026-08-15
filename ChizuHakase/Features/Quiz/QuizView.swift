@@ -188,7 +188,10 @@ struct QuizView: View {
 
     @ViewBuilder
     private func micButton(_ quiz: QuizViewModel) -> some View {
-        if app.isVoiceModeAvailable {
+        // なまえを あてる only. In ちずで さがす the question sentence already
+        // says the prefecture's name — speaking that name back is not an
+        // answer, so a microphone there has nothing it could listen for.
+        if quiz.mode == .nameIt, app.isVoiceModeAvailable {
             // Keyed to the mode, not to isListening: the session drops for a
             // beat between questions, and a button that flickered off there
             // would look like the mode had turned itself off.
@@ -378,7 +381,7 @@ struct QuizView: View {
     /// Voice answering is an alternative to tapping, never a replacement:
     /// the map stays live the whole time (CLAUDE.md §7).
     private func toggleVoiceMode(_ quiz: QuizViewModel) {
-        guard app.isVoiceModeAvailable else { return }
+        guard app.isVoiceModeAvailable, quiz.mode == .nameIt else { return }
         if voiceModeOn {
             voiceModeOn = false
             rearmTask?.cancel()
@@ -394,11 +397,10 @@ struct QuizView: View {
 
     /// One recognition session, scoped to the current question.
     private func startListening(_ quiz: QuizViewModel) {
-        // Only the names actually on offer: in 「なまえを あてる」 a child saying
-        // a prefecture that is not one of the four has not answered the
-        // question, and scoring it would be scoring the wrong thing.
-        let codes = quiz.mode == .nameIt ? quiz.choices : Array(quiz.interactiveCodes)
-        let candidates = app.mapData.prefectures(in: codes)
+        // Only the names actually on offer: a child saying a prefecture that
+        // is not one of the four choices has not answered the question, and
+        // scoring it would be scoring the wrong thing.
+        let candidates = app.mapData.prefectures(in: quiz.choices)
         app.voice.start { heard in
             guard let match = PrefectureNameMatcher.match(heard, among: candidates) else { return }
             // A spoken answer has no fingertip to aim at.
@@ -449,9 +451,9 @@ struct QuizView: View {
     private func speak(_ quiz: QuizViewModel) {
         guard app.save.data.settings.speechEnabled else { return }
         // The microphone gives way to the announcement: holding the session
-        // open would silence the reading — and in 「ちずで さがす」 the reading
-        // names the answer, which an open microphone would hear and score.
-        // The isSpeaking observer re-arms it afterwards if the mode is on.
+        // open would silence the reading, and what the app says out loud is
+        // not something it should be listening to. The isSpeaking observer
+        // re-arms it afterwards if the mode is on.
         if app.voice.isListening { app.voice.stop() }
         if quiz.mode == .nameIt {
             // Two phrases, not one string: the question and the instruction are
