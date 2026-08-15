@@ -74,9 +74,9 @@ struct MapEffectTests {
     /// The layers stack in `codes` order, so an animating prefecture used to
     /// slide *under* every neighbour drawn after it — the pop, the floating
     /// specialty emoji and all, half-swallowed by the next shape over. The
-    /// addressee of the live effect must ride above its siblings, and the
-    /// blinking answer above the crowd, or a neighbour's die-cut carves into
-    /// its outline.
+    /// addressee of the live effect must ride above its siblings, and anything
+    /// wearing a ring — the blinking answer, the asked-about prefecture —
+    /// above the crowd, or a neighbour's die-cut carves into its outline.
     @Test func theAnimatingPrefectureRisesAboveItsNeighbours() {
         let view = PrefectureMapView(
             mapData: MapDataTests.map,
@@ -84,13 +84,16 @@ struct MapEffectTests {
             appearance: { PrefectureAppearance.slot(for: $0.code) },
             hintCode: 13,
             effect: MapEffect(code: 5, kind: .pop, id: 1))
-        #expect(view.zIndex(for: 5) > view.zIndex(for: 6),
+        let slot = PrefectureAppearance.slot(for: 6)
+        #expect(view.zIndex(for: 5, paint: slot) > view.zIndex(for: 6, paint: slot),
                 "the popping prefecture is not lifted above its neighbours")
-        #expect(view.zIndex(for: 13) > view.zIndex(for: 6),
+        #expect(view.zIndex(for: 13, paint: slot) > view.zIndex(for: 6, paint: slot),
                 "the hinted answer's outline can be cut by a later neighbour")
-        #expect(view.zIndex(for: 5) > view.zIndex(for: 13),
+        #expect(view.zIndex(for: 5, paint: slot) > view.zIndex(for: 13, paint: slot),
                 "the thing moving right now outranks the thing blinking")
-        #expect(view.zIndex(for: 6) == view.zIndex(for: 7),
+        #expect(view.zIndex(for: 6, paint: slot) == view.zIndex(for: 7, paint: slot),
                 "everyone else stays flat")
+        #expect(view.zIndex(for: 6, paint: .asked(for: 6)) > view.zIndex(for: 7, paint: slot),
+                "the asked-about prefecture's ring can be cut by a later neighbour")
     }
 }
