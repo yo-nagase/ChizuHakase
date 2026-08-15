@@ -38,10 +38,15 @@ nonisolated struct PrefectureAppearance: Equatable {
         return appearance
     }
 
-    /// A sticker pressed onto the page.
+    /// A sticker pressed onto the page. The edge defaults to the white
+    /// die-cut; the quiz's correct-answer celebration passes gold, so that
+    /// moment reads as a small reward rather than as one more sticker on
+    /// the sheet.
     static func stuck(for code: Int, strength: Double = 1, sparkling: Bool = false,
+                      stroke: Color = Palette.dieCut,
                       badge: String? = nil) -> PrefectureAppearance {
         PrefectureAppearance(fill: Palette.fill(for: code, strength: strength),
+                             stroke: stroke,
                              isSparkling: sparkling,
                              isStuck: true,
                              badge: badge)

@@ -315,7 +315,10 @@ struct QuizView: View {
         // on screen has to stay a question.
         let isCelebrating = quiz.effect?.code == pref.code && quiz.phase == .celebrating
         guard isCelebrating else { return .slot(for: pref.code) }
-        return .stuck(for: pref.code, badge: quiz.lastDraw?.card.emoji)
+        // Gold, not the sticker-white die-cut: white against the washed slots
+        // barely registered, and gold is already the app's reward colour.
+        return .stuck(for: pref.code, stroke: Palette.gold,
+                      badge: quiz.lastDraw?.card.emoji)
     }
 
     // MARK: - Actions
