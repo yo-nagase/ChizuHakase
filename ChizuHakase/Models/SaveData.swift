@@ -192,6 +192,15 @@ nonisolated struct SaveData: Codable, Sendable, Equatable {
 
     var totalOwnedCards: Int { cards.values.filter { $0 > 0 }.count }
 
+    /// Cards currently sitting on one exact rung of the visible card ladder.
+    ///
+    /// Exact matters for a breakdown: a rainbow card grew out of a gold card,
+    /// but showing it in both columns would make the three displayed counts
+    /// add up to more cards than the child actually owns.
+    func cardCount(ofTier tier: CardTier) -> Int {
+        cards.keys.filter { self.tier(of: $0) == tier }.count
+    }
+
     /// Silver and up — see `CardTier.isSpecial`.
     var specialCardCount: Int { cards.keys.filter { tier(of: $0).isSpecial }.count }
 

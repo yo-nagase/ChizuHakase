@@ -209,12 +209,10 @@ struct TitleView: View {
     /// Two tallies, because there are two collections: the country and the
     /// cards.
     ///
-    /// The silver-and-up count used to be a third tile of its own, and out of
-    /// three tiles it was the one nobody could place. It shares a denominator
-    /// with the card count and is a *subset* of it, but sitting side by side at
-    /// equal weight the two read as unrelated collections — and 「5/141」 next
-    /// to 「38/141」 gives a child no way to see that the five are among the
-    /// thirty-eight. Inside the card tile the nesting is the layout.
+    /// The foil-card counts live inside the card tile because they are a
+    /// breakdown of that collection, not a third destination. Gold, silver
+    /// and rainbow are exclusive here: a rainbow card is no longer repeated
+    /// under gold, so the three numbers remain an honest inventory.
     private var progressLine: some View {
         HStack(spacing: 10) {
             // 「おぼえた」 is claimed at the top of the mastery ladder, not on
@@ -230,31 +228,49 @@ struct TitleView: View {
             // grid — one tap further, in the room where the cards already are.
             tally("TitleCardsHUD", app.save.data.totalOwnedCards, max(app.cards.count, 1),
                   mode.ownedCards, Palette.collected,
-                  note: TallyNote(emoji: "✨", label: mode.sparklingCards,
-                                  count: app.save.data.specialCardCount),
+                  breakdown: TallyBreakdown(items: [
+                    .init(tier: .silver,
+                          name: mode.cardTierName(.silver) ?? "シルバーカード",
+                          count: app.save.data.cardCount(ofTier: .silver),
+                          countTint: Palette.silverMark),
+                    .init(tier: .gold,
+                          name: mode.cardTierName(.gold) ?? "ゴールドカード",
+                          count: app.save.data.cardCount(ofTier: .gold),
+                          countTint: Palette.goldInk),
+                    .init(tier: .rainbow,
+                          name: mode.cardTierName(.rainbow) ?? "にじいろカード",
+                          count: app.save.data.cardCount(ofTier: .rainbow),
+                          countTint: Palette.rainbowMark),
+                  ]),
                   hint: mode.viewCards) {
                 onCardBook(.all)
             }
         }
         // Holds the row to its tallest tile instead of letting the flexible
-        // heights above stretch it down the screen. 330 rather than 360 on a
-        // phone: every point of tile height is a point taken from the map
-        // above. The iPad's wider stage reads the same tiles as small print,
-        // so it gets a wider row.
+        // heights above stretch it down the screen. The three tier counts need
+        // a little more breathing room than the old one-phrase note, while the
+        // row still fits inside the phone column without touching its edges.
         .fixedSize(horizontal: false, vertical: true)
-        .frame(maxWidth: hSize == .regular ? 380 : 330)
+        .frame(maxWidth: hSize == .regular ? 420 : 370)
     }
 
-    /// A second count that belongs *inside* the first.
-    ///
-    /// Only for genuine subsets — drawn under the meter, in the tile whose
-    /// number it is part of. Anything that is not a subset gets its own tile.
-    private struct TallyNote {
-        let emoji: String
-        let label: String
-        let count: Int
+    /// The exclusive rungs inside the owned-card total.
+    private struct TallyBreakdown {
+        struct Item: Identifiable {
+            let tier: CardTier
+            let name: String
+            let count: Int
+            let countTint: Color
 
-        var text: String { "\(emoji) \(label) \(count)" }
+            var id: String { name }
+            var accessibilityText: String { "\(name) \(count)まい" }
+        }
+
+        let items: [Item]
+
+        var accessibilityText: String {
+            items.map(\.accessibilityText).joined(separator: "、")
+        }
     }
 
     /// Each count opens the place its things live: the two prefecture counts go
@@ -263,14 +279,19 @@ struct TitleView: View {
     /// "where can I see them?".
     private func tally(_ artwork: String, _ have: Int, _ total: Int,
                        _ label: String, _ tint: Color,
-                       note: TallyNote? = nil,
+                       breakdown: TallyBreakdown? = nil,
                        hint: String = "",
                        action: @escaping () -> Void) -> some View {
-        Button(action: action) { tallyFace(artwork, have, total, label, tint, note) }
+        Button(action: action) {
+            tallyFace(artwork, have, total, label, tint, breakdown)
+        }
             .buttonStyle(TallyPressStyle())
             .accessibilityElement(children: .ignore)
-            .accessibilityLabel(note.map { "\(label) \(have) / \(total)。\($0.label) \($0.count)" }
-                                ?? "\(label) \(have) / \(total)")
+            .accessibilityLabel(
+                breakdown.map {
+                    "\(label) \(have) / \(total)。\($0.accessibilityText)"
+                } ?? "\(label) \(have) / \(total)"
+            )
             // Since the labelled マイマップ/カードをみる buttons left the
             // screen, the hint is where VoiceOver learns each tile is also
             // the door to its collection.
@@ -280,7 +301,7 @@ struct TitleView: View {
 
     private func tallyFace(_ artwork: String, _ have: Int, _ total: Int,
                            _ label: String, _ tint: Color,
-                           _ note: TallyNote?) -> some View {
+                           _ breakdown: TallyBreakdown?) -> some View {
         GeometryReader { geo in
             ZStack {
                 // The frame, corner ornaments and collection icon are artwork;
@@ -325,22 +346,72 @@ struct TitleView: View {
                 .position(x: geo.size.width * 0.52,
                           y: geo.size.height * 0.69)
 
-                // One Text rather than an HStack of three, so the note remains
-                // one readable phrase while its count changes.
-                if let note {
-                    Text(verbatim: note.text)
+                if let breakdown {
+                    HStack(spacing: 5) {
+                        ForEach(breakdown.items) { item in
+                            HStack(spacing: 2) {
+                                TierCardMark(tier: item.tier)
+                                Text(verbatim: "\(item.count)")
+                                    .foregroundStyle(item.countTint)
+                            }
+                        }
+                    }
                         .font(AppFont.rounded(10, relativeTo: .caption2))
-                        .foregroundStyle(Palette.ink.opacity(0.72))
                         .monospacedDigit()
                         .lineLimit(1)
-                        .minimumScaleFactor(0.68)
-                        .frame(width: geo.size.width * 0.72)
-                        .position(x: geo.size.width * 0.57,
+                        .minimumScaleFactor(0.75)
+                        .frame(width: geo.size.width * 0.82)
+                        .position(x: geo.size.width * 0.52,
                                   y: geo.size.height * 0.84)
                 }
             }
         }
         .aspectRatio(800 / 483, contentMode: .fit)
+    }
+
+    /// A tiny piece of the actual card finish, rather than a kanji abbreviation.
+    /// The order and the material now match the ladder in the card book:
+    /// silver, gold, then rainbow.
+    private struct TierCardMark: View {
+        let tier: CardTier
+
+        private var stops: [Gradient.Stop] {
+            switch tier {
+            case .silver: Palette.silverRamp
+            case .gold: Palette.foilRamp
+            case .rainbow: Palette.rainbowRamp
+            case .none, .plain: []
+            }
+        }
+
+        private var edge: Color {
+            switch tier {
+            case .silver: Palette.silverEdge
+            case .gold: Palette.foilEdge
+            case .rainbow: Palette.rainbowEdge
+            case .none, .plain: .white
+            }
+        }
+
+        var body: some View {
+            RoundedRectangle(cornerRadius: 2.5, style: .continuous)
+                .fill(LinearGradient(stops: stops,
+                                     startPoint: .topLeading,
+                                     endPoint: .bottomTrailing))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 2.5, style: .continuous)
+                        .stroke(edge, lineWidth: 1)
+                }
+                .overlay {
+                    Image(systemName: tier == .rainbow ? "sparkles" : "star.fill")
+                        .font(.system(size: 5, weight: .bold))
+                        .foregroundStyle(.white.opacity(0.92))
+                }
+                .frame(width: 12, height: 15)
+                .rotationEffect(.degrees(-5))
+                .shadow(color: Palette.ink.opacity(0.16), radius: 0.7, y: 1)
+                .accessibilityHidden(true)
+        }
     }
 }
 

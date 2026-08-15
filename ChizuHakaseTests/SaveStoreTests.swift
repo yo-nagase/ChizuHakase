@@ -211,6 +211,23 @@ struct SaveStoreTests {
         #expect(store.data.sparklingPrefectureCount == 0)
     }
 
+    @Test func exactTierCountsDoNotCountRainbowAsGoldTwice() {
+        var data = SaveData()
+        data.cards = [
+            "plain": 1,
+            "silver": GameRules.silverStars,
+            "gold": GameRules.maxCardStars,
+            "rainbow": GameRules.maxCardStars,
+        ]
+        data.rainbow = ["rainbow"]
+
+        #expect(data.cardCount(ofTier: .silver) == 1)
+        #expect(data.cardCount(ofTier: .gold) == 1)
+        #expect(data.cardCount(ofTier: .rainbow) == 1)
+        #expect(data.specialCardCount == 3)
+        #expect(data.goldCardCount == 2)
+    }
+
     // MARK: - Streaks and rainbow
 
     private func result(outcomes: [Int: [Bool]],
@@ -249,29 +266,39 @@ struct SaveStoreTests {
         #expect(store.data.stars(of: "01-1") == 1, "stars stand through a broken streak")
     }
 
-    @Test func goldHeldThroughAFifteenStreakTurnsRainbow() throws {
+    @Test func aCleanRunOfSevenAfterGoldTurnsRainbow() throws {
         let dir = try makeScratch()
         defer { try? FileManager.default.removeItem(at: dir) }
         let catalog = CardCatalog(cards: [card("01-1"), card("01-2"), card("01-3")])
 
         let store = SaveStore(directory: dir)
-        // Gold, but the streak is only fourteen: not yet.
+        // The answer that finishes the gold opens the count at zero…
         store.applyStageResult(
-            result(outcomes: [1: Array(repeating: true, count: 14)],
+            result(outcomes: [1: [true]],
                    draws: [.star(card("01-1"), stars: GameRules.maxCardStars)]),
             catalog: catalog)
         #expect(store.data.tier(of: "01-1") == .gold)
+        #expect(store.data.streak(of: 1) == 0,
+                "the promoting answer must not start the run")
+
+        // …six clean answers are not yet seven…
+        store.applyStageResult(
+            result(outcomes: [1: Array(repeating: true,
+                                       count: GameRules.rainbowStreak - 1)]),
+            catalog: catalog)
         #expect(store.data.rainbow.isEmpty)
 
-        // The fifteenth clean answer latches it.
+        // …the seventh latches it.
         store.applyStageResult(result(outcomes: [1: [true]]), catalog: catalog)
         #expect(store.data.tier(of: "01-1") == .rainbow)
         #expect(store.data.tier(of: "01-2") == .none,
                 "a card that is not gold has nothing to latch")
     }
 
-    /// The other order: the streak is already there when the card reaches gold.
-    @Test func aCardReachingGoldUnderALiveStreakLatchesImmediately() throws {
+    /// The other order no longer counts: a streak built before the card
+    /// reached gold is spent by the promotion, and the run toward rainbow
+    /// starts from the gold.
+    @Test func aStreakBuiltBeforeGoldDoesNotCount() throws {
         let dir = try makeScratch()
         defer { try? FileManager.default.removeItem(at: dir) }
         let catalog = CardCatalog(cards: [card("01-1")])
@@ -283,25 +310,32 @@ struct SaveStoreTests {
             result(outcomes: [1: [true]],
                    draws: [.star(card("01-1"), stars: GameRules.maxCardStars)]),
             catalog: catalog)
-        #expect(store.data.tier(of: "01-1") == .rainbow)
+        #expect(store.data.tier(of: "01-1") == .gold)
+        #expect(store.data.rainbow.isEmpty)
+        #expect(store.data.streak(of: 1) == 0, "the promotion spends the run")
     }
 
     /// The latch has to say what it caught, or the rarest thing in the game
-    /// happens in silence: the streak crossing fifteen promotes every gold card
-    /// the prefecture holds, including ones this stage never drew, so the
-    /// result screen cannot work it out from the draws.
+    /// happens in silence: the streak crossing its line promotes every card
+    /// whose gold predates the run, including ones this stage never drew, so
+    /// the result screen cannot work it out from the draws.
     @Test func theLatchReportsEveryCardItCaughtIncludingUndrawnOnes() throws {
         let dir = try makeScratch()
         defer { try? FileManager.default.removeItem(at: dir) }
         let catalog = CardCatalog(cards: [card("01-1"), card("01-2"), card("01-3")])
 
         let store = SaveStore(directory: dir)
-        // Two of the three at gold, then a fifteenth clean answer in a stage
-        // that draws nothing at all.
+        // Two of the three finish gold — each promotion spends the count —
+        // then a clean run of seven, ending in a stage that draws nothing
+        // at all.
         store.applyStageResult(
-            result(outcomes: [1: Array(repeating: true, count: 14)],
+            result(outcomes: [1: [true, true]],
                    draws: [.star(card("01-1"), stars: GameRules.maxCardStars),
                            .star(card("01-2"), stars: GameRules.maxCardStars)]),
+            catalog: catalog)
+        store.applyStageResult(
+            result(outcomes: [1: Array(repeating: true,
+                                       count: GameRules.rainbowStreak - 1)]),
             catalog: catalog)
 
         let gains = store.applyStageResult(result(outcomes: [1: [true]]), catalog: catalog)
@@ -318,8 +352,10 @@ struct SaveStoreTests {
         let catalog = CardCatalog(cards: [card("01-1")])
 
         let store = SaveStore(directory: dir)
+        // The promoting answer plus the seven that must follow it.
         let earning = store.applyStageResult(
-            result(outcomes: [1: Array(repeating: true, count: GameRules.rainbowStreak)],
+            result(outcomes: [1: Array(repeating: true,
+                                       count: GameRules.rainbowStreak + 1)],
                    draws: [.star(card("01-1"), stars: GameRules.maxCardStars)]),
             catalog: catalog)
         #expect(earning.rainbowCards == ["01-1"])
@@ -338,7 +374,8 @@ struct SaveStoreTests {
 
         let store = SaveStore(directory: dir)
         store.applyStageResult(
-            result(outcomes: [1: Array(repeating: true, count: 15)],
+            result(outcomes: [1: Array(repeating: true,
+                                       count: GameRules.rainbowStreak + 1)],
                    draws: [.star(card("01-1"), stars: GameRules.maxCardStars)]),
             catalog: catalog)
         #expect(store.data.tier(of: "01-1") == .rainbow)

@@ -120,7 +120,8 @@ struct RootView: View {
             visit(stage: 4, times: 1, score: 620, stars: 1)
             // Every owned card is illustrated; the higher tiers are still the
             // ones worth showing off for their foil. 13-2 goes rainbow through
-            // the real latch: gold stars here, the clean streak below.
+            // the real latch: gold stars here, and below, one answer that
+            // finishes the gold plus the clean run that must follow it.
             let collection: [(String, Int)] = [
                 ("01-2", 7), ("02-1", 5), ("08-1", 6), ("14-2", 9),
                 ("23-1", 5), ("26-2", 8), ("40-1", 5),
@@ -138,7 +139,7 @@ struct RootView: View {
                     }
                 },
                 outcomesByPrefecture: [13: Array(repeating: true,
-                                                 count: GameRules.rainbowStreak)]),
+                                                 count: GameRules.rainbowStreak + 1)]),
                 catalog: app.cards)
             // One nameIt record so the stage list shows the per-mode split.
             app.save.applyStageResult(StageResult(
@@ -161,13 +162,14 @@ struct RootView: View {
                     + (app.cards["13-2"].map {
                         [GameRules.CardDraw.star($0, stars: GameRules.maxCardStars)]
                     } ?? []),
-                // A clean fifteen on Tokyo, so 13-2 comes out of the real latch
-                // rather than being written in as rainbow — a debug state that
-                // stages itself keeps looking right after the rule breaks.
-                // 13-2 gives the dense sushi painting a rainbow-foil stress
-                // case while keeping the state representative of real data.
+                // The gold-finishing answer plus a clean run on Tokyo, so 13-2
+                // comes out of the real latch rather than being written in as
+                // rainbow — a debug state that stages itself keeps looking
+                // right after the rule breaks. 13-2 gives the dense sushi
+                // painting a rainbow-foil stress case while keeping the state
+                // representative of real data.
                 outcomesByPrefecture: [13: Array(repeating: true,
-                                                 count: GameRules.rainbowStreak)]),
+                                                 count: GameRules.rainbowStreak + 1)]),
                 catalog: app.cards)
         }
         // Every prefecture of one regional stage answered cleanly, which is the

@@ -281,25 +281,79 @@ struct GameRulesTests {
     // MARK: - Prefecture streak
 
     @Test func aCleanPassExtendsTheStreak() {
-        #expect(GameRules.nextStreak(current: 3, outcomes: [true, true]) == 5)
-        #expect(GameRules.nextStreak(current: 0, outcomes: [true]) == 1)
+        #expect(GameRules.nextStreak(current: 3, outcomes: [true, true]).streak == 5)
+        #expect(GameRules.nextStreak(current: 0, outcomes: [true]).streak == 1)
     }
 
     /// A fumble resets the count, but only the count: what comes after the
     /// fumble starts a fresh run within the same stage.
     @Test func aFumbleResetsTheStreakToWhatFollowedIt() {
-        #expect(GameRules.nextStreak(current: 9, outcomes: [false, true]) == 1)
-        #expect(GameRules.nextStreak(current: 9, outcomes: [true, false]) == 0)
-        #expect(GameRules.nextStreak(current: 9, outcomes: []) == 9)
+        #expect(GameRules.nextStreak(current: 9, outcomes: [false, true]).streak == 1)
+        #expect(GameRules.nextStreak(current: 9, outcomes: [true, false]).streak == 0)
+        #expect(GameRules.nextStreak(current: 9, outcomes: []).streak == 9)
     }
 
     // MARK: - Rainbow
 
-    @Test func rainbowNeedsAGoldCardAndAFifteenStreak() {
-        #expect(GameRules.qualifiesForRainbow(stars: 15, streak: 15))
-        #expect(GameRules.qualifiesForRainbow(stars: 15, streak: 20))
-        #expect(!GameRules.qualifiesForRainbow(stars: 14, streak: 20))
-        #expect(!GameRules.qualifiesForRainbow(stars: 15, streak: 14))
+    /// The run toward rainbow opens only after the gold exists: the draw that
+    /// finishes a card's stars resets the count, so the answer that completed
+    /// the gold is not also the first step past it, and nothing built before
+    /// it carries over.
+    @Test func finishingAGoldSpendsTheRun() {
+        let walked = GameRules.nextStreak(
+            current: 9, outcomes: [true, true],
+            draws: [.star(Self.sample[0], stars: GameRules.maxCardStars)],
+            goldCardIDs: [])
+        #expect(walked.streak == 1, "only the answer after the promotion counts")
+        #expect(walked.latched.isEmpty, "a streak built before gold must not latch")
+    }
+
+    @Test func aCleanRunAfterGoldLatchesAtTheLine() {
+        let gold: Set = [Self.sample[0].id]
+        let below = GameRules.nextStreak(
+            current: GameRules.rainbowStreak - 2, outcomes: [true],
+            draws: [.star(Self.sample[1], stars: 2)], goldCardIDs: gold)
+        #expect(below.latched.isEmpty)
+
+        let crossing = GameRules.nextStreak(
+            current: GameRules.rainbowStreak - 1, outcomes: [true],
+            draws: [.star(Self.sample[1], stars: 2)], goldCardIDs: gold)
+        #expect(crossing.latched == gold)
+    }
+
+    /// Latched mid-walk, not on the final count: the crossing on a stage's
+    /// first asking stands even when the second asking fumbles.
+    @Test func aFumbleAfterTheCrossingDoesNotSwallowTheRainbow() {
+        let gold: Set = [Self.sample[0].id]
+        let walked = GameRules.nextStreak(
+            current: GameRules.rainbowStreak - 1, outcomes: [true, false],
+            draws: [.star(Self.sample[1], stars: 2)], goldCardIDs: gold)
+        #expect(walked.streak == 0)
+        #expect(walked.latched == gold)
+    }
+
+    /// A card that finishes its gold after the count crossed does not ride
+    /// the same run — its promotion resets the count, so its seven start
+    /// from there.
+    @Test func aLateGoldStartsItsOwnRun() {
+        let walked = GameRules.nextStreak(
+            current: GameRules.rainbowStreak - 1, outcomes: [true, true],
+            draws: [.star(Self.sample[1], stars: 2),
+                    .star(Self.sample[2], stars: GameRules.maxCardStars)],
+            goldCardIDs: [Self.sample[0].id])
+        #expect(walked.latched == [Self.sample[0].id])
+        #expect(walked.streak == 0, "the late promotion spends the count again")
+    }
+
+    /// Saves written while the threshold was fifteen can arrive already past
+    /// the new line; they latch the moment the prefecture is next walked,
+    /// before any answer this stage gives.
+    @Test func anAlreadyQualifiedStreakLatchesOnArrival() {
+        let gold: Set = [Self.sample[0].id]
+        let walked = GameRules.nextStreak(
+            current: 12, outcomes: [false], draws: [], goldCardIDs: gold)
+        #expect(walked.latched == gold)
+        #expect(walked.streak == 0)
     }
 
     // MARK: - Next goal
@@ -313,8 +367,8 @@ struct GameRulesTests {
         #expect(GameRules.nextGoal(stars: 4, streak: 0, isRainbow: false) == .wins(1, to: .silver))
         #expect(GameRules.nextGoal(stars: 5, streak: 0, isRainbow: false) == .wins(10, to: .gold))
         #expect(GameRules.nextGoal(stars: 14, streak: 0, isRainbow: false) == .wins(1, to: .gold))
-        #expect(GameRules.nextGoal(stars: 15, streak: 0, isRainbow: false) == .streak(15))
-        #expect(GameRules.nextGoal(stars: 15, streak: 12, isRainbow: false) == .streak(3))
+        #expect(GameRules.nextGoal(stars: 15, streak: 0, isRainbow: false) == .streak(7))
+        #expect(GameRules.nextGoal(stars: 15, streak: 4, isRainbow: false) == .streak(3))
         #expect(GameRules.nextGoal(stars: 15, streak: 40, isRainbow: false) == .streak(1),
                 "a still-gold card never shows 「あと0」 — the latch just has not caught yet")
         #expect(GameRules.nextGoal(stars: 15, streak: 0, isRainbow: true) == .done)
@@ -334,8 +388,8 @@ struct GameRulesTests {
         #expect(fraction(stars: 5) == 0, "a fresh rung starts empty")
         #expect(fraction(stars: 14) == 0.9)
         #expect(fraction(stars: 15) == 0)
-        #expect(fraction(stars: 15, streak: 12) == 0.8)
-        #expect(fraction(stars: 15, streak: 40) == 14.0 / 15.0,
+        #expect(fraction(stars: 15, streak: 4) == 4.0 / 7.0)
+        #expect(fraction(stars: 15, streak: 40) == 6.0 / 7.0,
                 "the bar never reads full while the latch has not caught")
         #expect(fraction(stars: 15, rainbow: true) == 1)
     }
