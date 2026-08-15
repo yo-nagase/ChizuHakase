@@ -135,8 +135,6 @@ nonisolated extension TextMode {
     var learnedPrefectures: String { isKids ? "おぼえた けん" : "覚えた県" }
     var ownedCards: String { isKids ? "もっている カード" : "持っているカード" }
     var learnedCount: String { isKids ? "おぼえた" : "覚えた" }
-    /// VoiceOver's name for the mode medal on a stage sheet — a no-miss clear.
-    var noMissClear: String { isKids ? "ノーミスで クリア" : "ノーミスでクリア" }
     var resetZoom: String { isKids ? "もとの おおきさ" : "元の大きさ" }
     var eraseEverything: String { isKids ? "きろくを ぜんぶ けす" : "記録をすべて消去" }
     var eraseConfirm1: String { isKids ? "ほんとうに けしても いい?" : "本当に消去しますか?" }

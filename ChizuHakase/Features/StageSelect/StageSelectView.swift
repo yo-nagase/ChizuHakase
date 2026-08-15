@@ -6,10 +6,10 @@ import SwiftUI
 /// emoji. It told the child nothing about where they were going. Each card now
 /// shows the region's **actual silhouette**, drawn from the same map data the
 /// quiz uses, so the shape of Kanto or Kyushu is familiar before the first
-/// question is asked. The tallies on a sheet are earned states only — the
-/// 「おぼえた」 count and the no-miss medals. A coverage count ("answered at
-/// least once") used to sit here too, and it mostly measured having pressed
-/// play; a number that rewards showing up cheapens the two that don't.
+/// question is asked. The only tally on a sheet is the earned one — the
+/// 「おぼえた」 count. A coverage count ("answered at least once") used to sit
+/// here too, and it mostly measured having pressed play; a number that
+/// rewards showing up cheapens the one that doesn't.
 struct StageSelectView: View {
     @Environment(AppState.self) private var app
     @Environment(\.textMode) private var mode
@@ -26,7 +26,6 @@ struct StageSelectView: View {
                                mapData: app.mapData,
                                record: app.save.data.record(forStage: stage.index,
                                                             mode: quizMode),
-                               perfectModes: perfectModes(stage),
                                sparklingCount: sparklingCount(stage)) {
                         onPlay(stage)
                     }
@@ -82,17 +81,6 @@ struct StageSelectView: View {
         }
     }
 
-    /// Modes this stage has been cleared in without missing a single
-    /// prefecture. Judged by the record's stars: the full count is only ever
-    /// awarded for zero misses (`GameRules.stars`), and the record keeps the
-    /// best run, so this latches like every other achievement here.
-    private func perfectModes(_ stage: Stage) -> Set<QuizMode> {
-        Set(QuizMode.allCases.filter {
-            (app.save.data.record(forStage: stage.index, mode: $0)?.stars ?? 0)
-                >= GameRules.maxStageStars
-        })
-    }
-
     /// How many have reached the top of the mastery ladder — 「おぼえた」
     /// (CLAUDE.md §5).
     private func sparklingCount(_ stage: Stage) -> Int {
@@ -105,8 +93,6 @@ private struct StageSheet: View {
     let stage: Stage
     let mapData: MapData
     let record: StageRecord?
-    /// Modes cleared with no miss — the medals on the sheet's edge.
-    let perfectModes: Set<QuizMode>
     let sparklingCount: Int
     var action: () -> Void
 
@@ -156,19 +142,6 @@ private struct StageSheet: View {
                 }
 
                 Spacer(minLength: 4)
-
-                // One medal per quiz mode, grey until that mode has a no-miss
-                // clear of this stage. Grey rather than hidden — the stars
-                // above already say "how well", these say "which way", and an
-                // empty slot is a goal a child can see. Both medals visible at
-                // once is the point: the stars follow the mode switch, so
-                // without these the other mode's achievement is invisible.
-                VStack(spacing: 6) {
-                    ForEach(QuizMode.allCases) { candidate in
-                        ModeMedal(quizMode: candidate,
-                                  earned: perfectModes.contains(candidate))
-                    }
-                }
             }
             .padding(14)
             .frame(maxWidth: .infinity)
@@ -215,36 +188,7 @@ private struct StageSheet: View {
         var text = "\(stage.displayName(mode))。\(stage.questionCount) もん。"
             + mode.starCount(record?.stars ?? 0)
         if sparklingCount > 0 { text += "。\(mode.learnedCount) \(sparklingCount)" }
-        for candidate in QuizMode.allCases where perfectModes.contains(candidate) {
-            text += "。\(candidate.title(mode)) \(mode.noMissClear)"
-        }
         return text
-    }
-}
-
-/// A no-miss medal for one quiz mode.
-///
-/// Colour is the whole signal: greyscale-and-dim until earned, gold ring and
-/// full colour after. The symbol never changes — earning it should read as
-/// the same badge lighting up, not as a different badge appearing.
-private struct ModeMedal: View {
-    let quizMode: QuizMode
-    let earned: Bool
-
-    var body: some View {
-        Text(quizMode.symbol)
-            .font(.system(size: 14))
-            .grayscale(earned ? 0 : 1)
-            .opacity(earned ? 1 : 0.4)
-            .frame(width: 30, height: 30)
-            .background(
-                Circle().fill(earned ? Palette.gold.opacity(0.32) : .white.opacity(0.55))
-            )
-            .overlay(
-                Circle().strokeBorder(earned ? Palette.gold : Palette.ink.opacity(0.12),
-                                      lineWidth: earned ? 2 : 1)
-            )
-            .accessibilityHidden(true) // the sheet's label carries it
     }
 }
 
