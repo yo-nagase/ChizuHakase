@@ -300,11 +300,11 @@ struct QuizView: View {
     // MARK: - Appearance
 
     private func appearance(for pref: Prefecture, quiz: QuizViewModel) -> PrefectureAppearance {
-        // 「なまえを あてる」 asks about the one that is lit, so it stays lit until
+        // 「なまえを あてる」 asks about the ringed one, so the ring stays until
         // it is answered — including through a wrong guess, when the child needs
         // to look at it again rather than hunt for what the question was.
         if quiz.mode == .nameIt, quiz.phase == .asking, quiz.target?.code == pref.code {
-            return .spotlit(for: pref.code)
+            return .asked(for: pref.code)
         }
         // Answering does not colour a prefecture in.
         //

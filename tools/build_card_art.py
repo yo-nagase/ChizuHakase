@@ -112,42 +112,87 @@ ART_FOR_CARD = {
     "gifu-shirakawago": "21-1",      # 白川郷
     "gifu-mino-washi": "21-2",       # 美濃和紙
     "gifu-hidagyu": "21-3",          # 飛騨牛
-    "aichi-uiro": "23-1",            # ういろう
     # Two takes on Shizuoka tea exist. -ocha titles itself 「お茶」 and -cha
     # 「静岡茶」; the picture's own title is what a child reads, because an
     # illustrated chip drops the caption underneath (§4).
     "shizuoka-ocha": "22-1",         # 茶
     "shizuoka-unagi": "22-2",        # 鰻
     "shizuoka-miho-no-matsubara": "22-3",  # 三保松原
+    "aichi-uiro": "23-1",            # ういろう
     "aichi-nagoyajo": "23-2",        # 名古屋城
+    "aichi-arimatsu-shibori": "23-3",  # 有松絞り
+    "mie-ise-jingu": "24-1",         # 伊勢神宮
+    "mie-shinju": "24-2",            # 真珠
     "mie-ise-udon": "24-3",          # 伊勢うどん
+    "shiga-biwako": "25-1",          # 琵琶湖
+    "shiga-hikonejo": "25-2",        # 彦根城
     "shiga-funazushi": "25-3",       # 鮒ずし
+    "kyoto-kiyomizudera": "26-1",    # 清水寺
     "kyoto-uji-matcha": "26-2",      # 抹茶
     "kyoto-nishijin-ori": "26-3",    # 西陣織
     "osaka-takoyaki": "27-1",        # たこ焼き
+    "osaka-osakajo": "27-2",         # 大阪城
+    "osaka-kushikatsu": "27-3",      # 串カツ
+    "hyogo-kobe-beef": "28-1",       # 神戸ビーフ
+    "hyogo-himejijo": "28-2",        # 姫路城
     "hyogo-akashiyaki": "28-3",      # 明石焼
+    "nara-shika": "29-1",            # 鹿
+    "nara-todaiji": "29-2",          # 東大寺
     "nara-kakinoha-zushi": "29-3",   # 柿の葉寿司
     "wakayama-umeboshi": "30-1",     # 梅干し
+    "wakayama-kumano-kodo": "30-2",  # 熊野古道
+    "wakayama-panda": "30-3",        # パンダ
     "tottori-sakkyu": "31-1",        # 鳥取砂丘
     "tottori-nijisseiki-nashi": "31-2",  # 梨
+    "tottori-zuwaigani": "31-3",     # ズワイガニ
+    "shimane-izumo-taisha": "32-1",  # 出雲大社
     "shimane-izumo-soba": "32-2",    # 出雲そば
+    "shimane-iwami-ginzan": "32-3",  # 石見銀山
+    "okayama-kibi-dango": "33-1",    # きび団子
+    "okayama-kurashiki": "33-2",     # 倉敷
     "okayama-hakuto": "33-3",        # 白桃
     "hiroshima-momiji-manju": "34-1",  # もみじ饅頭
+    "hiroshima-itsukushima-jinja": "34-2",  # 厳島神社
     "hiroshima-kaki": "34-3",        # 牡蠣
     "yamaguchi-fugu": "35-1",        # 河豚
+    "yamaguchi-kintaikyo": "35-2",   # 錦帯橋
+    "yamaguchi-hagi-yaki": "35-3",   # 萩焼
     "tokushima-awa-odori": "36-1",   # 阿波踊り
     "tokushima-sudachi": "36-2",     # 酢橘
+    "tokushima-naruto-uzushio": "36-3",  # 鳴門の渦潮
     "kagawa-sanuki-udon": "37-1",    # 讃岐うどん
+    "kagawa-kotohira-gu": "37-2",    # 金刀比羅宮
+    "kagawa-olive": "37-3",           # オリーブ
     "ehime-mikan": "38-1",           # 蜜柑
+    "ehime-dogo-onsen": "38-2",      # 道後温泉
+    "ehime-iyo-kasuri": "38-3",      # 伊予絣
     "kochi-katsuo-tataki": "39-1",   # 鰹のたたき
+    "kochi-yosakoi": "39-2",         # よさこい
+    "kochi-shimanto-gawa": "39-3",   # 四万十川
     "fukuoka-mentaiko": "40-1",      # 明太子
+    "fukuoka-tonkotsu-ramen": "40-2",  # 豚骨ラーメン
+    "fukuoka-dazaifu-tenmangu": "40-3",  # 太宰府天満宮
     "saga-aritayaki": "41-1",        # 有田焼
+    "saga-ika": "41-2",              # 烏賊
+    "saga-mutsugoro": "41-3",        # ムツゴロウ
     "nagasaki-castella": "42-1",     # カステラ
+    "nagasaki-glover-garden": "42-2",  # グラバー園
+    "nagasaki-champon": "42-3",      # ちゃんぽん
+    "kumamoto-kumamotojo": "43-1",   # 熊本城
+    "kumamoto-asosan": "43-2",       # 阿蘇山
     "kumamoto-karashi-renkon": "43-3",  # 辛子蓮根
+    "oita-beppu-onsen": "44-1",      # 別府温泉
+    "oita-toriten": "44-2",          # とり天
     "oita-kabosu": "44-3",           # かぼす
     "miyazaki-mango": "45-1",        # マンゴー
+    "miyazaki-chicken-nanban": "45-2",  # チキン南蛮
+    "miyazaki-takachiho-kyo": "45-3",  # 高千穂峡
+    "kagoshima-sakurajima": "46-1",  # 桜島
     "kagoshima-kurobuta": "46-2",    # 黒豚
+    "kagoshima-satsumaimo": "46-3",  # 薩摩芋
+    "okinawa-shisa": "47-1",         # シーサー
     "okinawa-pineapple": "47-2",     # パイナップル
+    "okinawa-sango-sho": "47-3",     # 珊瑚礁
 }
 
 

@@ -77,9 +77,9 @@ struct RootView: View {
             visit(stage: 2, times: 4, score: 1310, stars: 3)
             visit(stage: 3, times: 3, score: 1050, stars: 2)
             visit(stage: 4, times: 1, score: 620, stars: 1)
-            // Silver and up are illustrated cards, so the tier that shows art
-            // is the tier being shown off. 13-2 goes rainbow through the real
-            // latch: gold stars here, the clean streak below.
+            // Every owned card is illustrated; the higher tiers are still the
+            // ones worth showing off for their foil. 13-2 goes rainbow through
+            // the real latch: gold stars here, the clean streak below.
             let collection: [(String, Int)] = [
                 ("01-2", 7), ("02-1", 5), ("08-1", 6), ("14-2", 9),
                 ("23-1", 5), ("26-2", 8), ("40-1", 5),
@@ -123,8 +123,8 @@ struct RootView: View {
                 // A clean fifteen on Tokyo, so 13-2 comes out of the real latch
                 // rather than being written in as rainbow — a debug state that
                 // stages itself keeps looking right after the rule breaks.
-                // 13-2 rather than 13-1 because it is illustrated, and a
-                // painting under rainbow foil is the state worth looking at.
+                // 13-2 gives the dense sushi painting a rainbow-foil stress
+                // case while keeping the state representative of real data.
                 outcomesByPrefecture: [13: Array(repeating: true,
                                                  count: GameRules.rainbowStreak)]),
                 catalog: app.cards)
@@ -159,9 +159,8 @@ struct RootView: View {
         case "result":
             // Synthetic 3-star clear so the celebration can be captured.
             //
-            // The キラ slot deliberately takes an illustrated card: picking the
-            // first card in the catalog gave a shiny with no art, so the one
-            // state worth looking at never appeared in a screenshot.
+            // Keep the キラ slot explicit so this route always exercises the
+            // silver treatment in addition to the two newly won cards.
             let illustrated = app.cards.all.first { $0.art != nil }
             let plain = app.cards.all.filter { $0.id != illustrated?.id }.prefix(2)
             let demo = StageResult(

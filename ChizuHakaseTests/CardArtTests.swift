@@ -20,9 +20,9 @@ struct CardArtTests {
         catalog.all.filter { $0.art != nil }
     }
 
-    @Test func someCardsAreIllustrated() {
-        #expect(!illustrated.isEmpty, "no card has art; did build_card_art.py run?")
-        #expect(illustrated.count <= catalog.count)
+    @Test func everyCardIsIllustrated() {
+        #expect(illustrated.count == catalog.count,
+                "\(catalog.count - illustrated.count) cards are missing art; did build_card_art.py run?")
     }
 
     /// The one that actually catches things: an asset name in the JSON that no
@@ -60,13 +60,23 @@ struct CardArtTests {
         }
     }
 
-    /// A card without art is a supported state, not a defect — most of the 141
-    /// are still emoji-only, and they must keep working.
-    @Test func cardsWithoutArtDecodeFine() {
-        let plain = catalog.all.filter { $0.art == nil }
-        #expect(!plain.isEmpty)
-        for card in plain {
-            #expect(!card.emoji.isEmpty, "\(card.id) has neither art nor emoji")
+    @Test func everyOwnedTierShowsArt() throws {
+        let card = try #require(illustrated.first)
+        #expect(CardFaceView.artNameToDisplay(for: card, stars: 0) == nil)
+        #expect(CardFaceView.artNameToDisplay(for: card, stars: 1) == card.art)
+        #expect(CardFaceView.artNameToDisplay(
+            for: card, stars: GameRules.silverStars
+        ) == card.art)
+        #expect(CardFaceView.artNameToDisplay(
+            for: card, stars: GameRules.maxCardStars, rainbow: true
+        ) == card.art)
+    }
+
+    /// Emoji remains a lightweight fallback for places that do not render the
+    /// painted card, even though every card now has art.
+    @Test func everyCardRetainsFallbackEmoji() {
+        for card in catalog.all {
+            #expect(!card.emoji.isEmpty, "\(card.id) has no fallback emoji")
         }
     }
 }

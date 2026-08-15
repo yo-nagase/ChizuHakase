@@ -50,14 +50,18 @@ struct CardFaceView: View {
     /// Silver, gold and rainbow are foil; plain board and an empty slot are not.
     private var isMetal: Bool { tier.isSpecial }
 
-    /// The painted card, shown from silver up (CLAUDE.md §4).
-    ///
-    /// Holding the picture back is what makes a repeat draw feel like a win
-    /// instead of a consolation: the emoji card the child already has turns into
-    /// the real thing. Silver rather than gold, because gold is five copies of
-    /// one card and the paintings would spend most of the game unseen. Cards
-    /// without art keep the emoji.
-    private var shownArt: String? { tier.isSpecial ? card.art : nil }
+    /// Every owned card shows its painted subject; rarity is communicated by
+    /// the board, edge, stars and foil rather than by hiding the illustration.
+    /// An unowned slot remains a question mark, and missing art falls back to
+    /// the card's emoji.
+    private var shownArt: String? {
+        Self.artNameToDisplay(for: card, stars: stars, rainbow: rainbow)
+    }
+
+    static func artNameToDisplay(for card: SpecialtyCard, stars: Int,
+                                 rainbow: Bool = false) -> String? {
+        CardTier(stars: stars, rainbow: rainbow) == .none ? nil : card.art
+    }
 
     struct Metrics {
         /// How much stock shows around the panel — the border, in other words.

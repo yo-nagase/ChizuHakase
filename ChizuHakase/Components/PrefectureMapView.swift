@@ -12,6 +12,8 @@ nonisolated struct PrefectureAppearance: Equatable {
     /// False is the album's faintly pre-printed slot — visible, so the map is
     /// never a grey blank, but obviously not yet earned.
     var isStuck: Bool = true
+    /// A steady ring drawn around the shape, over everything else.
+    var outline: Color?
     /// Specialty emoji floating up from a prefecture just won.
     var badge: String?
 
@@ -24,14 +26,16 @@ nonisolated struct PrefectureAppearance: Equatable {
 
     /// The one being asked about in 「なまえを あてる」.
     ///
-    /// Full colour against neighbours washed out to 22%, which is the widest
-    /// contrast the palette has. It has to be unmistakable at a glance among 46
-    /// others — if finding the lit one is any work at all, that becomes the
-    /// puzzle instead of the name, which is the thing being asked.
-    static func spotlit(for code: Int) -> PrefectureAppearance {
-        PrefectureAppearance(fill: Palette.fill(for: code),
-                             stroke: Palette.boundary,
-                             isStuck: false)
+    /// A red ring around an otherwise ordinary slot. It used to be the shape
+    /// at full colour against neighbours washed to 22% — the widest contrast
+    /// the palette has — but "the saturated one" is a comparison, and a
+    /// comparison takes a second look. A ring is a mark: nothing else on the
+    /// map wears one, so there is nothing to compare against. Steady rather
+    /// than blinking, because this is the question, not a rescue.
+    static func asked(for code: Int) -> PrefectureAppearance {
+        var appearance = slot(for: code)
+        appearance.outline = Palette.red
+        return appearance
     }
 
     /// A sticker pressed onto the page.
@@ -160,16 +164,17 @@ struct PrefectureMapView: View {
                     .allowsHitTesting(false)
 
                 ForEach(prefectures) { prefecture in
+                    let paint = appearance(prefecture)
                     PrefectureLayer(
                         prefecture: prefecture,
                         transform: transform,
                         canvasSize: geo.size,
                         zoom: zoom,
-                        appearance: appearance(prefecture),
+                        appearance: paint,
                         isHinted: hintCode == prefecture.code,
                         effect: effect?.code == prefecture.code ? effect : nil,
                         reduceMotion: reduceMotion)
-                        .zIndex(zIndex(for: prefecture.code))
+                        .zIndex(zIndex(for: prefecture.code, paint: paint))
                 }
             }
             .frame(width: geo.size.width, height: geo.size.height)
@@ -214,14 +219,15 @@ struct PrefectureMapView: View {
     /// Stacking order. The layers draw in `codes` order, so without this a
     /// prefecture mid-pop slid *under* every neighbour drawn after it — the
     /// celebration, the floating specialty emoji and all. The addressee of the
-    /// live effect rides on top; the blinking answer sits above the crowd too,
-    /// or a later neighbour's die-cut carves into its outline. The effect
-    /// outranks the hint because it is the one actually moving, and the two
-    /// can point at different prefectures — a wrong tap shakes one while the
-    /// answer blinks elsewhere.
-    func zIndex(for code: Int) -> Double {
+    /// live effect rides on top; anything wearing a ring (the blinking answer,
+    /// the asked-about prefecture) sits above the crowd too, or a later
+    /// neighbour's die-cut carves into its outline. The effect outranks the
+    /// rings because it is the one actually moving, and the two can point at
+    /// different prefectures — a wrong tap shakes one while the answer blinks
+    /// elsewhere.
+    func zIndex(for code: Int, paint: PrefectureAppearance) -> Double {
         if effect?.code == code { return 2 }
-        if hintCode == code { return 1 }
+        if hintCode == code || paint.outline != nil { return 1 }
         return 0
     }
 
@@ -291,6 +297,10 @@ private struct PrefectureLayer: View {
     private var boundaryWidth: CGFloat {
         min(max(canvasSize.width * 0.0019, 0.3), 0.7) / max(zoom, 1)
     }
+
+    /// One width for every red ring — the asked-about prefecture and the
+    /// blinking hint — so "a red line" always weighs the same thing.
+    private var ringWidth: CGFloat { 3.5 / max(zoom, 1) }
 
     private var anchor: UnitPoint {
         guard canvasSize.width > 0, canvasSize.height > 0 else { return .center }
@@ -368,8 +378,12 @@ private struct PrefectureLayer: View {
                     .modifier(SlowGlow(enabled: !reduceMotion))
             }
 
+            if let outline = appearance.outline {
+                path.stroke(outline, lineWidth: ringWidth)
+            }
+
             if isHinted {
-                path.stroke(Palette.red, lineWidth: 3.5 / max(zoom, 1))
+                path.stroke(Palette.red, lineWidth: ringWidth)
                     .modifier(HintBlink(enabled: !reduceMotion))
             }
         }

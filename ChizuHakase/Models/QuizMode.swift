@@ -10,7 +10,7 @@ import Foundation
 nonisolated enum QuizMode: String, Codable, Sendable, CaseIterable, Identifiable {
     /// 「あいちけんは どこかな?」 — given the name, find it on the map.
     case findOnMap
-    /// The map lights one prefecture up — say which one it is.
+    /// The map rings one prefecture in red — say which one it is.
     case nameIt
 
     var id: String { rawValue }
@@ -32,8 +32,8 @@ nonisolated extension QuizMode {
         switch (self, text.isKids) {
         case (.findOnMap, true): "なまえを きいて タップ"
         case (.findOnMap, false): "名前を聞いてタップ"
-        case (.nameIt, true): "ひかった けんを こたえる"
-        case (.nameIt, false): "光った県を答える"
+        case (.nameIt, true): "あかい わくの けんを こたえる"
+        case (.nameIt, false): "赤い枠の県を答える"
         }
     }
 

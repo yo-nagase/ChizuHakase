@@ -687,7 +687,8 @@
       "nameKana": "ありまつしぼり",
       "nameKanji": "有松絞り",
       "category": "craft",
-      "description": "ぬのを しばって そめる"
+      "description": "ぬのを しばって そめる",
+      "art": "card-23-3"
     },
     {
       "id": "24-1",
@@ -696,7 +697,8 @@
       "nameKana": "いせじんぐう",
       "nameKanji": "伊勢神宮",
       "category": "landmark",
-      "description": "もりの なかの ふるい おみや"
+      "description": "もりの なかの ふるい おみや",
+      "art": "card-24-1"
     },
     {
       "id": "24-2",
@@ -705,7 +707,8 @@
       "nameKana": "しんじゅ",
       "nameKanji": "真珠",
       "category": "craft",
-      "description": "かいの なかで そだつ たま"
+      "description": "かいの なかで そだつ たま",
+      "art": "card-24-2"
     },
     {
       "id": "24-3",
@@ -724,7 +727,8 @@
       "nameKana": "びわこ",
       "nameKanji": "琵琶湖",
       "category": "nature",
-      "description": "にほんで いちばん おおきい みずうみ"
+      "description": "にほんで いちばん おおきい みずうみ",
+      "art": "card-25-1"
     },
     {
       "id": "25-2",
@@ -733,7 +737,8 @@
       "nameKana": "ひこねじょう",
       "nameKanji": "彦根城",
       "category": "landmark",
-      "description": "むかしの ままの てんしゅ"
+      "description": "むかしの ままの てんしゅ",
+      "art": "card-25-2"
     },
     {
       "id": "25-3",
@@ -752,7 +757,8 @@
       "nameKana": "きよみずでら",
       "nameKanji": "清水寺",
       "category": "landmark",
-      "description": "がけに たつ おおきな ぶたい"
+      "description": "がけに たつ おおきな ぶたい",
+      "art": "card-26-1"
     },
     {
       "id": "26-2",
@@ -791,7 +797,8 @@
       "nameKana": "おおさかじょう",
       "nameKanji": "大阪城",
       "category": "landmark",
-      "description": "きんいろの かざりの おしろ"
+      "description": "きんいろの かざりの おしろ",
+      "art": "card-27-2"
     },
     {
       "id": "27-3",
@@ -800,7 +807,8 @@
       "nameKana": "くしかつ",
       "nameKanji": "串カツ",
       "category": "food",
-      "description": "くしに さして あげる"
+      "description": "くしに さして あげる",
+      "art": "card-27-3"
     },
     {
       "id": "28-1",
@@ -809,7 +817,8 @@
       "nameKana": "こうべびーふ",
       "nameKanji": "神戸ビーフ",
       "category": "food",
-      "description": "せかいで しられる ぎゅうにく"
+      "description": "せかいで しられる ぎゅうにく",
+      "art": "card-28-1"
     },
     {
       "id": "28-2",
@@ -818,7 +827,8 @@
       "nameKana": "ひめじじょう",
       "nameKanji": "姫路城",
       "category": "landmark",
-      "description": "しろさぎの ような しろい しろ"
+      "description": "しろさぎの ような しろい しろ",
+      "art": "card-28-2"
     },
     {
       "id": "28-3",
@@ -837,7 +847,8 @@
       "nameKana": "しか",
       "nameKanji": "鹿",
       "category": "nature",
-      "description": "こうえんを あるく やさしい しか"
+      "description": "こうえんを あるく やさしい しか",
+      "art": "card-29-1"
     },
     {
       "id": "29-2",
@@ -846,7 +857,8 @@
       "nameKana": "とうだいじ",
       "nameKanji": "東大寺",
       "category": "landmark",
-      "description": "とても おおきな だいぶつ"
+      "description": "とても おおきな だいぶつ",
+      "art": "card-29-2"
     },
     {
       "id": "29-3",
@@ -875,7 +887,8 @@
       "nameKana": "くまのこどう",
       "nameKanji": "熊野古道",
       "category": "landmark",
-      "description": "もりの なかの ふるい みち"
+      "description": "もりの なかの ふるい みち",
+      "art": "card-30-2"
     },
     {
       "id": "30-3",
@@ -884,7 +897,8 @@
       "nameKana": "ぱんだ",
       "nameKanji": "パンダ",
       "category": "nature",
-      "description": "しろと くろの にんきもの"
+      "description": "しろと くろの にんきもの",
+      "art": "card-30-3"
     },
     {
       "id": "31-1",
@@ -913,7 +927,8 @@
       "nameKana": "ずわいがに",
       "nameKanji": "ズワイガニ",
       "category": "food",
-      "description": "あしが ながい かに"
+      "description": "あしが ながい かに",
+      "art": "card-31-3"
     },
     {
       "id": "32-1",
@@ -922,7 +937,8 @@
       "nameKana": "いずもたいしゃ",
       "nameKanji": "出雲大社",
       "category": "landmark",
-      "description": "ふとい しめなわが ある おみや"
+      "description": "ふとい しめなわが ある おみや",
+      "art": "card-32-1"
     },
     {
       "id": "32-2",
@@ -941,7 +957,8 @@
       "nameKana": "いわみぎんざん",
       "nameKanji": "石見銀山",
       "category": "landmark",
-      "description": "ぎんを ほっていた やま"
+      "description": "ぎんを ほっていた やま",
+      "art": "card-32-3"
     },
     {
       "id": "33-1",
@@ -950,7 +967,8 @@
       "nameKana": "きびだんご",
       "nameKanji": "きび団子",
       "category": "food",
-      "description": "ももたろうの おはなしの だんご"
+      "description": "ももたろうの おはなしの だんご",
+      "art": "card-33-1"
     },
     {
       "id": "33-2",
@@ -959,7 +977,8 @@
       "nameKana": "くらしき",
       "nameKanji": "倉敷",
       "category": "landmark",
-      "description": "しろい かべと やなぎの かわ"
+      "description": "しろい かべと やなぎの かわ",
+      "art": "card-33-2"
     },
     {
       "id": "33-3",
@@ -988,7 +1007,8 @@
       "nameKana": "いつくしまじんじゃ",
       "nameKanji": "厳島神社",
       "category": "landmark",
-      "description": "うみに たつ あかい とりい"
+      "description": "うみに たつ あかい とりい",
+      "art": "card-34-2"
     },
     {
       "id": "34-3",
@@ -1017,7 +1037,8 @@
       "nameKana": "きんたいきょう",
       "nameKanji": "錦帯橋",
       "category": "landmark",
-      "description": "アーチが つづく きの はし"
+      "description": "アーチが つづく きの はし",
+      "art": "card-35-2"
     },
     {
       "id": "35-3",
@@ -1026,7 +1047,8 @@
       "nameKana": "はぎやき",
       "nameKanji": "萩焼",
       "category": "craft",
-      "description": "つかうほど いろが かわる"
+      "description": "つかうほど いろが かわる",
+      "art": "card-35-3"
     },
     {
       "id": "36-1",
@@ -1055,7 +1077,8 @@
       "nameKana": "なるとのうずしお",
       "nameKanji": "鳴門の渦潮",
       "category": "nature",
-      "description": "うみに できる おおきな うず"
+      "description": "うみに できる おおきな うず",
+      "art": "card-36-3"
     },
     {
       "id": "37-1",
@@ -1074,7 +1097,8 @@
       "nameKana": "こんぴらさん",
       "nameKanji": "金刀比羅宮",
       "category": "landmark",
-      "description": "ながい かいだんを のぼる"
+      "description": "ながい かいだんを のぼる",
+      "art": "card-37-2"
     },
     {
       "id": "37-3",
@@ -1083,7 +1107,8 @@
       "nameKana": "おりーぶ",
       "nameKanji": "オリーブ",
       "category": "nature",
-      "description": "しまで そだつ みどりの み"
+      "description": "しまで そだつ みどりの み",
+      "art": "card-37-3"
     },
     {
       "id": "38-1",
@@ -1102,7 +1127,8 @@
       "nameKana": "どうごおんせん",
       "nameKanji": "道後温泉",
       "category": "landmark",
-      "description": "とても ふるい おんせん"
+      "description": "とても ふるい おんせん",
+      "art": "card-38-2"
     },
     {
       "id": "38-3",
@@ -1111,7 +1137,8 @@
       "nameKana": "いよかすり",
       "nameKanji": "伊予絣",
       "category": "craft",
-      "description": "あいいろの もようの ぬの"
+      "description": "あいいろの もようの ぬの",
+      "art": "card-38-3"
     },
     {
       "id": "39-1",
@@ -1130,7 +1157,8 @@
       "nameKana": "よさこい",
       "nameKanji": "よさこい",
       "category": "landmark",
-      "description": "なるこを ならして おどる"
+      "description": "なるこを ならして おどる",
+      "art": "card-39-2"
     },
     {
       "id": "39-3",
@@ -1139,7 +1167,8 @@
       "nameKana": "しまんとがわ",
       "nameKanji": "四万十川",
       "category": "nature",
-      "description": "とても きれいな ながい かわ"
+      "description": "とても きれいな ながい かわ",
+      "art": "card-39-3"
     },
     {
       "id": "40-1",
@@ -1158,7 +1187,8 @@
       "nameKana": "とんこつらーめん",
       "nameKanji": "豚骨ラーメン",
       "category": "food",
-      "description": "しろい スープの ラーメン"
+      "description": "しろい スープの ラーメン",
+      "art": "card-40-2"
     },
     {
       "id": "40-3",
@@ -1167,7 +1197,8 @@
       "nameKana": "だざいふてんまんぐう",
       "nameKanji": "太宰府天満宮",
       "category": "landmark",
-      "description": "べんきょうの かみさま"
+      "description": "べんきょうの かみさま",
+      "art": "card-40-3"
     },
     {
       "id": "41-1",
@@ -1186,7 +1217,8 @@
       "nameKana": "いか",
       "nameKanji": "烏賊",
       "category": "food",
-      "description": "すきとおって みえる いか"
+      "description": "すきとおって みえる いか",
+      "art": "card-41-2"
     },
     {
       "id": "41-3",
@@ -1195,7 +1227,8 @@
       "nameKana": "むつごろう",
       "nameKanji": "ムツゴロウ",
       "category": "nature",
-      "description": "どろの うえを はねる さかな"
+      "description": "どろの うえを はねる さかな",
+      "art": "card-41-3"
     },
     {
       "id": "42-1",
@@ -1214,7 +1247,8 @@
       "nameKana": "ぐらばーえん",
       "nameKanji": "グラバー園",
       "category": "landmark",
-      "description": "うみが みえる ふるい おうち"
+      "description": "うみが みえる ふるい おうち",
+      "art": "card-42-2"
     },
     {
       "id": "42-3",
@@ -1223,7 +1257,8 @@
       "nameKana": "ちゃんぽん",
       "nameKanji": "ちゃんぽん",
       "category": "food",
-      "description": "やさいが たっぷりの めん"
+      "description": "やさいが たっぷりの めん",
+      "art": "card-42-3"
     },
     {
       "id": "43-1",
@@ -1232,7 +1267,8 @@
       "nameKana": "くまもとじょう",
       "nameKanji": "熊本城",
       "category": "landmark",
-      "description": "そりかえった いしがきの しろ"
+      "description": "そりかえった いしがきの しろ",
+      "art": "card-43-1"
     },
     {
       "id": "43-2",
@@ -1241,7 +1277,8 @@
       "nameKana": "あそさん",
       "nameKanji": "阿蘇山",
       "category": "nature",
-      "description": "おおきな くぼみが ある やま"
+      "description": "おおきな くぼみが ある やま",
+      "art": "card-43-2"
     },
     {
       "id": "43-3",
@@ -1260,7 +1297,8 @@
       "nameKana": "べっぷおんせん",
       "nameKanji": "別府温泉",
       "category": "landmark",
-      "description": "ゆげが まちじゅうに あがる"
+      "description": "ゆげが まちじゅうに あがる",
+      "art": "card-44-1"
     },
     {
       "id": "44-2",
@@ -1269,7 +1307,8 @@
       "nameKana": "とりてん",
       "nameKanji": "とり天",
       "category": "food",
-      "description": "とりにくの てんぷら"
+      "description": "とりにくの てんぷら",
+      "art": "card-44-2"
     },
     {
       "id": "44-3",
@@ -1298,7 +1337,8 @@
       "nameKana": "ちきんなんばん",
       "nameKanji": "チキン南蛮",
       "category": "food",
-      "description": "しろい ソースを かける"
+      "description": "しろい ソースを かける",
+      "art": "card-45-2"
     },
     {
       "id": "45-3",
@@ -1307,7 +1347,8 @@
       "nameKana": "たかちほきょう",
       "nameKanji": "高千穂峡",
       "category": "nature",
-      "description": "たかい いわに はさまれた かわ"
+      "description": "たかい いわに はさまれた かわ",
+      "art": "card-45-3"
     },
     {
       "id": "46-1",
@@ -1316,7 +1357,8 @@
       "nameKana": "さくらじま",
       "nameKanji": "桜島",
       "category": "nature",
-      "description": "けむりを あげる しまの やま"
+      "description": "けむりを あげる しまの やま",
+      "art": "card-46-1"
     },
     {
       "id": "46-2",
@@ -1335,7 +1377,8 @@
       "nameKana": "さつまいも",
       "nameKanji": "薩摩芋",
       "category": "food",
-      "description": "やくと ほくほく あまい"
+      "description": "やくと ほくほく あまい",
+      "art": "card-46-3"
     },
     {
       "id": "47-1",
@@ -1344,7 +1387,8 @@
       "nameKana": "しーさー",
       "nameKanji": "シーサー",
       "category": "craft",
-      "description": "やねの うえで まもる いきもの"
+      "description": "やねの うえで まもる いきもの",
+      "art": "card-47-1"
     },
     {
       "id": "47-2",
@@ -1363,7 +1407,8 @@
       "nameKana": "さんごしょう",
       "nameKanji": "珊瑚礁",
       "category": "nature",
-      "description": "あおい うみの いろとりどりの いえ"
+      "description": "あおい うみの いろとりどりの いえ",
+      "art": "card-47-3"
     }
   ]
 }
