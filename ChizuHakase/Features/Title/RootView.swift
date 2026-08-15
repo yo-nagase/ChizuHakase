@@ -71,6 +71,10 @@ struct RootView: View {
         .task {
             applyDebugRoute()
             playThemeIfWanted()
+            // After the first frame, before the first tap: the engine spin-up
+            // this hides would otherwise run inside that tap's button action
+            // and read as the app hesitating.
+            SoundService.shared.warmUp()
         }
     }
 

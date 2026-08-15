@@ -26,7 +26,9 @@ struct StageSelectView: View {
                                mapData: app.mapData,
                                record: app.save.data.record(forStage: stage.index,
                                                             mode: quizMode),
-                               sparklingCount: sparklingCount(stage)) {
+                               save: app.save.data) {
+                        SoundService.shared.play(
+                            .decide, enabled: app.save.data.settings.soundEnabled)
                         onPlay(stage)
                     }
                 }
@@ -81,11 +83,6 @@ struct StageSelectView: View {
         }
     }
 
-    /// How many have reached the top of the mastery ladder — 「おぼえた」
-    /// (CLAUDE.md §5).
-    private func sparklingCount(_ stage: Stage) -> Int {
-        stage.codes.filter { app.save.data.masteryLevel(of: $0) >= GameRules.maxMastery }.count
-    }
 }
 
 private struct StageSheet: View {
@@ -93,8 +90,15 @@ private struct StageSheet: View {
     let stage: Stage
     let mapData: MapData
     let record: StageRecord?
-    let sparklingCount: Int
+    let save: SaveData
     var action: () -> Void
+
+    /// The stage's prefectures at the top of the mastery ladder — 「おぼえた」
+    /// (CLAUDE.md §5). Derived from the same save the silhouette paints from,
+    /// so the chip's number and the gold on the map cannot disagree.
+    private var learnedCount: Int {
+        stage.codes.filter { save.masteryLevel(of: $0) >= GameRules.maxMastery }.count
+    }
 
     var body: some View {
         Button(action: action) {
@@ -133,8 +137,8 @@ private struct StageSheet: View {
                     // left on purpose: a coverage count ("answered at least
                     // once") sat next to it for a while, and it mostly
                     // measured having pressed play.
-                    if sparklingCount > 0 {
-                        countChip("✨ \(mode.learnedCount) \(sparklingCount)",
+                    if learnedCount > 0 {
+                        countChip("✨ \(mode.learnedCount) \(learnedCount)",
                                   tint: Palette.goldInk,
                                   border: Palette.gold.opacity(0.65))
                             .padding(.top, 2)
@@ -174,12 +178,17 @@ private struct StageSheet: View {
             .shadow(color: Palette.stickerShadow, radius: 0, y: 1)
     }
 
-    /// The region, drawn as the sticker it will become.
+    /// The region, painted with the same mastery ramp as the title map and
+    /// the my-map (`MasteryStyle`): grey → light green → deep green → gold.
+    /// One function feeds all three screens, so the ladder can never show a
+    /// different colour here than the legend promises there. Identity colours
+    /// are gone from this thumbnail — it now answers "how much of this region
+    /// do I know", which is the question a child picks a stage by.
     private var silhouette: some View {
         PrefectureMapView(
             mapData: mapData,
             codes: stage.codes,
-            appearance: { PrefectureAppearance.stuck(for: $0.code) },
+            appearance: { MasteryStyle.appearance(for: $0.code, save: save) },
             showsOkinawaInset: false)
         .allowsHitTesting(false)
     }
@@ -187,7 +196,7 @@ private struct StageSheet: View {
     private var accessibilityText: String {
         var text = "\(stage.displayName(mode))。\(stage.questionCount) もん。"
             + mode.starCount(record?.stars ?? 0)
-        if sparklingCount > 0 { text += "。\(mode.learnedCount) \(sparklingCount)" }
+        if learnedCount > 0 { text += "。\(mode.learnedCount) \(learnedCount)" }
         return text
     }
 }

@@ -70,7 +70,11 @@ struct TitleView: View {
                 // above already open the my-map and the card book; a second,
                 // smaller pair of doors to the same two rooms just competed
                 // with the one door that matters.
-                Button(action: onStart) {
+                Button {
+                    SoundService.shared.play(
+                        .decide, enabled: app.save.data.settings.soundEnabled)
+                    onStart()
+                } label: {
                     Image(mode.isKids ? "TitlePlayButton" : "TitlePlayButtonAdult")
                         .resizable()
                         .scaledToFit()

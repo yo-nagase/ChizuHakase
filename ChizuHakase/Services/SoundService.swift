@@ -7,14 +7,16 @@ import Foundation
 /// The quiz cues are synthesised in-process rather than shipped as audio
 /// files: that set is four short tones, and generating them keeps the bundle
 /// free of binary assets that would need licence tracking for a
-/// Kids-category release. The navigation taps are the exception — supplied
-/// recordings whose shapes a tone pair does not reproduce, bundled as
-/// {name}.caf and baked to 44.1 kHz mono.
+/// Kids-category release. The navigation taps are the exception — a supplied
+/// recording whose shape a tone pair does not reproduce, bundled as tap.caf
+/// and baked to 44.1 kHz mono. Forward and back currently share the one
+/// recording; the two cue names survive so they can diverge again without
+/// touching the call sites.
 final class SoundService {
     static let shared = SoundService()
 
     enum Cue: Hashable {
-        /// Played from decide.caf / cancel.caf rather than from notes.
+        /// Played from a bundled recording rather than from notes.
         case decide, cancel
         case correct, wrong, star, cardWin
 
@@ -35,8 +37,7 @@ final class SoundService {
         /// Bundled file name for the recorded cues.
         var fileName: String? {
             switch self {
-            case .decide: "decide"
-            case .cancel: "cancel"
+            case .decide, .cancel: "tap"
             default: nil
             }
         }
@@ -63,6 +64,17 @@ final class SoundService {
     private func reset() {
         engine.stop()
         started = false
+    }
+
+    /// Builds the engine and decodes the tap recording before the first tap
+    /// needs them. Both otherwise happen synchronously inside the first
+    /// button action, and starting an AVAudioEngine takes long enough there
+    /// to read as input lag. Runs regardless of the sound setting: the
+    /// toggle can flip at any moment, and an idle engine on the ambient
+    /// session just renders silence.
+    func warmUp() {
+        _ = recordedBuffer(for: .decide)
+        try? start()
     }
 
     func play(_ cue: Cue, enabled: Bool) {
@@ -96,8 +108,9 @@ final class SoundService {
         AVAudioFormat(standardFormatWithSampleRate: sampleRate, channels: 1)
     }
 
-    /// Recorded cues, decoded once and kept.
-    private var recordedBuffers: [Cue: AVAudioPCMBuffer] = [:]
+    /// Recorded cues, decoded once and kept. Keyed by file name, not by cue,
+    /// so cues that share a recording share the one decoded buffer.
+    private var recordedBuffers: [String: AVAudioPCMBuffer] = [:]
 
     /// The files are baked to 44.1 kHz mono so their processing format is
     /// exactly the format the player node was connected with. The guard
@@ -105,16 +118,16 @@ final class SoundService {
     /// buffer raises an exception, which would turn a re-exported file into a
     /// crash on the first tap.
     private func recordedBuffer(for cue: Cue) -> AVAudioPCMBuffer? {
-        if let cached = recordedBuffers[cue] { return cached }
-        guard let name = cue.fileName,
-              let url = Bundle.main.url(forResource: name, withExtension: "caf"),
+        guard let name = cue.fileName else { return nil }
+        if let cached = recordedBuffers[name] { return cached }
+        guard let url = Bundle.main.url(forResource: name, withExtension: "caf"),
               let file = try? AVAudioFile(forReading: url),
               file.processingFormat == format,
               let buffer = AVAudioPCMBuffer(pcmFormat: file.processingFormat,
                                             frameCapacity: AVAudioFrameCount(file.length))
         else { return nil }
         do { try file.read(into: buffer) } catch { return nil }
-        recordedBuffers[cue] = buffer
+        recordedBuffers[name] = buffer
         return buffer
     }
 
