@@ -46,8 +46,10 @@ nonisolated enum Palette {
 
     // MARK: - Sticker album
 
-    /// The album page a sticker is stuck onto.
-    static let page = Color(hex: 0xFFFBF2)
+    /// The album page a sticker is stuck onto. A deeper cream than the old
+    /// near-white (0xFFFBF2): white next to the artwork read as a bare
+    /// screen, this reads as paper.
+    static let page = Color(hex: 0xF9F1DE)
     /// Outline of a slot no sticker has been earned for yet, and the stock of a
     /// card not collected yet.
     static let emptySlotHex: UInt32 = 0xD8D2C4

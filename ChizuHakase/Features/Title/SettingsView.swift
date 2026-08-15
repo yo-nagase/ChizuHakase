@@ -31,6 +31,11 @@ struct SettingsView: View {
                 }
 
                 Section {
+                    // The same flag the title's mute button writes, so the two
+                    // controls can never disagree about whether the song plays.
+                    Toggle(isOn: setting(\.musicEnabled)) {
+                        label(mode.music)
+                    }
                     Toggle(isOn: setting(\.soundEnabled)) {
                         label(mode.soundEffects)
                     }

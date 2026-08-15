@@ -142,6 +142,10 @@ nonisolated enum GameRules {
 
     // MARK: - Stars
 
+    /// The full house. `stars` only awards it for zero missed prefectures, so
+    /// "has the top star count" and "has a no-miss clear" are the same fact.
+    static let maxStageStars = 3
+
     /// Stars for a finished stage, judged on how many *prefectures* were
     /// missed — not how many wrong taps happened. Repeatedly fumbling one
     /// prefecture should not cost more than getting one wrong.

@@ -9,6 +9,9 @@ final class AppState {
     let cards: CardCatalog
     let save: SaveStore
     let voice: VoiceInputService
+    /// The title theme. Owned here so returning to the title finds the same
+    /// player it left, not a second one layered under the first.
+    let music = MusicService()
 
     init(mapData: MapData? = nil,
          cards: CardCatalog? = nil,

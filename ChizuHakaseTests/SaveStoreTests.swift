@@ -27,6 +27,7 @@ struct SaveStoreTests {
         #expect(store.data.version == SaveData.currentVersion)
         #expect(store.data.settings.soundEnabled)
         #expect(store.data.settings.speechEnabled)
+        #expect(store.data.settings.musicEnabled)
         #expect(!store.data.settings.voiceInputEnabled)
     }
 
@@ -135,6 +136,17 @@ struct SaveStoreTests {
 
         SaveStore(directory: dir).updateSettings { $0.soundEnabled = false }
         #expect(SaveStore(directory: dir).data.settings.soundEnabled == false)
+    }
+
+    /// The title-screen mute writes through this flag; off has to survive a
+    /// relaunch, or the song comes back on the next cold start and the mute
+    /// button taught the child that buttons lie.
+    @Test func musicStaysOffOnceMuted() throws {
+        let dir = try makeScratch()
+        defer { try? FileManager.default.removeItem(at: dir) }
+
+        SaveStore(directory: dir).updateSettings { $0.musicEnabled = false }
+        #expect(SaveStore(directory: dir).data.settings.musicEnabled == false)
     }
 
     /// A truncated or hand-edited file must not take the app down on launch.
@@ -531,5 +543,14 @@ struct SaveMigrationTests {
         let data = try load("{}")
         #expect(data.records.isEmpty)
         #expect(data.version == SaveData.currentVersion)
+    }
+
+    /// A save written before the theme song existed plays it: music defaults
+    /// on, and only an explicit mute turns it off. The keys around it must
+    /// keep their stored values rather than being dragged to defaults.
+    @Test func savesWrittenBeforeTheMusicSettingPlayMusic() throws {
+        let data = try load(#"{"version":5,"settings":{"soundEnabled":false}}"#)
+        #expect(data.settings.musicEnabled)
+        #expect(data.settings.soundEnabled == false)
     }
 }

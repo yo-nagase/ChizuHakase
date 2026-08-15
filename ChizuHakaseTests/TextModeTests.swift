@@ -151,6 +151,17 @@ struct TextModeTests {
         #expect(adult.nextGoalLabel(.done) == "最高のカード")
     }
 
+    /// The mute button names the action pressing it performs, so muting and
+    /// unmuting cannot read as the same button to VoiceOver.
+    @Test func theMusicControlsAreWordedForBothModes() {
+        #expect(TextMode.kids.music == "おんがく")
+        #expect(TextMode.adult.music == "音楽")
+        for mode in TextMode.allCases {
+            #expect(mode.musicStop != mode.musicPlay,
+                    "muting and unmuting read as the same action")
+        }
+    }
+
     /// Speech must keep using the reading regardless of mode, or adult mode
     /// would make the app mispronounce prefecture names.
     @Test func spokenNameIsAlwaysTheReading() {
@@ -175,10 +186,11 @@ extension TextMode {
          points, bestScore, playAgain, chooseStage, becameSparkling, becameRainbow,
          starCount(3),
          sparklingCards, learnedPrefectures, ownedCards,
-         learnedCount, stickerCount, resetZoom,
+         learnedCount, clearedPrefectures, noMissClear, resetZoom,
          eraseEverything, eraseConfirm1, eraseConfirm2, eraseCancel, eraseNext,
          eraseConfirmAction,
-         soundSection, soundEffects, speech, voiceSection, voiceOnDeviceNote, micDenied,
+         soundSection, music, musicStop, musicPlay, soundEffects, speech,
+         voiceSection, voiceOnDeviceNote, micDenied,
          displaySection,
          masteryLabel(0), masteryLabel(1), masteryLabel(2), masteryLabel(3),
          masteryLabel(4), masteryLabel(5),

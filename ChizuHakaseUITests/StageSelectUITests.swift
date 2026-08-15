@@ -25,9 +25,9 @@ final class StageSelectUITests: XCTestCase {
     /// finished (CLAUDE.md §12).
     func testAFullyCoveredStageReadsAsFull() {
         launch(learned: true)
-        XCTAssertTrue(app.staticTexts["シール 7 / 7"].waitForExistence(timeout: 10),
+        XCTAssertTrue(app.staticTexts["できた けん 7 / 7"].waitForExistence(timeout: 10),
                       "a stage with every prefecture covered did not show as full")
-        XCTAssertFalse(app.staticTexts["シール 7 / 14"].exists,
+        XCTAssertFalse(app.staticTexts["できた けん 7 / 14"].exists,
                        "the denominator is counting questions again")
     }
 
@@ -35,7 +35,7 @@ final class StageSelectUITests: XCTestCase {
     /// never catch the bug above on its own.
     func testTheNationalStageCountsAllFortySeven() {
         launch(learned: false)
-        XCTAssertTrue(app.staticTexts["シール 0 / 47"].waitForExistence(timeout: 10),
+        XCTAssertTrue(app.staticTexts["できた けん 0 / 47"].waitForExistence(timeout: 10),
                       "the national stage should count every prefecture in the country")
     }
 }

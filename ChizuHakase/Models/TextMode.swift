@@ -135,11 +135,14 @@ nonisolated extension TextMode {
     var learnedPrefectures: String { isKids ? "おぼえた けん" : "覚えた県" }
     var ownedCards: String { isKids ? "もっている カード" : "持っているカード" }
     var learnedCount: String { isKids ? "おぼえた" : "覚えた" }
-    /// The stage list's coverage count: prefectures answered at least once —
-    /// stickers stuck on that sheet. Deliberately *not* 「おぼえた」: that word
-    /// means the top of the mastery ladder now (§5), and one stuck sticker is
-    /// the first step, not the summit.
-    var stickerCount: String { isKids ? "シール" : "シール" }
+    /// The stage list's coverage count: prefectures answered cleanly at least
+    /// once. Deliberately *not* 「おぼえた」: that word means the top of the
+    /// mastery ladder now (§5), and one clean answer is the first step, not
+    /// the summit. It said 「シール」 for a while — a leftover from when the
+    /// tiles were stickers, naming a thing the interface no longer shows.
+    var clearedPrefectures: String { isKids ? "できた けん" : "正解した県" }
+    /// VoiceOver's name for the mode medal on a stage sheet — a no-miss clear.
+    var noMissClear: String { isKids ? "ノーミスで クリア" : "ノーミスでクリア" }
     var resetZoom: String { isKids ? "もとの おおきさ" : "元の大きさ" }
     var eraseEverything: String { isKids ? "きろくを ぜんぶ けす" : "記録をすべて消去" }
     var eraseConfirm1: String { isKids ? "ほんとうに けしても いい?" : "本当に消去しますか?" }
@@ -167,6 +170,12 @@ nonisolated extension TextMode {
 
     // Settings
     var soundSection: String { isKids ? "おと" : "音" }
+    var music: String { isKids ? "おんがく" : "音楽" }
+    /// The title-screen mute names the action a press performs, and the two
+    /// states must not share a wording — to VoiceOver an identical label makes
+    /// muting and unmuting the same button.
+    var musicStop: String { isKids ? "おんがくを とめる" : "音楽を止める" }
+    var musicPlay: String { isKids ? "おんがくを ならす" : "音楽を鳴らす" }
     var soundEffects: String { isKids ? "こうかおん" : "効果音" }
     var speech: String { isKids ? "よみあげ" : "読み上げ" }
     var voiceSection: String { isKids ? "こえ" : "音声入力" }

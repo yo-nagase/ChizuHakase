@@ -21,9 +21,31 @@ final class VoiceInputService {
         case unsupported
         /// Permission refused. We fall back to tapping and never ask again.
         case denied
+        /// The system was never asked — neither denied (we may still ask) nor
+        /// available (recognition would refuse to start). Reachable when the
+        /// mode was switched on but that launch died before the prompt was
+        /// answered; the settings toggle keeps its right to ask again.
+        case notDetermined
     }
 
     private(set) var availability: Availability = .unsupported
+
+    init() {
+        refreshAvailability()
+    }
+
+    /// Availability at launch, without prompting anyone: TCC already knows
+    /// its answer for whoever has been asked before.
+    ///
+    /// Without this, a save with the mode switched on came back from a
+    /// relaunch with the mic button missing — availability only ever moved
+    /// inside requestAccess(), and nothing called that until the settings
+    /// toggle was flipped again.
+    func refreshAvailability() {
+        availability = .derived(possibleOnDevice: isPossibleOnThisDevice,
+                                speech: SFSpeechRecognizer.authorizationStatus(),
+                                microphone: AVAudioApplication.shared.recordPermission)
+    }
     private(set) var isListening = false
     private(set) var transcript = ""
 
@@ -158,6 +180,27 @@ final class VoiceInputService {
         // one use of the microphone and a child who cannot read hiragana had no
         // way left to hear the question.
         AudioSession.configureForPlayback()
+    }
+}
+
+extension VoiceInputService.Availability {
+    /// TCC's current answer, read from state that was handed in — a pure
+    /// function for the same reason the speech-voice pick is one (CLAUDE.md
+    /// §7): the real inputs are device state, and tests must not depend on
+    /// what the machine running them happens to allow.
+    nonisolated static func derived(
+        possibleOnDevice: Bool,
+        speech: SFSpeechRecognizerAuthorizationStatus,
+        microphone: AVAudioApplication.recordPermission
+    ) -> Self {
+        guard possibleOnDevice else { return .unsupported }
+        // A single refusal decides: a denied mic cannot listen no matter what
+        // the other, possibly unasked, prompt might say later.
+        if speech == .denied || speech == .restricted || microphone == .denied {
+            return .denied
+        }
+        if speech == .authorized && microphone == .granted { return .available }
+        return .notDetermined
     }
 }
 

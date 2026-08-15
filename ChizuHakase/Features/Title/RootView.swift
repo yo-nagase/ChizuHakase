@@ -41,7 +41,33 @@ struct RootView: View {
         .sheet(isPresented: $showsSettings) {
             SettingsView().environment(\.textMode, app.save.data.settings.textMode)
         }
-        .task { applyDebugRoute() }
+        // The theme belongs to the title alone. It fades out under the push
+        // animation rather than cutting off, and every path back to the title
+        // starts it again — playTitleTheme is idempotent, so the paths need
+        // not coordinate.
+        .onChange(of: path.isEmpty) { _, atTitle in
+            if atTitle { playThemeIfWanted() } else { app.music.stop(fadeOut: 0.6) }
+        }
+        // Written by the title's mute button and by the settings sheet alike;
+        // reacting to the flag here means both controls behave identically.
+        .onChange(of: app.save.data.settings.musicEnabled) { _, enabled in
+            // A mute should feel like a hand on the speaker — near-instant,
+            // but not a click.
+            if enabled { playThemeIfWanted() } else { app.music.stop(fadeOut: 0.2) }
+        }
+        // After the debug route, not before: a session launched straight into
+        // another screen has no title to sing over.
+        .task {
+            applyDebugRoute()
+            playThemeIfWanted()
+        }
+    }
+
+    /// The one gate for starting the theme: only on the title, only if the
+    /// mute has not been chosen.
+    private func playThemeIfWanted() {
+        guard path.isEmpty, app.save.data.settings.musicEnabled else { return }
+        app.music.playTitleTheme()
     }
 
     /// Jump straight to a screen via `-startAt <route>`, for capturing store

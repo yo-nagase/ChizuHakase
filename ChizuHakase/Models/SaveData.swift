@@ -8,6 +8,10 @@ nonisolated struct StageRecord: Codable, Sendable, Equatable {
 nonisolated struct Settings: Codable, Sendable, Equatable {
     var soundEnabled = true
     var speechEnabled = true
+    /// The title theme. Off is a choice someone made at the mute button, so it
+    /// survives relaunch — a mute that un-mutes itself taught the child that
+    /// buttons lie.
+    var musicEnabled = true
     var voiceInputEnabled = false
     /// Child mode is the product; adult mode is the accommodation.
     var textMode: TextMode = .kids
@@ -21,6 +25,9 @@ nonisolated struct Settings: Codable, Sendable, Equatable {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         soundEnabled = try c.decodeIfPresent(Bool.self, forKey: .soundEnabled) ?? true
         speechEnabled = try c.decodeIfPresent(Bool.self, forKey: .speechEnabled) ?? true
+        // A save from before the theme song existed has expressed no opinion
+        // about it, so it gets the default, not silence.
+        musicEnabled = try c.decodeIfPresent(Bool.self, forKey: .musicEnabled) ?? true
         voiceInputEnabled = try c.decodeIfPresent(Bool.self, forKey: .voiceInputEnabled) ?? false
         // A save written before this setting existed is a child's save.
         textMode = try c.decodeIfPresent(TextMode.self, forKey: .textMode) ?? .kids

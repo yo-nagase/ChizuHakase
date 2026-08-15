@@ -5,6 +5,7 @@ import SwiftUI
 struct TitleView: View {
     @Environment(AppState.self) private var app
     @Environment(\.textMode) private var mode
+    @Environment(\.horizontalSizeClass) private var hSize
 
     var onStart: () -> Void
     var onMyMap: () -> Void
@@ -22,59 +23,68 @@ struct TitleView: View {
         ZStack {
             AlbumPage()
             VStack(spacing: 0) {
-                // The brand mark is artwork, shared by both text modes;
-                // VoiceOver still gets words, not a picture, via TextMode.
-                Image("TitleLogo")
-                    .resizable()
-                    .scaledToFit()
-                    .frame(maxWidth: 300)
-                    .padding(.top, 4)
-                    .accessibilityLabel("\(mode.appTitleTop) \(mode.appTitleMain)")
-                    .accessibilityAddTraits(.isHeader)
-
+                // The plaque-free logo floats over the sea and the top of the
+                // country. Sharing this space gives the map the width and
+                // height the old separate logo row used to consume.
                 miniMap
-                    .frame(maxHeight: 380)
+                    // On iPad the −52 bleed would inflate the sea to 756pt
+                    // and push the tallies onto the Okinawa inset; 680 keeps
+                    // the composition. iPhone proposals never reach the cap.
+                    .frame(maxWidth: 680)
+                    .padding(.top, 64)
+                    .overlay(alignment: .top) {
+                        // Two ceilings, both set by the 1000px art, not by
+                        // style: 320pt is 960px on a 3x phone, 420pt is
+                        // 840px on a 2x iPad — each the widest that still
+                        // renders sharp on its display.
+                        Image("TitleLogoFloating")
+                            .resizable()
+                            .scaledToFit()
+                            .frame(maxWidth: hSize == .regular ? 420 : 320)
+                            .accessibilityLabel(
+                                "\(mode.appTitleTop) \(mode.appTitleMain)"
+                            )
+                            .accessibilityAddTraits(.isHeader)
+                    }
                     .layoutPriority(1)
-                    .padding(.vertical, 8)
+                    // −52 goes past cancelling the column's 24pt margin: the
+                    // frame runs 28pt off each screen edge, trading the art's
+                    // transparent side margins for a visibly larger country.
+                    .padding(.horizontal, -52)
+                    .padding(.vertical, 2)
+                    // The sea keeps its full painted height, but the layout
+                    // hands part of it back, so the tallies and あそぶ sit on
+                    // the water (drawn later in the VStack = drawn on top).
+                    // Only ever water may go under them: at −170 the tallies
+                    // covered the Okinawa inset frame, and hiding a real map
+                    // element is where "the lower sea is margin" stops being
+                    // true. −95/−100 clears the inset's bottom edge on each
+                    // size class with water to spare.
+                    .padding(.bottom, hSize == .regular ? -100 : -75)
 
                 progressLine
 
-                Spacer(minLength: 12)
+                Spacer(minLength: 8)
 
-                VStack(spacing: 10) {
-                    Button(action: onStart) {
-                        Image(mode.isKids ? "TitlePlayButton" : "TitlePlayButtonAdult")
-                            .resizable()
-                            .scaledToFit()
-                            .accessibilityHidden(true)
-                    }
-                    .buttonStyle(TitleArtworkButtonStyle())
-                    .accessibilityLabel(mode.play)
-                    .frame(maxWidth: 256)
-
-                    HStack(spacing: 10) {
-                        Button(action: onMyMap) {
-                            Image("TitleMapButton")
-                                .resizable()
-                                .scaledToFit()
-                                .accessibilityHidden(true)
-                        }
-                        .buttonStyle(TitleArtworkButtonStyle())
-                        .accessibilityLabel(mode.myMap)
-
-                        Button(action: { onCardBook(.all) }) {
-                            Image(mode.isKids ? "TitleCardButton" : "TitleCardButtonAdult")
-                                .resizable()
-                                .scaledToFit()
-                                .accessibilityHidden(true)
-                        }
-                        .buttonStyle(TitleArtworkButtonStyle())
-                        .accessibilityLabel(mode.viewCards)
-                    }
+                // あそぶ is the only labelled button left. The two tallies
+                // above already open the my-map and the card book; a second,
+                // smaller pair of doors to the same two rooms just competed
+                // with the one door that matters.
+                Button(action: onStart) {
+                    Image(mode.isKids ? "TitlePlayButton" : "TitlePlayButtonAdult")
+                        .resizable()
+                        .scaledToFit()
+                        .accessibilityHidden(true)
                 }
-                .frame(maxWidth: 320)
+                .buttonStyle(TitleArtworkButtonStyle())
+                .accessibilityLabel(mode.play)
+                .frame(maxWidth: 256)
 
-                Spacer(minLength: 16)
+                // Flexible again now that the map overlap keeps the leftover
+                // small: on a phone there is almost nothing to distribute,
+                // and on iPad splitting it above and below あそぶ reads as
+                // album margins instead of one dead block over the footer.
+                Spacer(minLength: 12)
 
                 VStack(spacing: 2) {
                     Text("ちずデータ: Global Map Japan (国土地理院) をもとに簡略化")
@@ -95,28 +105,91 @@ struct TitleView: View {
             .padding(.horizontal, 24)
             .pageColumn()
 
-            // The gear floats over the page corner instead of owning a row of
-            // the column — that row's 44pt was the map's missing headroom. The
-            // logo underneath keeps its transparent corner there, so the two
-            // never visually collide.
-            Button { onSettings() } label: { Text("⚙️") }
-                .buttonStyle(CircleIconButtonStyle(diameter: 40))
+            // Both discs live in the bottom corners, beside the footer: the
+            // top band belongs to the logo, and these are parent-facing
+            // controls — down by the small print is exactly their register.
+            // A symbol on album paper, not the ⚙️ emoji: the emoji ships its
+            // own steel greys on a stark white disc, the one square inch of
+            // this screen that ignored the palette.
+            Button { onSettings() } label: { Image(systemName: "gearshape.fill") }
+                .buttonStyle(CircleIconButtonStyle(
+                    background: Palette.page,
+                    foreground: Palette.ink.opacity(0.62),
+                    diameter: 40))
                 .accessibilityLabel(mode.settings)
                 .frame(maxWidth: .infinity, maxHeight: .infinity,
-                       alignment: .topTrailing)
-                .padding(.horizontal, 24)
+                       alignment: .bottomTrailing)
+                .padding(.horizontal, 12)
+                .padding(.bottom, 10)
+                .pageColumn()
+
+            // The theme's mute, on the corner the gear left free. It lives
+            // here rather than only in settings because the moment someone
+            // wants the song off is the moment it is playing — and it writes
+            // through Settings.musicEnabled, so the choice survives relaunch
+            // and the settings sheet shows the same state.
+            Button {
+                app.save.updateSettings { $0.musicEnabled.toggle() }
+            } label: {
+                Image(systemName: app.save.data.settings.musicEnabled
+                      ? "speaker.wave.2.fill" : "speaker.slash.fill")
+            }
+                .buttonStyle(CircleIconButtonStyle(
+                    background: Palette.page,
+                    foreground: Palette.ink.opacity(0.62),
+                    diameter: 40))
+                // The label names the action a press performs, not the state,
+                // so muting and unmuting read as different buttons.
+                .accessibilityLabel(app.save.data.settings.musicEnabled
+                                    ? mode.musicStop : mode.musicPlay)
+                .frame(maxWidth: .infinity, maxHeight: .infinity,
+                       alignment: .bottomLeading)
+                .padding(.horizontal, 12)
+                .padding(.bottom, 10)
                 .pageColumn()
         }
     }
 
     /// The child's own progress, as the title art.
     private var miniMap: some View {
-        PrefectureMapView(
-            mapData: app.mapData,
-            codes: Array(1...47),
-            appearance: { MasteryStyle.appearance(for: $0.code, save: app.save.data) })
-        .aspectRatio(PrefectureGeometry.aspectRatio(of: app.mapData.prefectures),
-                     contentMode: .fit)
+        GeometryReader { geo in
+            ZStack {
+                // The sea, waves, compass and sparkles are decorative artwork.
+                // The country itself deliberately is not baked into this image,
+                // so its 47 live fills can keep changing.
+                Image("TitleMapBackdrop")
+                    .resizable()
+                    .scaledToFill()
+                    .frame(width: geo.size.width, height: geo.size.height)
+                    .clipped()
+                    .accessibilityHidden(true)
+
+                PrefectureMapView(
+                    mapData: app.mapData,
+                    codes: Array(1...47),
+                    appearance: {
+                        MasteryStyle.appearance(for: $0.code, save: app.save.data)
+                    }
+                )
+                .aspectRatio(
+                    PrefectureGeometry.aspectRatio(of: app.mapData.prefectures),
+                    contentMode: .fit
+                )
+                .frame(width: geo.size.width * 0.93,
+                       height: geo.size.height * 0.86)
+                .position(x: geo.size.width * 0.50,
+                          y: geo.size.height * 0.50)
+                // A single die-cut edge and lift around the live country. The
+                // fill colours remain untouched inside that silhouette.
+                .compositingGroup()
+                .shadow(color: .white.opacity(0.98), radius: 4)
+                .shadow(color: Palette.ink.opacity(0.18), radius: 2, y: 3)
+            }
+        }
+        // 0.8 = the backdrop's own 800×1000. Any other ratio means
+        // scaledToFill crops the artwork — at 0.95 the top and bottom sixth
+        // of the sea (and the blob's soft edge) were silently cut off.
+        .aspectRatio(0.8, contentMode: .fit)
         .allowsHitTesting(false)
     }
 
@@ -145,7 +218,8 @@ struct TitleView: View {
             // to 47/47 while the map was still mostly green, and a full meter
             // over an unfinished map called the child done when they were not.
             tally("TitleLearnedHUD", app.save.data.sparklingPrefectureCount, 47,
-                  mode.learnedPrefectures, Palette.learned, action: onMyMap)
+                  mode.learnedPrefectures, Palette.learned, hint: mode.myMap,
+                  action: onMyMap)
             // Opens the book unfiltered now rather than straight onto the キラ
             // cards, which the third tile used to do. One tile cannot lead two
             // places, and the book's own ✨ chip is the first thing above the
@@ -153,14 +227,18 @@ struct TitleView: View {
             tally("TitleCardsHUD", app.save.data.totalOwnedCards, max(app.cards.count, 1),
                   mode.ownedCards, Palette.collected,
                   note: TallyNote(emoji: "✨", label: mode.sparklingCards,
-                                  count: app.save.data.specialCardCount)) {
+                                  count: app.save.data.specialCardCount),
+                  hint: mode.viewCards) {
                 onCardBook(.all)
             }
         }
         // Holds the row to its tallest tile instead of letting the flexible
-        // heights above stretch it down the screen.
+        // heights above stretch it down the screen. 330 rather than 360 on a
+        // phone: every point of tile height is a point taken from the map
+        // above. The iPad's wider stage reads the same tiles as small print,
+        // so it gets a wider row.
         .fixedSize(horizontal: false, vertical: true)
-        .frame(maxWidth: 360)
+        .frame(maxWidth: hSize == .regular ? 380 : 330)
     }
 
     /// A second count that belongs *inside* the first.
@@ -182,12 +260,17 @@ struct TitleView: View {
     private func tally(_ artwork: String, _ have: Int, _ total: Int,
                        _ label: String, _ tint: Color,
                        note: TallyNote? = nil,
+                       hint: String = "",
                        action: @escaping () -> Void) -> some View {
         Button(action: action) { tallyFace(artwork, have, total, label, tint, note) }
             .buttonStyle(TallyPressStyle())
             .accessibilityElement(children: .ignore)
             .accessibilityLabel(note.map { "\(label) \(have) / \(total)。\($0.label) \($0.count)" }
                                 ?? "\(label) \(have) / \(total)")
+            // Since the labelled マイマップ/カードをみる buttons left the
+            // screen, the hint is where VoiceOver learns each tile is also
+            // the door to its collection.
+            .accessibilityHint(hint)
             .accessibilityAddTraits(.isButton)
     }
 
