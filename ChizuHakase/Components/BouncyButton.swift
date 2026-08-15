@@ -44,6 +44,24 @@ struct BouncyButtonStyle: ButtonStyle {
     }
 }
 
+/// Press feedback for title buttons whose complete face comes from artwork.
+/// The asset already contains its rim, highlight and depth, so adding another
+/// SwiftUI plate here would change the approved design.
+struct TitleArtworkButtonStyle: ButtonStyle {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.isEnabled) private var isEnabled
+
+    func makeBody(configuration: Configuration) -> some View {
+        let pressed = configuration.isPressed && !reduceMotion
+        configuration.label
+            .scaleEffect(pressed ? 0.985 : 1)
+            .offset(y: pressed ? 3 : 0)
+            .brightness(configuration.isPressed ? -0.05 : 0)
+            .opacity(isEnabled ? 1 : 0.45)
+            .animation(.spring(duration: 0.16), value: configuration.isPressed)
+    }
+}
+
 extension ButtonStyle where Self == BouncyButtonStyle {
     static var bouncy: BouncyButtonStyle { BouncyButtonStyle() }
 

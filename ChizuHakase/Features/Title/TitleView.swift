@@ -46,18 +46,38 @@ struct TitleView: View {
 
                 Spacer(minLength: 12)
 
-                VStack(spacing: 14) {
-                    Button(mode.play) { onStart() }
-                        .buttonStyle(BouncyButtonStyle(horizontalPadding: 52,
-                                                       verticalPadding: 16,
-                                                       fontSize: 24))
-                    HStack(spacing: 12) {
-                        Button(mode.myMap) { onMyMap() }
-                            .buttonStyle(.bouncy(Palette.teal, fontSize: 17))
-                        Button(mode.viewCards) { onCardBook(.all) }
-                            .buttonStyle(.bouncy(Palette.teal, fontSize: 17))
+                VStack(spacing: 10) {
+                    Button(action: onStart) {
+                        Image("TitlePlayButton")
+                            .resizable()
+                            .scaledToFit()
+                            .accessibilityHidden(true)
+                    }
+                    .buttonStyle(TitleArtworkButtonStyle())
+                    .accessibilityLabel(mode.play)
+                    .frame(maxWidth: 288)
+
+                    HStack(spacing: 10) {
+                        Button(action: onMyMap) {
+                            Image("TitleMapButton")
+                                .resizable()
+                                .scaledToFit()
+                                .accessibilityHidden(true)
+                        }
+                        .buttonStyle(TitleArtworkButtonStyle())
+                        .accessibilityLabel(mode.myMap)
+
+                        Button(action: { onCardBook(.all) }) {
+                            Image("TitleCardButton")
+                                .resizable()
+                                .scaledToFit()
+                                .accessibilityHidden(true)
+                        }
+                        .buttonStyle(TitleArtworkButtonStyle())
+                        .accessibilityLabel(mode.viewCards)
                     }
                 }
+                .frame(maxWidth: 360)
 
                 Spacer(minLength: 16)
 
