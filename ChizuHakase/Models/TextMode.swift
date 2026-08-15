@@ -135,12 +135,6 @@ nonisolated extension TextMode {
     var learnedPrefectures: String { isKids ? "おぼえた けん" : "覚えた県" }
     var ownedCards: String { isKids ? "もっている カード" : "持っているカード" }
     var learnedCount: String { isKids ? "おぼえた" : "覚えた" }
-    /// The stage list's coverage count: prefectures answered cleanly at least
-    /// once. Deliberately *not* 「おぼえた」: that word means the top of the
-    /// mastery ladder now (§5), and one clean answer is the first step, not
-    /// the summit. It said 「シール」 for a while — a leftover from when the
-    /// tiles were stickers, naming a thing the interface no longer shows.
-    var clearedPrefectures: String { isKids ? "できた けん" : "正解した県" }
     /// VoiceOver's name for the mode medal on a stage sheet — a no-miss clear.
     var noMissClear: String { isKids ? "ノーミスで クリア" : "ノーミスでクリア" }
     var resetZoom: String { isKids ? "もとの おおきさ" : "元の大きさ" }

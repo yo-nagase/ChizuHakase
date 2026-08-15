@@ -122,3 +122,15 @@ App Store Connect の各欄にそのまま貼り付けられる形式。文字�
 再撮影するときは: シミュレータで
 `xcrun simctl launch <UDID> com.wakuwaku.chizuhakase -demoSave -startAt <route>`
 (`-demoSave` がスクリーンショット用の進捗状態を作る。ルートは RootView.swift 参照)
+
+- 撮影前にステータスバーを揃える:
+  `xcrun simctl status_bar <UDID> override --time "9:41" --batteryState charged --batteryLevel 100 --wifiBars 3 --cellularBars 4`
+- 6.9" は iPhone 16 Pro Max、13" は iPad Pro 13-inch のシミュレータがそのままの
+  ピクセル数を吐く。**6.5" は撮れる端末が手元に無いので 6.9" から縮小する**:
+  `sips -z 2778 1284 <file>`(0.4% の縦圧縮は見えない)
+- `docs/screenshots/` の 4 枚も 6.9" からの縮小: `sips -z 840 386 <file>`
+- **必ず直前に clean build してから撮る。** 並行セッションと DerivedData を
+  共有していると、インクリメンタルビルドが編集済みファイルの再コンパイルを
+  取りこぼし、「ソースは新しいのに絵が古い」スクショが撮れてしまう
+  (実際に 08 のメダルが消えた)。疑わしいときはバイナリを
+  `strings ChizuHakase.debug.dylib | grep <新しい型名>` で確かめる

@@ -6,7 +6,10 @@ import SwiftUI
 /// emoji. It told the child nothing about where they were going. Each card now
 /// shows the region's **actual silhouette**, drawn from the same map data the
 /// quiz uses, so the shape of Kanto or Kyushu is familiar before the first
-/// question is asked — and the sticker count says what there is to collect.
+/// question is asked. The tallies on a sheet are earned states only — the
+/// 「おぼえた」 count and the no-miss medals. A coverage count ("answered at
+/// least once") used to sit here too, and it mostly measured having pressed
+/// play; a number that rewards showing up cheapens the two that don't.
 struct StageSelectView: View {
     @Environment(AppState.self) private var app
     @Environment(\.textMode) private var mode
@@ -24,7 +27,6 @@ struct StageSelectView: View {
                                record: app.save.data.record(forStage: stage.index,
                                                             mode: quizMode),
                                perfectModes: perfectModes(stage),
-                               stuckCount: stuckCount(stage),
                                sparklingCount: sparklingCount(stage)) {
                         onPlay(stage)
                     }
@@ -91,11 +93,6 @@ struct StageSelectView: View {
         })
     }
 
-    /// How many of this stage's prefectures the child has stuck down at all.
-    private func stuckCount(_ stage: Stage) -> Int {
-        stage.codes.filter { app.save.data.masteryLevel(of: $0) > 0 }.count
-    }
-
     /// How many have reached the top of the mastery ladder — 「おぼえた」
     /// (CLAUDE.md §5).
     private func sparklingCount(_ stage: Stage) -> Int {
@@ -110,7 +107,6 @@ private struct StageSheet: View {
     let record: StageRecord?
     /// Modes cleared with no miss — the medals on the sheet's edge.
     let perfectModes: Set<QuizMode>
-    let stuckCount: Int
     let sparklingCount: Int
     var action: () -> Void
 
@@ -145,27 +141,18 @@ private struct StageSheet: View {
                                 .padding(.leading, 4)
                         }
                     }
-                    HStack(spacing: 8) {
-                        // Out of the stage's *prefectures*, which is what
-                        // `stuckCount` counts. Against `questionCount` a
-                        // regional stage could never pass half — every one of
-                        // them asks each prefecture twice — so a child who had
-                        // covered all of Kanto was shown 「7 / 14」 and told
-                        // they were halfway (CLAUDE.md §12).
-                        countChip("\(mode.clearedPrefectures) \(stuckCount) / \(stage.codes.count)",
-                                  tint: Palette.ink.opacity(0.75),
-                                  border: Palette.ink.opacity(0.10))
-
-                        // Only once there is one to show. A 「✨ 0 / 9」 on every
-                        // untouched stage would read as something missing
-                        // rather than as something still to find.
-                        if sparklingCount > 0 {
-                            countChip("✨ \(mode.learnedCount) \(sparklingCount)",
-                                      tint: Palette.goldInk,
-                                      border: Palette.gold.opacity(0.65))
-                        }
+                    // Only once there is one to show. A 「✨ 0 / 9」 on every
+                    // untouched stage would read as something missing rather
+                    // than as something still to find. This is the only chip
+                    // left on purpose: a coverage count ("answered at least
+                    // once") sat next to it for a while, and it mostly
+                    // measured having pressed play.
+                    if sparklingCount > 0 {
+                        countChip("✨ \(mode.learnedCount) \(sparklingCount)",
+                                  tint: Palette.goldInk,
+                                  border: Palette.gold.opacity(0.65))
+                            .padding(.top, 2)
                     }
-                    .padding(.top, 2)
                 }
 
                 Spacer(minLength: 4)
@@ -226,8 +213,7 @@ private struct StageSheet: View {
 
     private var accessibilityText: String {
         var text = "\(stage.displayName(mode))。\(stage.questionCount) もん。"
-            + "\(mode.starCount(record?.stars ?? 0))。"
-            + "\(mode.clearedPrefectures) \(stuckCount)"
+            + mode.starCount(record?.stars ?? 0)
         if sparklingCount > 0 { text += "。\(mode.learnedCount) \(sparklingCount)" }
         for candidate in QuizMode.allCases where perfectModes.contains(candidate) {
             text += "。\(candidate.title(mode)) \(mode.noMissClear)"
