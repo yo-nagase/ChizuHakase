@@ -4,18 +4,24 @@ import Foundation
 
 /// Short feedback sounds.
 ///
-/// Synthesised in-process rather than shipped as audio files: the whole set is
-/// four short tones, and generating them keeps the bundle free of binary
-/// assets that would need licence tracking for a Kids-category release.
+/// The quiz cues are synthesised in-process rather than shipped as audio
+/// files: that set is four short tones, and generating them keeps the bundle
+/// free of binary assets that would need licence tracking for a
+/// Kids-category release. The navigation taps are the exception — supplied
+/// recordings whose shapes a tone pair does not reproduce, bundled as
+/// {name}.caf and baked to 44.1 kHz mono.
 final class SoundService {
     static let shared = SoundService()
 
-    enum Cue {
+    enum Cue: Hashable {
+        /// Played from decide.caf / cancel.caf rather than from notes.
+        case decide, cancel
         case correct, wrong, star, cardWin
 
-        /// (frequencies in Hz, seconds per note)
-        var notes: ([Double], Double) {
+        /// (frequencies in Hz, seconds per note); nil for recorded cues.
+        var notes: ([Double], Double)? {
             switch self {
+            case .decide, .cancel: nil
             // Rising major third: unambiguously "yes" without being shrill.
             case .correct: ([660, 880], 0.09)
             // Gentle low blip. Deliberately not a buzzer — a wrong tap should
@@ -23,6 +29,15 @@ final class SoundService {
             case .wrong: ([300, 260], 0.07)
             case .star: ([784, 988, 1175], 0.10)
             case .cardWin: ([523, 659, 784, 1047], 0.08)
+            }
+        }
+
+        /// Bundled file name for the recorded cues.
+        var fileName: String? {
+            switch self {
+            case .decide: "decide"
+            case .cancel: "cancel"
+            default: nil
             }
         }
     }
@@ -81,8 +96,32 @@ final class SoundService {
         AVAudioFormat(standardFormatWithSampleRate: sampleRate, channels: 1)
     }
 
+    /// Recorded cues, decoded once and kept.
+    private var recordedBuffers: [Cue: AVAudioPCMBuffer] = [:]
+
+    /// The files are baked to 44.1 kHz mono so their processing format is
+    /// exactly the format the player node was connected with. The guard
+    /// re-checks that rather than trusting the asset: scheduling a mismatched
+    /// buffer raises an exception, which would turn a re-exported file into a
+    /// crash on the first tap.
+    private func recordedBuffer(for cue: Cue) -> AVAudioPCMBuffer? {
+        if let cached = recordedBuffers[cue] { return cached }
+        guard let name = cue.fileName,
+              let url = Bundle.main.url(forResource: name, withExtension: "caf"),
+              let file = try? AVAudioFile(forReading: url),
+              file.processingFormat == format,
+              let buffer = AVAudioPCMBuffer(pcmFormat: file.processingFormat,
+                                            frameCapacity: AVAudioFrameCount(file.length))
+        else { return nil }
+        do { try file.read(into: buffer) } catch { return nil }
+        recordedBuffers[cue] = buffer
+        return buffer
+    }
+
     private func makeBuffer(for cue: Cue) -> AVAudioPCMBuffer? {
-        let (frequencies, noteDuration) = cue.notes
+        guard let (frequencies, noteDuration) = cue.notes else {
+            return recordedBuffer(for: cue)
+        }
         guard let format else { return nil }
         let framesPerNote = AVAudioFrameCount(sampleRate * noteDuration)
         let total = framesPerNote * AVAudioFrameCount(frequencies.count)

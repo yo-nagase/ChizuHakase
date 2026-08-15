@@ -41,6 +41,17 @@ struct RootView: View {
         .sheet(isPresented: $showsSettings) {
             SettingsView().environment(\.textMode, app.save.data.settings.textMode)
         }
+        // One sound for every way back — the system chevron, the quiz's ←,
+        // a result screen unwinding. They all shrink this stack, so listening
+        // here means no screen has to remember to play it. Pushes stay silent:
+        // the forward taps that want a sound (the stage sheets) play their
+        // own decide.
+        .onChange(of: path.count) { before, after in
+            if after < before {
+                SoundService.shared.play(.cancel,
+                                         enabled: app.save.data.settings.soundEnabled)
+            }
+        }
         // The theme belongs to the title alone. It fades out under the push
         // animation rather than cutting off, and every path back to the title
         // starts it again — playTitleTheme is idempotent, so the paths need
