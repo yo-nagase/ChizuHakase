@@ -311,25 +311,28 @@ struct TitleView: View {
                     .scaledToFit()
                     .accessibilityHidden(true)
 
+                // Set in the heading face, not the round one: these run small
+                // over painted artwork, and the round family ships a single
+                // light weight — W6 is the bold this HUD can actually render.
                 VStack(spacing: 0) {
                     HStack(alignment: .firstTextBaseline, spacing: 2) {
                         // Verbatim: SwiftUI's localised interpolation groups
                         // integers, and a child reading 「1,120」 has to parse a
                         // comma first.
                         Text(verbatim: "\(have)")
-                            .font(AppFont.rounded(23, relativeTo: .title3))
+                            .font(AppFont.heading(25, relativeTo: .title3))
                             .foregroundStyle(Palette.ink)
                         Text(verbatim: "/\(total)")
-                            .font(AppFont.rounded(11, relativeTo: .caption2))
-                            .foregroundStyle(Palette.ink.opacity(0.48))
+                            .font(AppFont.heading(12, relativeTo: .caption2))
+                            .foregroundStyle(Palette.ink.opacity(0.55))
                     }
                     .monospacedDigit()
                     .lineLimit(1)
                     .minimumScaleFactor(0.7)
 
                     Text(label)
-                        .font(AppFont.rounded(11, relativeTo: .caption2))
-                        .foregroundStyle(Palette.ink.opacity(0.78))
+                        .font(AppFont.heading(12, relativeTo: .caption2))
+                        .foregroundStyle(Palette.ink.opacity(0.88))
                         .lineLimit(1)
                         .minimumScaleFactor(0.62)
                 }
@@ -356,7 +359,7 @@ struct TitleView: View {
                             }
                         }
                     }
-                        .font(AppFont.rounded(10, relativeTo: .caption2))
+                        .font(AppFont.heading(11, relativeTo: .caption2))
                         .monospacedDigit()
                         .lineLimit(1)
                         .minimumScaleFactor(0.75)
