@@ -81,6 +81,28 @@ nonisolated enum ZoomPan {
         return (scale, clamp(offset: centred, scale: scale, in: size))
     }
 
+    /// Whether a point in the content's own coordinates is on the glass —
+    /// inside the frame — once the zoom and pan are applied. The mapping is
+    /// the one everything here uses: `C + (p - C) * scale + offset`.
+    ///
+    /// `scaleEffect` magnifies the touch geometry along with the drawing, so
+    /// a zoomed map's tap gesture reaches far outside its clipped panel —
+    /// over headers, buttons and page margins where nothing is drawn. The
+    /// clip hides the pixels but not the touches. A tap whose screen image
+    /// falls outside the frame is a tap the child never saw land, and the
+    /// caller must drop it.
+    ///
+    /// A zero-sized frame answers yes: before layout has settled there is no
+    /// geometry to test against, and swallowing every tap would be the worse
+    /// failure.
+    static func isVisible(_ point: CGPoint, scale: CGFloat, offset: CGSize,
+                          in size: CGSize) -> Bool {
+        guard size.width > 0, size.height > 0 else { return true }
+        let sx = size.width / 2 + (point.x - size.width / 2) * scale + offset.width
+        let sy = size.height / 2 + (point.y - size.height / 2) * scale + offset.height
+        return (0...size.width).contains(sx) && (0...size.height).contains(sy)
+    }
+
     /// The offset that holds `anchor` still while the scale changes.
     ///
     /// Without this the map zooms about the centre of its frame, so pinching

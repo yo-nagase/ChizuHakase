@@ -137,6 +137,41 @@ struct ZoomPanTests {
         #expect(clamped == .zero)
     }
 
+    // MARK: - Visibility
+
+    /// At rest every point of the panel is its own screen point, so nothing
+    /// legitimate is dropped.
+    @Test func atRestTheWholePanelIsVisible() {
+        #expect(ZoomPan.isVisible(.zero, scale: 1, offset: .zero, in: frame))
+        #expect(ZoomPan.isVisible(CGPoint(x: 300, y: 400), scale: 1, offset: .zero, in: frame))
+        #expect(!ZoomPan.isVisible(CGPoint(x: -1, y: 0), scale: 1, offset: .zero, in: frame))
+        #expect(!ZoomPan.isVisible(CGPoint(x: 0, y: 401), scale: 1, offset: .zero, in: frame))
+    }
+
+    /// Zoomed about the centre, the middle stays on the glass and the corners
+    /// scale off it — the region the clip hides but the touch geometry keeps,
+    /// which is how a zoomed map used to swallow the back button.
+    @Test func zoomingPushesTheCornersOffTheGlass() {
+        #expect(ZoomPan.isVisible(CGPoint(x: 150, y: 200), scale: 4, offset: .zero, in: frame))
+        #expect(!ZoomPan.isVisible(CGPoint(x: 10, y: 10), scale: 4, offset: .zero, in: frame))
+    }
+
+    /// Panning toward a hidden corner brings its taps back with its pixels —
+    /// visibility has to follow the same mapping the drawing uses.
+    @Test func panningBringsAHiddenCornerBack() {
+        let corner = CGPoint(x: 10, y: 10)
+        #expect(!ZoomPan.isVisible(corner, scale: 2, offset: .zero, in: frame))
+        let toCorner = ZoomPan.clamp(offset: CGSize(width: 9_999, height: 9_999),
+                                     scale: 2, in: frame)
+        #expect(ZoomPan.isVisible(corner, scale: 2, offset: toCorner, in: frame))
+    }
+
+    /// Before layout settles the frame is zero; treating that as "nothing is
+    /// visible" would swallow every tap, which is the worse failure.
+    @Test func zeroSizedFrameKeepsTapsAlive() {
+        #expect(ZoomPan.isVisible(CGPoint(x: 50, y: 50), scale: 1, offset: .zero, in: .zero))
+    }
+
     // MARK: - Region framing
 
     /// The whole promise of the 「にしにほん」「ひがしにほん」 buttons: one press

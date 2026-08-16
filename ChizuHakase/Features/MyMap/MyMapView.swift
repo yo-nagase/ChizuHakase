@@ -12,6 +12,8 @@ struct MyMapView: View {
     @State private var eraseStep = 0   // 0 = idle, 1 = asked once, 2 = confirming
     @State private var zoom: CGFloat = 1
     @State private var pan: CGSize = .zero
+    /// The map's frame, for dropping taps the zoom pushed off the glass.
+    @State private var mapSize: CGSize = .zero
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -51,7 +53,14 @@ struct MyMapView: View {
             appearance: appearance,
             interactiveCodes: Set(1...47),
             zoom: zoom,
-            onTap: { prefecture, _ in selected = prefecture })
+            onTap: { prefecture, point in
+                // The touch region outgrows the clipped panel while zoomed
+                // (ZoomPan.isVisible); a tap on the legend must not open a
+                // prefecture the child cannot see.
+                guard ZoomPan.isVisible(point, scale: zoom, offset: pan,
+                                        in: mapSize) else { return }
+                selected = prefecture
+            })
         // 0.8, taller than the country's own near-square ratio: the extra
         // height becomes sea above and below the diagonal archipelago, and a
         // zoomed-in child gets that much more viewport to move around in.
@@ -59,6 +68,13 @@ struct MyMapView: View {
         // Same gesture as the quiz map: a child who learns it on one country
         // should not find it missing on the other.
         .zoomPan(scale: $zoom, offset: $pan, oneFingerZoom: true)
+        .background {
+            GeometryReader { geo in
+                Color.clear
+                    .onAppear { mapSize = geo.size }
+                    .onChange(of: geo.size) { _, new in mapSize = new }
+            }
+        }
         // Clipped to its own card: a zoomed map must not spill over the legend
         // or the buttons underneath it.
         .clipShape(RoundedRectangle(cornerRadius: 26, style: .continuous))

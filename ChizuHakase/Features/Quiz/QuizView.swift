@@ -76,8 +76,13 @@ struct QuizView: View {
 
     private func content(_ quiz: QuizViewModel) -> some View {
         VStack(spacing: 12) {
-            header(quiz)
-            question(quiz)
+            // Above the map for hit testing: scaleEffect magnifies the touch
+            // region along with the drawing, so the zoomed map — a later
+            // sibling — otherwise swallows the taps aimed at these rows, and
+            // the back button died exactly while a child was zoomed in and
+            // most lost. Later siblings (choices, footer) already win.
+            header(quiz).zIndex(1)
+            question(quiz).zIndex(1)
             Spacer(minLength: 0)
             map(quiz)
             Spacer(minLength: 0)
@@ -295,7 +300,15 @@ struct QuizView: View {
             effect: quiz.effect,
             zoom: zoom,
             comboBurst: comboBurst,
-            onTap: { handleTap($0, at: .point($1), quiz: quiz) })
+            onTap: { prefecture, point in
+                // The clip hides everything outside the panel; the touch
+                // region does not honour it (ZoomPan.isVisible). A tap that
+                // landed where the child sees page, not map, must not answer
+                // the question.
+                guard ZoomPan.isVisible(point, scale: zoom, offset: pan,
+                                        in: mapSize) else { return }
+                handleTap(prefecture, at: .point(point), quiz: quiz)
+            })
     }
 
     @ViewBuilder private var resetZoomButton: some View {
