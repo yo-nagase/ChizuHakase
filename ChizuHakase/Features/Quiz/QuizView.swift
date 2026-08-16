@@ -346,7 +346,12 @@ struct QuizView: View {
         if app.voice.isListening { app.voice.stop() }
         switch quiz.answer(prefecture.code) {
         case .correct:
-            SoundService.shared.play(.correct, enabled: app.save.data.settings.soundEnabled)
+            // The cue climbs one scale step per clean answer in the run —
+            // answer() has already updated the combo, so this reads the run
+            // this answer just extended (or, after a fumble, restarted).
+            SoundService.shared.play(
+                .correct, enabled: app.save.data.settings.soundEnabled,
+                semitonesUp: SoundService.semitoneRise(forCombo: quiz.combo))
             showComboBurst(quiz, at: anchor)
             scheduleAdvance(quiz)
         case .wrong:

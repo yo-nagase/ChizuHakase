@@ -43,6 +43,19 @@ final class SoundService {
         }
     }
 
+    /// How far the correct cue rises for a running combo, in semitones.
+    ///
+    /// One major scale, do to do: each clean answer climbs a step, so a run
+    /// *sounds* like it is going somewhere before the child can read the
+    /// combo badge. From the octave on it holds — the cue has to keep
+    /// reading as "yes", and climbing forever turns yes into a whistle.
+    /// Combo 0 and 1 are the base note: one correct answer is not yet a
+    /// run, and an answer after a fumble starts over where the scale does.
+    static func semitoneRise(forCombo combo: Int) -> Int {
+        let scale = [0, 2, 4, 5, 7, 9, 11, 12]
+        return scale[min(max(combo - 1, 0), scale.count - 1)]
+    }
+
     private let engine = AVAudioEngine()
     private let player = AVAudioPlayerNode()
     private var started = false
@@ -77,9 +90,11 @@ final class SoundService {
         try? start()
     }
 
-    func play(_ cue: Cue, enabled: Bool) {
+    /// `semitonesUp` transposes the synthesised cues; recorded cues play as
+    /// recorded — resampling a real tap would just make it chipmunked.
+    func play(_ cue: Cue, enabled: Bool, semitonesUp: Int = 0) {
         guard enabled else { return }
-        guard let buffer = makeBuffer(for: cue) else { return }
+        guard let buffer = makeBuffer(for: cue, semitonesUp: semitonesUp) else { return }
         do {
             try start()
             player.scheduleBuffer(buffer, at: nil, options: .interrupts)
@@ -131,10 +146,14 @@ final class SoundService {
         return buffer
     }
 
-    private func makeBuffer(for cue: Cue) -> AVAudioPCMBuffer? {
-        guard let (frequencies, noteDuration) = cue.notes else {
+    private func makeBuffer(for cue: Cue, semitonesUp: Int = 0) -> AVAudioPCMBuffer? {
+        guard let (baseFrequencies, noteDuration) = cue.notes else {
             return recordedBuffer(for: cue)
         }
+        // Equal-temperament transpose: the cue keeps its own interval and
+        // length, only its register moves.
+        let factor = pow(2, Double(semitonesUp) / 12)
+        let frequencies = baseFrequencies.map { $0 * factor }
         guard let format else { return nil }
         let framesPerNote = AVAudioFrameCount(sampleRate * noteDuration)
         let total = framesPerNote * AVAudioFrameCount(frequencies.count)
