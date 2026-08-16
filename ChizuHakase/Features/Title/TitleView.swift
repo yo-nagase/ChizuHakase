@@ -282,7 +282,13 @@ struct TitleView: View {
                        breakdown: TallyBreakdown? = nil,
                        hint: String = "",
                        action: @escaping () -> Void) -> some View {
-        Button(action: action) {
+        Button {
+            // Forward taps play their own decide (RootView listens only for
+            // the way back) — and these tiles are doors as much as あそぶ is.
+            SoundService.shared.play(
+                .decide, enabled: app.save.data.settings.soundEnabled)
+            action()
+        } label: {
             tallyFace(artwork, have, total, label, tint, breakdown)
         }
             .buttonStyle(TallyPressStyle())
