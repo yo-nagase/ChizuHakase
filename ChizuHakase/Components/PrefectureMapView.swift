@@ -365,6 +365,18 @@ private struct PrefectureLayer: View {
                 path.stroke(appearance.stroke, lineWidth: boundaryWidth)
             }
 
+            // A correct answer earns a brief foil trace around the prefecture.
+            // This ties the celebration to the map itself before the stamp at
+            // the fingertip appears; a floating badge on its own could belong
+            // to any quiz. The live effect id recreates the trace for repeated
+            // answers to the same prefecture.
+            if appearance.isStuck, case .pop? = effect?.kind {
+                CorrectFoilTrace(path: path,
+                                 lineWidth: max(dieCutWidth * 0.8, 1 / max(zoom, 1)),
+                                 reduceMotion: reduceMotion)
+                    .id(effect?.id)
+            }
+
             if appearance.isSparkling {
                 // No gold rim: the fill is already gold, so an outline drew a
                 // line around a colour the shape had anyway, and at map scale
@@ -512,39 +524,140 @@ private struct RiseEffect: ViewModifier {
     }
 }
 
-/// 「3 れんぞく!」 rising off the tap, louder the longer the run.
+/// A travel stamp pressed where the answer landed.
 ///
-/// Every tier changes size *and* colour *and* how much sparkle it carries. One
-/// axis alone is too easy to miss at a glance, and the whole point is that the
-/// fourth in a row should feel different from the second.
+/// The old white capsule and emoji sparkles looked like a generic toast laid
+/// over the map. This uses the album's paper, ink and foil instead: the count is
+/// printed inside a round souvenir stamp and restrained rays make longer runs
+/// feel rarer without throwing confetti over the question.
 private struct ComboBurstLabel: View {
     let burst: ComboBurst
     let reduceMotion: Bool
 
     @State private var shown = false
 
-    private var size: CGFloat { [18, 23, 29][min(max(burst.tier, 1), 3) - 1] }
-    private var tint: Color { burst.tier >= 3 ? Palette.gold : Palette.orange }
-    private var sparkles: String { String(repeating: "✨", count: max(burst.tier - 1, 0)) }
+    private var tier: Int { min(max(burst.tier, 1), 3) }
+    private var diameter: CGFloat { [72, 84, 98][tier - 1] }
+    private var countSize: CGFloat { [28, 34, 40][tier - 1] }
+    private var labelSize: CGFloat { [11, 12, 13][tier - 1] }
+    private var ink: Color { tier == 1 ? Palette.orange : Palette.ink }
+
+    private var parts: (count: String, label: String) {
+        let pieces = burst.text.split(separator: " ", maxSplits: 1)
+        return (pieces.first.map(String.init) ?? burst.text,
+                pieces.count > 1 ? String(pieces[1]) : "")
+    }
+
+    private var foilColors: [Color] {
+        guard tier >= 3 else {
+            return [Palette.orange, Palette.gold, .white, Palette.gold, Palette.orange]
+        }
+        // The top tier borrows the card book's holographic promise, but only
+        // on the foil edge. The paper centre keeps the number easy to read.
+        return [Palette.red, Palette.gold, Palette.teal,
+                Color(hex: 0x81D4FA), Color(hex: 0xCE93D8), Palette.red]
+    }
 
     var body: some View {
-        Text(sparkles.isEmpty ? burst.text : "\(sparkles)\(burst.text)")
-            .font(AppFont.rounded(size, relativeTo: .title3))
-            .foregroundStyle(tint)
-            .monospacedDigit()
-            .padding(.horizontal, 10)
-            .padding(.vertical, 5)
-            .background(Capsule().fill(.white.opacity(0.94)))
-            .overlay(Capsule().strokeBorder(tint.opacity(0.35), lineWidth: 1.5))
-            .shadow(color: Palette.ink.opacity(0.16), radius: 4, y: 2)
-            .fixedSize()
-            // Reduce Motion keeps the call-out — it just stops travelling. The
-            // information is the streak, not the movement (CLAUDE.md §9).
-            .offset(y: reduceMotion ? -26 : (shown ? -34 : 0))
-            .scaleEffect(reduceMotion ? 1 : (shown ? 1 : 0.5))
-            .opacity(reduceMotion ? 1 : (shown ? 1 : 0))
-            .animation(reduceMotion ? nil : .spring(duration: 0.45), value: shown)
-            .onAppear { shown = true }
+        ZStack {
+            StampRays(diameter: diameter, tier: tier, colors: foilColors)
+                .scaleEffect(reduceMotion ? 1 : (shown ? 1 : 0.62))
+                .rotationEffect(.degrees(reduceMotion ? 0 : (shown ? 0 : -16)))
+                .opacity(tier == 1 ? 0.55 : 0.82)
+
+            Circle()
+                .fill(Palette.page.opacity(0.98))
+                .shadow(color: Palette.stickerShadow, radius: 0, y: 3)
+                .shadow(color: Palette.gold.opacity(0.32), radius: tier >= 2 ? 9 : 4)
+
+            Circle()
+                .stroke(
+                    AngularGradient(colors: foilColors, center: .center),
+                    style: StrokeStyle(lineWidth: tier == 1 ? 3 : 4.5,
+                                       lineCap: .round))
+                .padding(2)
+
+            // Slightly broken ink inside the foil rim makes this read as a
+            // physical stamp rather than another polished app badge.
+            Circle()
+                .stroke(ink.opacity(0.46),
+                        style: StrokeStyle(lineWidth: 1.5, dash: [2.5, 3.5]))
+                .padding(9)
+
+            (Text(parts.count)
+                .font(AppFont.heading(countSize, relativeTo: .title))
+             + Text("\n")
+             + Text(parts.label)
+                .font(AppFont.rounded(labelSize, relativeTo: .caption)))
+                .foregroundStyle(ink)
+                .multilineTextAlignment(.center)
+                .lineSpacing(-3)
+                .monospacedDigit()
+                // Keep the exact existing UI-test and VoiceOver label even
+                // though the visual treatment now uses two lines.
+                .accessibilityLabel(burst.text)
+        }
+        .frame(width: diameter, height: diameter)
+        .fixedSize()
+        // A stamp arrives from just above the paper, lands with a short spring,
+        // then lifts enough to uncover the prefecture beneath it.
+        .rotationEffect(.degrees(reduceMotion ? -2 : (shown ? -2 : -9)))
+        .offset(y: reduceMotion ? -30 : (shown ? -34 : -12))
+        .scaleEffect(reduceMotion ? 1 : (shown ? 1 : 1.34))
+        .opacity(reduceMotion ? 1 : (shown ? 1 : 0))
+        .animation(reduceMotion ? nil : .spring(duration: 0.52, bounce: 0.32),
+                   value: shown)
+        .onAppear { shown = true }
+    }
+}
+
+/// The glints behind the stamp are foil rays, not particles: they stay attached
+/// to the award and disappear with it, so even the top tier never becomes a
+/// screen-filling confetti effect.
+private struct StampRays: View {
+    let diameter: CGFloat
+    let tier: Int
+    let colors: [Color]
+
+    private var count: Int { [6, 9, 12][min(max(tier, 1), 3) - 1] }
+    private var length: CGFloat { [7, 10, 13][min(max(tier, 1), 3) - 1] }
+
+    var body: some View {
+        ZStack {
+            ForEach(0..<count, id: \.self) { index in
+                Capsule()
+                    .fill(AngularGradient(colors: colors, center: .center))
+                    .frame(width: tier >= 3 ? 3 : 2.5, height: length)
+                    .offset(y: -(diameter / 2 + 5 + length / 2))
+                    .rotationEffect(.degrees(Double(index) * 360 / Double(count)))
+            }
+        }
+    }
+}
+
+/// A bright segment runs once around the rewarded prefecture. With Reduce
+/// Motion the existing steady gold edge carries the same meaning on its own.
+private struct CorrectFoilTrace: View {
+    let path: Path
+    let lineWidth: CGFloat
+    let reduceMotion: Bool
+
+    @State private var progress: CGFloat = 0
+
+    var body: some View {
+        if !reduceMotion {
+            path
+                .trim(from: max(0, progress - 0.34), to: progress)
+                .stroke(
+                    LinearGradient(colors: [Palette.orange, .white, Palette.gold],
+                                   startPoint: .leading, endPoint: .trailing),
+                    style: StrokeStyle(lineWidth: lineWidth,
+                                       lineCap: .round, lineJoin: .round))
+                .shadow(color: Palette.gold.opacity(0.75), radius: 4)
+                .onAppear {
+                    withAnimation(.easeInOut(duration: 0.62)) { progress = 1 }
+                }
+        }
     }
 }
 
