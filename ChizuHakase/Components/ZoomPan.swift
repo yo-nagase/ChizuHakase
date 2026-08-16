@@ -138,6 +138,12 @@ struct ZoomPanModifier: ViewModifier {
             // what reads as the map sticking.
             .simultaneousGesture(magnify)
             .simultaneousGesture(oneFinger)
+            // The hold completing changes nothing on screen until the finger
+            // moves, so the lightest tap is the only way to say "lifted — a
+            // slide now zooms" at the moment it becomes true.
+            .sensoryFeedback(.impact(weight: .light), trigger: lift.isActive) { _, isActive in
+                isActive
+            }
             .background {
                 GeometryReader { geo in
                     Color.clear
@@ -233,5 +239,33 @@ extension View {
                  oneFingerZoom: Bool = false) -> some View {
         modifier(ZoomPanModifier(scale: scale, offset: offset,
                                  oneFingerZoom: oneFingerZoom))
+    }
+}
+
+/// How the one-finger zoom gets discovered.
+///
+/// The gesture (hold, then slide up or down) is invisible, and a five-year-old
+/// will not find it by accident. The pill sits on empty sea while the map is at
+/// rest, and gives way once zoomed — at that point the child has found the
+/// gesture, and the screen belongs to the way back out.
+///
+/// One shared view rather than one per screen, so a map that can be lifted
+/// always announces it with the same pill. Which patch of sea it sits on is the
+/// caller's choice — each screen keeps it off its own occupied water.
+struct ZoomHintChip: View {
+    @Environment(\.textMode) private var mode
+    let zoom: CGFloat
+
+    var body: some View {
+        if !ZoomPan.isZoomed(zoom) {
+            Text("👆 \(mode.zoomHint)")
+                .font(AppFont.rounded(13, relativeTo: .caption))
+                .foregroundStyle(Palette.ink.opacity(0.72))
+                .padding(.horizontal, 12)
+                .padding(.vertical, 7)
+                .background(Capsule().fill(.white.opacity(0.88)))
+                .overlay(Capsule().strokeBorder(Palette.ink.opacity(0.10)))
+                .allowsHitTesting(false)
+        }
     }
 }

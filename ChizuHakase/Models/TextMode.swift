@@ -136,6 +136,10 @@ nonisolated extension TextMode {
     var ownedCards: String { isKids ? "もっている カード" : "持っているカード" }
     var learnedCount: String { isKids ? "おぼえた" : "覚えた" }
     var resetZoom: String { isKids ? "もとの おおきさ" : "元の大きさ" }
+    /// How the one-finger zoom is discovered: press and hold, then slide up
+    /// or down. Pinch works too, but nobody needs a label to find a pinch.
+    var zoomHint: String { isKids ? "ながおしして うえしたで おおきく できるよ"
+                                  : "長押しして上下で拡大縮小できます" }
     var eraseEverything: String { isKids ? "きろくを ぜんぶ けす" : "記録をすべて消去" }
     var eraseConfirm1: String { isKids ? "ほんとうに けしても いい?" : "本当に消去しますか?" }
     var eraseConfirm2: String { isKids ? "けすと もどせないよ。いい?" : "消去すると元に戻せません" }

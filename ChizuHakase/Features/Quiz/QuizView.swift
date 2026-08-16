@@ -241,6 +241,16 @@ struct QuizView: View {
         .background(Palette.seaGradient)
         .stickerCard(fill: .clear, cornerRadius: 26)
         .overlay(alignment: .topTrailing) { resetZoomButton }
+        // The same pill as my map, but only on 全国チャレンジ: that is the map
+        // where Kagawa is a few points across and zooming is how the question
+        // becomes answerable. On regional stages the prefectures are already
+        // finger-sized, and a pill repeated on every question would be
+        // furniture in front of the thing being aimed at. It sits on the
+        // northern sea here — the southern edge belongs to the region buttons,
+        // and to Okinawa's inset.
+        .overlay(alignment: .top) {
+            if stage.isNationwide { ZoomHintChip(zoom: zoom).padding(.top, 10) }
+        }
         // Reaches wider than the rest of the column. The map is limited by the
         // screen's width, never its height, so every point of margin here is a
         // point off how big each prefecture is drawn — and this is the one

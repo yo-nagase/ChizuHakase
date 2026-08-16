@@ -65,6 +65,7 @@ struct MyMapView: View {
         .background(Palette.seaGradient)
         .stickerCard(fill: .clear, cornerRadius: 26)
         .overlay(alignment: .topTrailing) { resetZoomButton }
+        .overlay(alignment: .bottom) { ZoomHintChip(zoom: zoom).padding(.bottom, 12) }
         .accessibilityZoomAction { action in
             // VoiceOver cannot pinch, so it gets the same range through the
             // rotor-driven zoom action.
