@@ -188,7 +188,9 @@ struct PrefectureMapView: View {
                 guard let onTap else { return }
                 onTap(resolve(location, transform: transform), location)
             }
-            .overlay(alignment: .topLeading) { comboLabel(transform: transform) }
+            .overlay(alignment: .topLeading) {
+                comboLabel(transform: transform, canvasSize: geo.size)
+            }
         }
     }
 
@@ -197,16 +199,65 @@ struct PrefectureMapView: View {
     /// Counter-scaled by the zoom for the same reason the outlines are divided
     /// by it: this sits inside the magnified content, and at 4x an unscaled
     /// label would cover half the country.
-    @ViewBuilder private func comboLabel(transform: CGAffineTransform) -> some View {
+    @ViewBuilder private func comboLabel(transform: CGAffineTransform,
+                                         canvasSize: CGSize) -> some View {
         if let comboBurst, let point = burstPoint(comboBurst.anchor, transform: transform) {
+            let radius = ComboBurstLabel.visualRadius(for: comboBurst.tier)
+            let safePoint = comboPoint(point, radius: radius,
+                                       transform: transform, canvasSize: canvasSize)
             ComboBurstLabel(burst: comboBurst, reduceMotion: reduceMotion)
                 .scaleEffect(1 / max(zoom, 1))
-                .position(point)
+                .position(safePoint)
                 .allowsHitTesting(false)
                 // Keyed on the burst so a second streak restarts the animation
                 // instead of inheriting the finished state of the first.
                 .id(comboBurst.id)
         }
+    }
+
+    /// Places the stamp clear of the specialty emoji rising from the rewarded
+    /// prefecture. Both effects used to travel upward from virtually the same
+    /// point, leaving the emoji hidden behind the much larger stamp.
+    private func comboPoint(_ point: CGPoint, radius: CGFloat,
+                            transform: CGAffineTransform,
+                            canvasSize: CGSize) -> CGPoint {
+        // ComboBurstLabel finishes 34pt above its position anchor.
+        var stampCenter = CGPoint(x: point.x, y: point.y - 34)
+
+        if let effect,
+           let prefecture = mapData[effect.code],
+           appearance(prefecture).badge != nil {
+            let badgeOrigin = PrefectureGeometry.screenCentroid(
+                of: prefecture, transform: transform)
+            // The emoji rises 26pt. Its swept area is represented by the
+            // midpoint of that short path plus enough room for the 26pt glyph.
+            let badgePathCenter = CGPoint(x: badgeOrigin.x, y: badgeOrigin.y - 13)
+            let dx = stampCenter.x - badgePathCenter.x
+            let dy = stampCenter.y - badgePathCenter.y
+            // Extra clearance also covers the stamp's brief 1.34x arrival,
+            // not just its resting circle.
+            let clearance = radius + 42
+
+            if hypot(dx, dy) < clearance {
+                let left = badgeOrigin.x - clearance
+                let right = badgeOrigin.x + clearance
+                let leftRoom = left - radius
+                let rightRoom = canvasSize.width - (right + radius)
+
+                // Prefer the side with enough paper; when both fit, use the
+                // roomier side so coastal prefectures naturally move inward.
+                stampCenter.x = rightRoom > leftRoom ? right : left
+            }
+        }
+
+        // Keep the full foil rays inside the clipped map panel. Return the
+        // anchor rather than the visual centre, restoring the label's -34pt
+        // resting offset.
+        stampCenter.x = min(max(stampCenter.x, radius),
+                            max(radius, canvasSize.width - radius))
+        stampCenter.y = min(max(stampCenter.y, radius),
+                            max(radius, canvasSize.height - radius))
+        return CGPoint(x: stampCenter.x, y: stampCenter.y + 34)
     }
 
     private func burstPoint(_ anchor: ComboBurst.Anchor,
@@ -541,6 +592,13 @@ private struct ComboBurstLabel: View {
     private var countSize: CGFloat { [28, 34, 40][tier - 1] }
     private var labelSize: CGFloat { [11, 12, 13][tier - 1] }
     private var ink: Color { tier == 1 ? Palette.orange : Palette.ink }
+
+    static func visualRadius(for tier: Int) -> CGFloat {
+        let index = min(max(tier, 1), 3) - 1
+        let diameters: [CGFloat] = [72, 84, 98]
+        let rayLengths: [CGFloat] = [7, 10, 13]
+        return diameters[index] / 2 + 5 + rayLengths[index]
+    }
 
     private var parts: (count: String, label: String) {
         let pieces = burst.text.split(separator: " ", maxSplits: 1)

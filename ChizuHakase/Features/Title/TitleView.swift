@@ -6,6 +6,7 @@ struct TitleView: View {
     @Environment(AppState.self) private var app
     @Environment(\.textMode) private var mode
     @Environment(\.horizontalSizeClass) private var hSize
+    @Environment(\.verticalSizeClass) private var vSize
 
     var onStart: () -> Void
     var onMyMap: () -> Void
@@ -19,6 +20,12 @@ struct TitleView: View {
         Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String
     }
 
+    /// iPad must support landscape. Keeping the portrait map width there
+    /// makes its 5:4 painted sea taller than the entire safe area, so the CTA
+    /// falls below the screen. The wide-short presentation keeps the same
+    /// single-column hierarchy, just at a compact scale.
+    private var isShort: Bool { vSize == .compact }
+
     var body: some View {
         ZStack {
             AlbumPage()
@@ -27,28 +34,36 @@ struct TitleView: View {
                 // country. Sharing this space gives the map the width and
                 // height the old separate logo row used to consume.
                 miniMap
-                    // On iPad the −52 bleed would inflate the sea to 756pt
-                    // and push the tallies onto the Okinawa inset; 680 keeps
-                    // the composition. iPhone proposals never reach the cap.
-                    .frame(maxWidth: 680)
-                    .padding(.top, 64)
+                    // On a portrait iPad the −52 bleed would inflate the sea
+                    // to 756pt; 680 keeps the composition. A short landscape
+                    // safe area gets the smaller ceiling below.
+                    .frame(maxWidth: isShort ? 450 : 680)
+                    // Keep a calm band below the status area, but do not let
+                    // it become a second header. The old 64pt inset made the
+                    // whole composition sit low, especially on tall phones.
+                    .padding(.top, isShort ? 8 : (hSize == .regular ? 42 : 44))
                     .overlay(alignment: .top) {
-                        // Two ceilings, both set by the 1000px art, not by
-                        // style: 320pt is 960px on a 3x phone, 420pt is
-                        // 840px on a 2x iPad — each the widest that still
-                        // renders sharp on its display.
+                        // The artwork has deliberate transparent breathing
+                        // room, so its painted width is about 85% of this
+                        // frame. These ceilings make the visible wordmark line
+                        // up with the tally row instead of looking pinched
+                        // above it. The overlay still consumes no map space.
                         Image("TitleLogoFloating")
                             .resizable()
                             .scaledToFit()
-                            .frame(maxWidth: hSize == .regular ? 420 : 320)
+                            .frame(maxWidth: isShort ? 390
+                                                    : (hSize == .regular ? 500 : 405))
                             .accessibilityLabel(
                                 "\(mode.appTitleTop) \(mode.appTitleMain)"
                             )
                             .accessibilityAddTraits(.isHeader)
                     }
-                    .layoutPriority(1)
-                    // −52 goes past cancelling the column's 24pt margin: the
-                    // frame runs 28pt off each screen edge, trading the art's
+                    // In a short landscape safe area the controls win any
+                    // final compression contest; the map is illustration,
+                    // while the CTA must remain visible and tappable.
+                    .layoutPriority(isShort ? 0 : 1)
+                    // −52 goes past cancelling the column's 20pt margin: the
+                    // frame runs 32pt off each screen edge, trading the art's
                     // transparent side margins for a visibly larger country.
                     .padding(.horizontal, -52)
                     .padding(.vertical, 2)
@@ -58,13 +73,14 @@ struct TitleView: View {
                     // Only ever water may go under them: at −170 the tallies
                     // covered the Okinawa inset frame, and hiding a real map
                     // element is where "the lower sea is margin" stops being
-                    // true. −95/−100 clears the inset's bottom edge on each
-                    // size class with water to spare.
-                    .padding(.bottom, hSize == .regular ? -100 : -75)
+                    // true. These per-presentation overlaps all clear the
+                    // inset's bottom edge with water to spare.
+                    .padding(.bottom, isShort ? -92
+                                             : (hSize == .regular ? -104 : -78))
 
                 progressLine
 
-                Spacer(minLength: 8)
+                Spacer(minLength: isShort ? 4 : 8)
 
                 // あそぶ is the only labelled button left. The two tallies
                 // above already open the my-map and the card book; a second,
@@ -82,13 +98,16 @@ struct TitleView: View {
                 }
                 .buttonStyle(TitleArtworkButtonStyle())
                 .accessibilityLabel(mode.play)
-                .frame(maxWidth: 256)
+                // Slightly broader than before so the three main horizontal
+                // masses step down cleanly: logo, tallies, then primary CTA.
+                .frame(maxWidth: isShort ? 248
+                                         : (hSize == .regular ? 284 : 264))
 
                 // Flexible again now that the map overlap keeps the leftover
                 // small: on a phone there is almost nothing to distribute,
                 // and on iPad splitting it above and below あそぶ reads as
                 // album margins instead of one dead block over the footer.
-                Spacer(minLength: 12)
+                Spacer(minLength: isShort ? 8 : 12)
 
                 VStack(spacing: 2) {
                     Text("ちずデータ: Global Map Japan (国土地理院) をもとに簡略化")
@@ -106,7 +125,10 @@ struct TitleView: View {
                 }
                 .padding(.bottom, 6)
             }
-            .padding(.horizontal, 24)
+            // The painted tally frames want to sit a little closer to the
+            // page edge than ordinary text. This also gives the logo and the
+            // two-card row the same optical left/right margins on phones.
+            .padding(.horizontal, 20)
             .pageColumn()
 
             // Both discs live in the bottom corners, beside the footer: the
@@ -251,7 +273,8 @@ struct TitleView: View {
         // a little more breathing room than the old one-phrase note, while the
         // row still fits inside the phone column without touching its edges.
         .fixedSize(horizontal: false, vertical: true)
-        .frame(maxWidth: hSize == .regular ? 420 : 370)
+        .frame(maxWidth: isShort ? 390
+                                 : (hSize == .regular ? 440 : 382))
     }
 
     /// The exclusive rungs inside the owned-card total.
