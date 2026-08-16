@@ -220,19 +220,22 @@ struct QuizView: View {
     /// shape cannot learn it. The tap allowance shrinks with the zoom so
     /// magnifying never turns into a wider net.
     private func map(_ quiz: QuizViewModel) -> some View {
-        PrefectureMapView(
-            mapData: app.mapData,
-            codes: quiz.order,
-            appearance: { appearance(for: $0, quiz: quiz) },
-            interactiveCodes: quiz.mode == .nameIt ? [] : quiz.interactiveCodes,
-            targetCode: quiz.target?.code,
-            hintCode: quiz.hintCode,
-            effect: quiz.effect,
-            zoom: zoom,
-            comboBurst: comboBurst,
-            onTap: { handleTap($0, at: .point($1), quiz: quiz) })
-        .aspectRatio(PrefectureGeometry.aspectRatio(
-            of: app.mapData.prefectures(in: quiz.order)), contentMode: .fit)
+        Group {
+            // Regional stages hug the country's own proportions. 全国チャレンジ
+            // takes every point of height the column has spare instead: the
+            // country cannot be drawn any bigger — the screen's width already
+            // caps it — so all the spare height becomes sea, and a zoomed-in
+            // child gets that much more viewport to move around in. A frame
+            // rather than a taller fixed ratio, so a short screen simply
+            // yields a shorter panel instead of shrinking the country to
+            // honour a ratio it has no room for.
+            if stage.isNationwide {
+                mapView(quiz).frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else {
+                mapView(quiz).aspectRatio(PrefectureGeometry.aspectRatio(
+                    of: app.mapData.prefectures(in: quiz.order)), contentMode: .fit)
+            }
+        }
         .zoomPan(scale: $zoom, offset: $pan, oneFingerZoom: true)
         .clipShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
         .background(Palette.seaGradient)
@@ -251,6 +254,24 @@ struct QuizView: View {
             pan = .zero
             comboBurst = nil
         }
+        // Ahead of the surrounding Spacers, or the flexible nationwide panel
+        // would be offered only an equal split of the leftover height and the
+        // rest would sit in the margins it was meant to absorb.
+        .layoutPriority(stage.isNationwide ? 1 : 0)
+    }
+
+    private func mapView(_ quiz: QuizViewModel) -> some View {
+        PrefectureMapView(
+            mapData: app.mapData,
+            codes: quiz.order,
+            appearance: { appearance(for: $0, quiz: quiz) },
+            interactiveCodes: quiz.mode == .nameIt ? [] : quiz.interactiveCodes,
+            targetCode: quiz.target?.code,
+            hintCode: quiz.hintCode,
+            effect: quiz.effect,
+            zoom: zoom,
+            comboBurst: comboBurst,
+            onTap: { handleTap($0, at: .point($1), quiz: quiz) })
     }
 
     @ViewBuilder private var resetZoomButton: some View {

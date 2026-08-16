@@ -52,8 +52,10 @@ struct MyMapView: View {
             interactiveCodes: Set(1...47),
             zoom: zoom,
             onTap: { prefecture, _ in selected = prefecture })
-        .aspectRatio(PrefectureGeometry.aspectRatio(of: app.mapData.prefectures),
-                     contentMode: .fit)
+        // 0.8, taller than the country's own near-square ratio: the extra
+        // height becomes sea above and below the diagonal archipelago, and a
+        // zoomed-in child gets that much more viewport to move around in.
+        .aspectRatio(0.8, contentMode: .fit)
         // Same gesture as the quiz map: a child who learns it on one country
         // should not find it missing on the other.
         .zoomPan(scale: $zoom, offset: $pan, oneFingerZoom: true)
