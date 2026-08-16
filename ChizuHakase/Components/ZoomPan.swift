@@ -52,6 +52,35 @@ nonisolated enum ZoomPan {
         clamp(scale: scale * pow(2, dy / liftDoubling))
     }
 
+    /// The scale and offset that frame `region` — a rect in the view's
+    /// at-rest coordinates — inside `size`, for the 「にしにほん」「ひがしにほん」
+    /// buttons on the nationwide map.
+    ///
+    /// A destination, not a gesture: a child who cannot yet pinch reliably gets
+    /// half the country in one press, already inside the same clamps every
+    /// other zoom obeys, so a button can never strand the map anywhere a pinch
+    /// could not have.
+    ///
+    /// Derivation: a point `p` is drawn at `C + (p - C) * scale + offset`, so
+    /// landing the region's centre `r` on the frame's centre `C` needs
+    /// `offset = (C - r) * scale`.
+    ///
+    /// - Parameter margin: breathing room around the region, as a fraction of
+    ///   its size, so a coastline never sits against the frame's edge.
+    static func framing(_ region: CGRect, in size: CGSize,
+                        margin: CGFloat = GameRules.mapPaddingRatio
+    ) -> (scale: CGFloat, offset: CGSize) {
+        guard region.width > 0, region.height > 0,
+              size.width > 0, size.height > 0 else { return (minScale, .zero) }
+        let padded = region.insetBy(dx: -region.width * margin,
+                                    dy: -region.height * margin)
+        let scale = clamp(scale: min(size.width / padded.width,
+                                     size.height / padded.height))
+        let centred = CGSize(width: (size.width / 2 - padded.midX) * scale,
+                             height: (size.height / 2 - padded.midY) * scale)
+        return (scale, clamp(offset: centred, scale: scale, in: size))
+    }
+
     /// The offset that holds `anchor` still while the scale changes.
     ///
     /// Without this the map zooms about the centre of its frame, so pinching

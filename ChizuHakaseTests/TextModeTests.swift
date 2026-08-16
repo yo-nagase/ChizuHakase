@@ -186,7 +186,7 @@ extension TextMode {
          points, bestScore, playAgain, chooseStage, becameSparkling, becameRainbow,
          starCount(3),
          sparklingCards, learnedPrefectures, ownedCards,
-         learnedCount, resetZoom, zoomHint,
+         learnedCount, resetZoom, zoomHint, westJapan, middleJapan, eastJapan,
          eraseEverything, eraseConfirm1, eraseConfirm2, eraseCancel, eraseNext,
          eraseConfirmAction,
          soundSection, music, musicStop, musicPlay, soundEffects, speech,

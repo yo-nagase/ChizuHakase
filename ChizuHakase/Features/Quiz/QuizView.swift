@@ -23,6 +23,8 @@ struct QuizView: View {
     @State private var rearmTask: Task<Void, Never>?
     @State private var zoom: CGFloat = 1
     @State private var pan: CGSize = .zero
+    /// The map's frame, measured for the region buttons' framing maths.
+    @State private var mapSize: CGSize = .zero
     @State private var comboBurst: ComboBurst?
     @State private var burstCount = 0
 
@@ -237,10 +239,21 @@ struct QuizView: View {
             }
         }
         .zoomPan(scale: $zoom, offset: $pan, oneFingerZoom: true)
+        // The frame the region buttons aim their zoom at — the same size the
+        // zoom-pan clamps against, so a framed region obeys the same limits.
+        .background {
+            GeometryReader { geo in
+                Color.clear
+                    .onAppear { mapSize = geo.size }
+                    .onChange(of: geo.size) { _, new in mapSize = new }
+            }
+        }
         .clipShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
         .background(Palette.seaGradient)
         .stickerCard(fill: .clear, cornerRadius: 26)
-        .overlay(alignment: .topTrailing) { resetZoomButton }
+        // In the same corner as the region buttons it swaps in for, so the way
+        // back out appears exactly where the finger that zoomed just pressed.
+        .overlay(alignment: .bottomTrailing) { resetZoomButton }
         // The same pill as my map, but only on 全国チャレンジ: that is the map
         // where Kagawa is a few points across and zooming is how the question
         // becomes answerable. On regional stages the prefectures are already
@@ -251,6 +264,7 @@ struct QuizView: View {
         .overlay(alignment: .top) {
             if stage.isNationwide { ZoomHintChip(zoom: zoom).padding(.top, 10) }
         }
+        .overlay(alignment: .bottomTrailing) { regionZoomButtons }
         // Reaches wider than the rest of the column. The map is limited by the
         // screen's width, never its height, so every point of margin here is a
         // point off how big each prefecture is drawn — and this is the one
@@ -298,6 +312,56 @@ struct QuizView: View {
             .overlay(Capsule().strokeBorder(Palette.ink.opacity(0.12)))
             .padding(10)
         }
+    }
+
+    /// One press to a third of the country, for the child the hold-and-slide
+    /// is still too fiddly for — 全国チャレンジ only, where the whole point of
+    /// zooming is that 47 prefectures in one frame leaves Kagawa unreachable.
+    ///
+    /// Only while at rest: once zoomed the stack gives way to
+    /// 「もとの おおきさ」 in this same corner, and a "zoom somewhere else"
+    /// button on top of a zoomed map would teleport the child instead of
+    /// letting them look. Stacked down the
+    /// south-eastern corner in the country's own order — east at the top,
+    /// west at the bottom, the way the archipelago runs diagonally above. That
+    /// corner is open Pacific on every layout, however short the panel gets;
+    /// a row along the foot reached far enough left to cover Okinawa's inset
+    /// on the smallest phones, and a button must never sit on a prefecture a
+    /// tap might be aiming for.
+    @ViewBuilder private var regionZoomButtons: some View {
+        if stage.isNationwide, !ZoomPan.isZoomed(zoom) {
+            VStack(alignment: .trailing, spacing: 6) {
+                regionButton(mode.eastJapan, codes: Stage.eastJapanCodes)
+                regionButton(mode.middleJapan, codes: Stage.middleJapanCodes)
+                regionButton(mode.westJapan, codes: Stage.westJapanCodes)
+            }
+            .padding(10)
+        }
+    }
+
+    private func regionButton(_ title: String, codes: [Int]) -> some View {
+        Button(title) { zoomToRegion(codes) }
+            .font(AppFont.rounded(13, relativeTo: .caption))
+            .foregroundStyle(Palette.ink)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 7)
+            .background(Capsule().fill(.white.opacity(0.92)))
+            .overlay(Capsule().strokeBorder(Palette.ink.opacity(0.12)))
+    }
+
+    private func zoomToRegion(_ codes: [Int]) {
+        guard mapSize.width > 0, mapSize.height > 0 else { return }
+        // The same fit the map itself draws with, so the framed rect is the
+        // region exactly as it sits on screen.
+        let transform = PrefectureGeometry.fitTransform(
+            bounds: PrefectureGeometry.boundingBox(
+                of: app.mapData.prefectures(in: stage.codes)),
+            into: mapSize)
+        let region = PrefectureGeometry.boundingBox(
+            of: app.mapData.prefectures(in: codes)).applying(transform)
+        let (scale, offset) = ZoomPan.framing(region, in: mapSize)
+        let apply = { zoom = scale; pan = offset }
+        if reduceMotion { apply() } else { withAnimation(.spring(duration: 0.35), apply) }
     }
 
     @ViewBuilder

@@ -140,6 +140,12 @@ nonisolated extension TextMode {
     /// or down. Pinch works too, but nobody needs a label to find a pinch.
     var zoomHint: String { isKids ? "ながおしして うえしたで おおきく できるよ"
                                   : "長押しして上下で拡大縮小できます" }
+    /// The nationwide map's one-press zooms. 「にほん」 spelt out rather than
+    /// 「にし」「なか」「ひがし」 alone: a five-year-old meets these words here
+    /// first, and the regions should sound like parts of the country.
+    var westJapan: String { isKids ? "にしにほん" : "西日本" }
+    var middleJapan: String { isKids ? "なかにほん" : "中日本" }
+    var eastJapan: String { isKids ? "ひがしにほん" : "東日本" }
     var eraseEverything: String { isKids ? "きろくを ぜんぶ けす" : "記録をすべて消去" }
     var eraseConfirm1: String { isKids ? "ほんとうに けしても いい?" : "本当に消去しますか?" }
     var eraseConfirm2: String { isKids ? "けすと もどせないよ。いい?" : "消去すると元に戻せません" }

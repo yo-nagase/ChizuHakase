@@ -48,4 +48,21 @@ nonisolated struct Stage: Identifiable, Sendable, Equatable {
     static func stage(at index: Int) -> Stage? {
         all.first { $0.index == index }
     }
+
+    /// The thirds the nationwide map's quick-zoom buttons frame.
+    ///
+    /// Camera targets, not a partition — 大阪 and 兵庫 appear in two frames,
+    /// and nothing counts membership. Thirds rather than halves because halves
+    /// barely magnified: 北海道〜愛知 in one frame is still most of the
+    /// country's diagonal, and a zoom that changes little teaches that the
+    /// buttons do nothing.
+    ///
+    /// 西日本 runs from 大阪 westward rather than cutting at the 中国 stage:
+    /// in everyday speech 大阪 *is* west Japan, and a west button that leaves
+    /// it out betrays the word on the button. 奈良 and 和歌山 ride along inside
+    /// the frame's own margin.
+    static let eastJapanCodes = Array(1...14)               // 北海道・東北 + 関東
+    static let middleJapanCodes = Array(15...30)            // 中部 + 近畿
+    static let westJapanCodes = [27, 28] + Array(31...47)   // 大阪から西
+
 }
