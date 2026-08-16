@@ -44,7 +44,11 @@ struct CardBookView: View {
         switch active {
         case .all, .card: true
         case .category(let c): card.category == c
-        case .special: save.tier(of: card.id).isSpecial
+        // The exact rung, the way `cardCount(ofTier:)` counts: a rainbow card
+        // under the gold filter would put one card behind two chips, and a
+        // child hunting their rainbows deserves a filter with only rainbows
+        // in it.
+        case .tier(let t): save.tier(of: card.id) == t
         }
     }
 
@@ -93,10 +97,12 @@ struct CardBookView: View {
             HStack(spacing: 8) {
                 chip(title: mode.allCategories,
                      isOn: active == .all || isOpeningOneCard) { filter = .all }
-                // Ahead of the categories: it is the one a child arrives here
-                // looking for, and the one they will want to switch back to.
-                chip(title: "✨ \(mode.sparklingCards)", isOn: active == .special) {
-                    filter = active == .special ? .all : .special
+                // Ahead of the categories: the payoff is what a child arrives
+                // here looking for. One chip per tier rather than a single
+                // キラカード bundle — a child asking "where are my golds?" was
+                // being answered with silvers mixed in.
+                ForEach([CardTier.silver, .gold, .rainbow], id: \.self) { tier in
+                    tierChip(tier)
                 }
                 ForEach(SpecialtyCard.Category.allCases, id: \.self) { c in
                     chip(title: "\(c.emoji) \(c.label(mode))",
@@ -108,6 +114,32 @@ struct CardBookView: View {
             .padding(.vertical, 8)
         }
         .background(Palette.page)
+    }
+
+    /// A tier's filter chip, lit in the tier's own colour when selected — the
+    /// same rule the card faces and the win banner follow, so "the silver one"
+    /// means the same thing everywhere.
+    @ViewBuilder private func tierChip(_ tier: CardTier) -> some View {
+        if let name = mode.tierFilterName(tier) {
+            chip(title: name,
+                 isOn: active == .tier(tier),
+                 onFill: tierFill(tier),
+                 // The rainbow wash is pastel; white on it disappears.
+                 onInk: tier == .rainbow ? Palette.ink : .white) {
+                filter = active == .tier(tier) ? .all : .tier(tier)
+            }
+        }
+    }
+
+    private func tierFill(_ tier: CardTier) -> AnyShapeStyle {
+        switch tier {
+        case .silver: AnyShapeStyle(Palette.silverMark)
+        case .gold: AnyShapeStyle(Palette.gold)
+        case .rainbow: AnyShapeStyle(LinearGradient(stops: Palette.rainbowRamp,
+                                                    startPoint: .topLeading,
+                                                    endPoint: .bottomTrailing))
+        default: AnyShapeStyle(Palette.orange)
+        }
     }
 
     /// Shown when a filter leaves nothing, so an empty book reads as "none yet"
@@ -122,14 +154,17 @@ struct CardBookView: View {
         }
     }
 
-    private func chip(title: String, isOn: Bool, action: @escaping () -> Void) -> some View {
+    private func chip(title: String, isOn: Bool,
+                      onFill: AnyShapeStyle = AnyShapeStyle(Palette.orange),
+                      onInk: Color = .white,
+                      action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Text(title)
                 .font(AppFont.rounded(14, relativeTo: .footnote))
-                .foregroundStyle(isOn ? .white : Palette.ink)
+                .foregroundStyle(isOn ? onInk : Palette.ink)
                 .padding(.horizontal, 14)
                 .padding(.vertical, 8)
-                .background(isOn ? Palette.orange : Color.white, in: Capsule())
+                .background(isOn ? onFill : AnyShapeStyle(Color.white), in: Capsule())
         }
         .buttonStyle(.plain)
         .accessibilityAddTraits(isOn ? [.isSelected] : [])
@@ -166,9 +201,10 @@ struct CardBookView: View {
 nonisolated enum CardFilter: Hashable, Sendable {
     case all
     case category(SpecialtyCard.Category)
-    /// Silver and up, rainbow included — the payoff, and what the ✨ count
-    /// inside the title screen's card tile is counting.
-    case special
+    /// One exact rung of the ladder — silver, gold or rainbow. This replaced
+    /// a single "silver and up" キラカード filter, which answered "where are my
+    /// golds?" with silvers mixed in.
+    case tier(CardTier)
     /// Everything, opened straight onto one card. Debug only, for looking at
     /// the detail view without tapping through the book to find it.
     case card(String)

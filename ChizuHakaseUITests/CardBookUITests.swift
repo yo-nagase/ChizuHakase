@@ -25,13 +25,18 @@ final class CardBookUITests: XCTestCase {
         app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", name)).firstMatch
     }
 
-    /// Tapping the ✨ count has to land on those cards, not on a book of 141
-    /// with the nine somewhere inside it.
-    func testTheKiraCountOpensTheBookAlreadyFiltered() {
-        launch(at: "cardBook:special")
-        let chip = app.buttons["✨ キラカード"]
-        XCTAssertTrue(chip.waitForExistence(timeout: 10), "no キラキラ filter in the book")
-        XCTAssertTrue(chip.isSelected, "the book did not open on the キラキラ filter")
+    /// Arriving on a tier has to land on that tier's cards, not on a book of
+    /// 141 with them somewhere inside it — and each tier is its own filter,
+    /// not a shared キラカード bundle.
+    func testATierRouteOpensTheBookAlreadyFiltered() {
+        for (route, label) in [("cardBook:silver", "🥈 シルバー"),
+                               ("cardBook:gold", "🥇 ゴールド"),
+                               ("cardBook:rainbow", "🌈 にじいろ")] {
+            launch(at: route)
+            let chip = app.buttons[label]
+            XCTAssertTrue(chip.waitForExistence(timeout: 10), "no \(label) filter in the book")
+            XCTAssertTrue(chip.isSelected, "the book did not open on the \(label) filter")
+        }
     }
 
     func testTheBookOpensUnfilteredByDefault() {
@@ -41,16 +46,16 @@ final class CardBookUITests: XCTestCase {
         XCTAssertTrue(all.isSelected, "the book should open showing everything")
     }
 
-    /// A fresh save has no キラ cards, so the filter empties the book. That has
-    /// to read as "none yet" rather than as a screen that failed to load.
+    /// A fresh save has no silver cards, so the filter empties the book. That
+    /// has to read as "none yet" rather than as a screen that failed to load.
     func testAnEmptyFilterSaysSoRatherThanShowingNothing() {
-        launch(at: "cardBook:special")
+        launch(at: "cardBook:silver")
         XCTAssertTrue(app.staticTexts["まだ もっていない カード"].waitForExistence(timeout: 10),
                       "an empty filter showed a blank page")
     }
 
     func testSwitchingBackToEverythingWorks() {
-        launch(at: "cardBook:special")
+        launch(at: "cardBook:silver")
         let all = app.buttons["ぜんぶ"]
         XCTAssertTrue(all.waitForExistence(timeout: 10))
         all.tap()

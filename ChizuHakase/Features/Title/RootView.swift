@@ -189,7 +189,9 @@ struct RootView: View {
         case "stageSelect": path = [.stageSelect]
         case "myMap": path = [.myMap]
         case "cardBook": path = [.cardBook(filter: .all)]
-        case "cardBook:special": path = [.cardBook(filter: .special)]
+        case "cardBook:silver": path = [.cardBook(filter: .tier(.silver))]
+        case "cardBook:gold": path = [.cardBook(filter: .tier(.gold))]
+        case "cardBook:rainbow": path = [.cardBook(filter: .tier(.rainbow))]
         // Opens straight onto one card, so the detail view can be looked
         // at without tapping through the book to reach it.
         case let value where value.hasPrefix("card:"):

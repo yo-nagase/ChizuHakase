@@ -88,6 +88,19 @@ nonisolated extension TextMode {
         case .rainbow: "にじいろカード"
         }
     }
+    /// The book's tier filter chips. Shorter than `cardTierName` — on a chip
+    /// the word カード is the whole bar repeating itself — and fronted by a
+    /// medal the way the category chips front their emoji. The medals lean on
+    /// the same knowledge the katakana does: second and first place are
+    /// pictures a six-year-old already reads.
+    func tierFilterName(_ tier: CardTier) -> String? {
+        switch tier {
+        case .none, .plain: nil
+        case .silver: "🥈 シルバー"
+        case .gold: "🥇 ゴールド"
+        case .rainbow: "🌈 にじいろ"
+        }
+    }
     /// The 「あと◯」 line under a card (CLAUDE.md §5). It only ever counts
     /// toward the next thing — a streak that broke is not mentioned, because
     /// naming the loss is the loss (CLAUDE.md §12).
