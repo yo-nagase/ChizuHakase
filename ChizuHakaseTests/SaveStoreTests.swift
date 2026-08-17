@@ -440,10 +440,9 @@ struct SaveMigrationTests {
         #expect(!data.owns("01-3"))
     }
 
-    /// 3 → 4 stretched the scale: silver moved from three stars to five, gold
-    /// from five to fifteen. Counts move by their place on the old ladder so no
-    /// card demotes — an old three lands on the new silver floor, a four lands
-    /// mid-silver, an old gold stays gold.
+    /// Version 3 counts land by their place on the current ladder, so no card
+    /// demotes — an old three lands on the silver floor, a four (second of two
+    /// silver steps) lands mid-silver, an old gold stays gold.
     @Test func versionThreeStarsAreLiftedToTheNewScale() throws {
         let data = try load("""
         {"version":3,"cards":{"a":1,"b":2,"c":3,"d":4,"e":5}}
@@ -451,24 +450,42 @@ struct SaveMigrationTests {
         #expect(data.stars(of: "a") == 1)
         #expect(data.stars(of: "b") == 2)
         #expect(data.stars(of: "c") == GameRules.silverStars)
-        #expect(data.stars(of: "d") == 10)
+        #expect(data.stars(of: "d") == 7)
         #expect(data.stars(of: "e") == GameRules.maxCardStars)
         #expect(data.tier(of: "c") == .silver)
         #expect(data.tier(of: "d") == .silver)
         #expect(data.tier(of: "e") == .gold)
     }
 
-    /// The lift must not run twice: a version 4 file already speaks the new
-    /// scale, and a five there is a five.
-    @Test func aVersionFourFileKeepsItsStarCounts() throws {
+    /// Version 4 spoke the fifteen-star scale; 6 folds everything past ten
+    /// down onto the new top. A tier can only rise — the fourteen-star silver
+    /// arrives as gold — and counts at or below ten do not move.
+    @Test func aVersionFourFileFoldsOntoTheTenStarLadder() throws {
         let data = try load("""
         {"version":4,"cards":{"a":2,"b":5,"c":14,"d":15}}
         """)
         #expect(data.stars(of: "a") == 2)
         #expect(data.tier(of: "a") == .plain)
         #expect(data.tier(of: "b") == .silver)
-        #expect(data.tier(of: "c") == .silver)
+        #expect(data.stars(of: "c") == GameRules.maxCardStars)
+        #expect(data.tier(of: "c") == .gold, "a folded count may only promote")
         #expect(data.tier(of: "d") == .gold)
+    }
+
+    /// 5 → 6 folded the ladder from fifteen stars down to ten. The stored
+    /// counts themselves are asserted, not the clamped read: decoding is the
+    /// migration, and what sits in memory must already be the current shape.
+    @Test func versionFiveStarsFoldOntoTheTenStarLadder() throws {
+        let data = try load("""
+        {"version":5,"cards":{"a":15,"b":12,"c":10,"d":7,"e":1}}
+        """)
+        #expect(data.cards["a"] == GameRules.maxCardStars)
+        #expect(data.cards["b"] == GameRules.maxCardStars)
+        #expect(data.tier(of: "b") == .gold, "a folded count may only promote")
+        #expect(data.cards["c"] == GameRules.maxCardStars)
+        #expect(data.cards["d"] == 7)
+        #expect(data.tier(of: "d") == .silver)
+        #expect(data.cards["e"] == 1)
     }
 
     /// 4 → 5 stretched mastery: キラキラ moved from three clean answers to

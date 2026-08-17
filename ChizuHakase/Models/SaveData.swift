@@ -35,12 +35,14 @@ nonisolated struct Settings: Codable, Sendable, Equatable {
 }
 
 nonisolated struct SaveData: Codable, Sendable, Equatable {
-    /// 5 stretched mastery to five clean answers. 4 stretched the stars to
-    /// fifteen and added the prefecture streaks with their rainbow latch. 3
-    /// gave every card five stars instead of a plain/キラ pair. 2 split the
-    /// stage records per quiz mode. Version 1 had one mode and wrote a flat
-    /// `stages` dictionary.
-    static let currentVersion = 5
+    /// 6 folded the card stars down to a ten-star ladder — fifteen put the
+    /// first gold about eighteen clean runs of a stage away, which no child
+    /// ever reached. 5 stretched mastery to five clean answers. 4 stretched
+    /// the stars to fifteen and added the prefecture streaks with their
+    /// rainbow latch. 3 gave every card five stars instead of a plain/キラ
+    /// pair. 2 split the stage records per quiz mode. Version 1 had one mode
+    /// and wrote a flat `stages` dictionary.
+    static let currentVersion = 6
 
     var version: Int = SaveData.currentVersion
     /// prefecture code -> 0...3.
@@ -48,9 +50,10 @@ nonisolated struct SaveData: Codable, Sendable, Equatable {
     /// Deliberately *not* split by mode: both directions teach the same
     /// prefecture, and a child should not have two separate maps to fill in.
     var mastery: [Int: Int] = [:]
-    /// card id -> stars, 0...15. Five is silver, fifteen is gold.
+    /// card id -> stars, 0...10. Five is silver, ten is gold.
     var cards: [String: Int] = [:]
-    /// Cards that were gold while their prefecture's streak stood at fifteen.
+    /// Cards that were gold while their prefecture's clean streak reached the
+    /// rainbow line.
     ///
     /// Recorded rather than derived, because it cannot be derived: the streak
     /// resets on the next fumble, and the rainbow must not reset with it
@@ -98,6 +101,13 @@ nonisolated struct SaveData: Codable, Sendable, Equatable {
         if stored < 5 {
             mastery = mastery.mapValues(Self.liftV4Mastery)
         }
+        if stored < 6 {
+            // Version 6 folded the star ladder from fifteen down to ten.
+            // Counts past the new top fold onto it, so a tier can only rise —
+            // an eleven-star silver arrives as gold, gold stays gold — and
+            // nothing at or below ten moves at all.
+            cards = cards.mapValues { min(GameRules.maxCardStars, $0) }
+        }
         rainbow = try c.decodeIfPresent(Set<String>.self, forKey: .rainbow) ?? []
         streaks = try c.decodeIfPresent([Int: Int].self, forKey: .streaks) ?? [:]
         records = try c.decodeIfPresent([String: [Int: StageRecord]].self,
@@ -115,16 +125,18 @@ nonisolated struct SaveData: Codable, Sendable, Equatable {
         }
     }
 
-    /// Version 3 → 4 stretched the star scale: silver moved from three to
-    /// five, gold from five to fifteen. Counts move by their place on the old
-    /// ladder — the tier is what the child sees, so it is the tier that must
-    /// not demote (CLAUDE.md §12). An old three lands on the new silver floor,
-    /// a four (second of two silver steps) lands mid-silver, gold stays gold.
+    /// Version 3's five-step ladder lands by place on the current one. Counts
+    /// move by their place, not their number — the tier is what the child
+    /// sees, so it is the tier that must not demote (CLAUDE.md §12). An old
+    /// three lands on the silver floor, a four (second of two silver steps)
+    /// lands mid-silver, gold stays gold. Written against the current ladder
+    /// directly rather than replaying version 4's stretch to fifteen, so the
+    /// fold below has nothing to undo here.
     private static func liftV3Stars(_ stars: Int) -> Int {
         switch stars {
         case ..<3: max(0, stars)
         case 3: GameRules.silverStars
-        case 4: 10
+        case 4: 7
         default: GameRules.maxCardStars
         }
     }

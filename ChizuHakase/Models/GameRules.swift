@@ -11,16 +11,19 @@ nonisolated enum GameRules {
     /// week is not having learned a prefecture (CLAUDE.md §5).
     static let maxMastery = 5
 
-    /// A card's stars: one per copy won. Five make it silver, fifteen make it
-    /// gold, and fifteen is the cap (CLAUDE.md §5).
-    static let maxCardStars = 15
+    /// A card's stars: one per copy won. Five make it silver, ten make it
+    /// gold, and ten is the cap (CLAUDE.md §5). Down from fifteen: with the
+    /// draw spreading stars across a prefecture's three cards, the first gold
+    /// sat about eighteen clean runs of one stage away, and a top tier no
+    /// child ever reaches is not a goal, it is a ceiling.
+    static let maxCardStars = 10
     static let silverStars = 5
     /// Consecutive clean answers *after* a card reaches gold before it turns
-    /// rainbow. Seven, down from fifteen — and the run only opens once the
-    /// gold exists: finishing the stars resets the count, so the rainbow is
-    /// always earned on top of the completed card, never alongside it
-    /// (CLAUDE.md §5).
-    static let rainbowStreak = 7
+    /// rainbow. Five — down from seven, originally fifteen — and the run only
+    /// opens once the gold exists: finishing the stars resets the count, so
+    /// the rainbow is always earned on top of the completed card, never
+    /// alongside it (CLAUDE.md §5).
+    static let rainbowStreak = 5
 
     static let firstTryBaseScore = 100
     static let comboBonus = 20
@@ -190,8 +193,8 @@ nonisolated enum GameRules {
     /// *at that moment* latches. Checked mid-walk rather than on the final
     /// count: a fumble on the stage's second asking must not swallow a
     /// rainbow the first asking had already earned. And any promotion resets
-    /// the count, so a run of seven is always entirely later than every gold
-    /// in the set — a card promoted after the crossing starts its own run.
+    /// the count, so a qualifying run is always entirely later than every
+    /// gold in the set — a card promoted after the crossing starts its own.
     static func nextStreak(
         current: Int, outcomes: [Bool],
         draws: [CardDraw] = [], goldCardIDs: Set<String> = []
@@ -200,8 +203,8 @@ nonisolated enum GameRules {
         var streak = max(0, current)
         var latched: Set<String> = []
         // A count already over the line latches on arrival: saves written
-        // while the threshold was fifteen can hold a qualified streak that
-        // never met a check at seven.
+        // under an older, higher threshold can hold a qualified streak that
+        // never met a check at the current line.
         if streak >= rainbowStreak { latched.formUnion(gold) }
         var drawIndex = 0
         for clean in outcomes {
