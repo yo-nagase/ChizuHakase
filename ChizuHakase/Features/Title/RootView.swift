@@ -71,6 +71,10 @@ struct RootView: View {
         .task {
             applyDebugRoute()
             playThemeIfWanted()
+            // After the first frame, before the first tap: the engine spin-up
+            // this hides would otherwise run inside that tap's button action
+            // and read as the app hesitating.
+            SoundService.shared.warmUp()
         }
     }
 
@@ -116,11 +120,12 @@ struct RootView: View {
             visit(stage: 4, times: 1, score: 620, stars: 1)
             // Every owned card is illustrated; the higher tiers are still the
             // ones worth showing off for their foil. 13-2 goes rainbow through
-            // the real latch: gold stars here, the clean streak below.
+            // the real latch: gold stars here, and below, one answer that
+            // finishes the gold plus the clean run that must follow it.
             let collection: [(String, Int)] = [
                 ("01-2", 7), ("02-1", 5), ("08-1", 6), ("14-2", 9),
                 ("23-1", 5), ("26-2", 8), ("40-1", 5),
-                ("04-2", 15), ("27-1", 15), ("13-2", 15),
+                ("04-2", 10), ("27-1", 10), ("13-2", 10),
                 ("03-1", 3), ("05-1", 2), ("07-1", 4), ("10-1", 1),
                 ("12-1", 2), ("15-1", 1), ("19-3", 1), ("22-1", 3),
                 ("28-3", 2), ("34-1", 1), ("43-3", 2), ("47-2", 4),
@@ -134,7 +139,7 @@ struct RootView: View {
                     }
                 },
                 outcomesByPrefecture: [13: Array(repeating: true,
-                                                 count: GameRules.rainbowStreak)]),
+                                                 count: GameRules.rainbowStreak + 1)]),
                 catalog: app.cards)
             // One nameIt record so the stage list shows the per-mode split.
             app.save.applyStageResult(StageResult(
@@ -157,13 +162,14 @@ struct RootView: View {
                     + (app.cards["13-2"].map {
                         [GameRules.CardDraw.star($0, stars: GameRules.maxCardStars)]
                     } ?? []),
-                // A clean fifteen on Tokyo, so 13-2 comes out of the real latch
-                // rather than being written in as rainbow — a debug state that
-                // stages itself keeps looking right after the rule breaks.
-                // 13-2 gives the dense sushi painting a rainbow-foil stress
-                // case while keeping the state representative of real data.
+                // The gold-finishing answer plus a clean run on Tokyo, so 13-2
+                // comes out of the real latch rather than being written in as
+                // rainbow — a debug state that stages itself keeps looking
+                // right after the rule breaks. 13-2 gives the dense sushi
+                // painting a rainbow-foil stress case while keeping the state
+                // representative of real data.
                 outcomesByPrefecture: [13: Array(repeating: true,
-                                                 count: GameRules.rainbowStreak)]),
+                                                 count: GameRules.rainbowStreak + 1)]),
                 catalog: app.cards)
         }
         // Every prefecture of one regional stage answered cleanly, which is the
@@ -183,7 +189,9 @@ struct RootView: View {
         case "stageSelect": path = [.stageSelect]
         case "myMap": path = [.myMap]
         case "cardBook": path = [.cardBook(filter: .all)]
-        case "cardBook:special": path = [.cardBook(filter: .special)]
+        case "cardBook:silver": path = [.cardBook(filter: .tier(.silver))]
+        case "cardBook:gold": path = [.cardBook(filter: .tier(.gold))]
+        case "cardBook:rainbow": path = [.cardBook(filter: .tier(.rainbow))]
         // Opens straight onto one card, so the detail view can be looked
         // at without tapping through the book to reach it.
         case let value where value.hasPrefix("card:"):

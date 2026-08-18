@@ -189,41 +189,49 @@ final class QuizFlowUITests: XCTestCase {
     /// on the whole map — staying zoomed could ask about a prefecture that is
     /// off screen, and panning to it would point at the answer.
     ///
-    /// Runs on a regional stage and retries across questions: a pinch is
-    /// centred on the frame, so whether the asked prefecture is still visible
-    /// depends on where the shuffle put it. Asserting on the first question
-    /// would pass or fail on the draw rather than on the behaviour.
+    /// The pinch is made *on the asked prefecture*: anchored there, it stays
+    /// put and visible while the rest magnifies around it. A pinch centred on
+    /// the frame is no good here — the synthesised gesture overshoots its
+    /// scale, throws the whole stage off the clipped panel, and taps on
+    /// clipped content are rightly dropped now (`ZoomPan.isVisible`). This
+    /// test used to pass by exploiting exactly that hole.
     func testAnsweringWhileZoomedScoresAndResetsTheView() {
         launch(at: "quiz:0")
         XCTAssertTrue(waitUntilQuizIsReady())
         let reset = app.buttons["もとの おおきさ"]
 
-        for question in 1...Self.tohokuNames.count {
-            guard let name = currentTargetName() else {
-                return XCTFail("could not read the asked prefecture")
-            }
-            let next = app.staticTexts["14 もんちゅう \(question + 1) もんめ"]
-            let element = app.buttons[name]
-
-            app.pinch(withScale: 1.6, velocity: 2)
-            XCTAssertTrue(reset.waitForExistence(timeout: 5), "the quiz map did not zoom")
-
-            if element.exists, element.isHittable {
-                element.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
-                XCTAssertTrue(next.waitForExistence(timeout: 8),
-                              "a correct tap on \(name) did not register while zoomed")
-                XCTAssertFalse(reset.exists,
-                               "the map stayed zoomed into the next question")
-                return
-            }
-
-            // Magnified out of view: come back and answer normally to move on.
-            reset.tap()
-            XCTAssertTrue(element.waitForExistence(timeout: 3))
-            element.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
-            XCTAssertTrue(next.waitForExistence(timeout: 8))
+        guard let name = currentTargetName() else {
+            return XCTFail("could not read the asked prefecture")
         }
-        XCTFail("no question left its prefecture on screen at 1.6x")
+        let element = app.buttons[name]
+        XCTAssertTrue(element.waitForExistence(timeout: 3))
+
+        element.pinch(withScale: 1.6, velocity: 2)
+        XCTAssertTrue(reset.waitForExistence(timeout: 5), "the quiz map did not zoom")
+
+        element.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+        XCTAssertTrue(app.staticTexts["14 もんちゅう 2 もんめ"].waitForExistence(timeout: 8),
+                      "a correct tap on \(name) did not register while zoomed")
+        XCTAssertFalse(reset.exists, "the map stayed zoomed into the next question")
+    }
+
+    /// Regression: scaleEffect magnifies the touch region along with the
+    /// drawing, so the zoomed map's tap gesture used to reach over the header
+    /// and swallow the back button — the way out died exactly while a child
+    /// was zoomed in and most lost.
+    func testTheBackButtonStillWorksWhileZoomed() {
+        launch(at: "quiz:6")
+        XCTAssertTrue(waitUntilQuizIsReady(questions: 47))
+
+        let west = app.buttons["にしにほん"]
+        XCTAssertTrue(west.waitForExistence(timeout: 5))
+        west.tap()
+        XCTAssertTrue(app.buttons["もとの おおきさ"].waitForExistence(timeout: 5),
+                      "the map did not zoom")
+
+        app.buttons["やめる"].tap()
+        XCTAssertTrue(app.staticTexts["ステージ"].waitForExistence(timeout: 5),
+                      "the back button did not leave the zoomed quiz")
     }
 
     // MARK: - Stage availability

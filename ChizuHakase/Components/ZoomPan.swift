@@ -52,6 +52,57 @@ nonisolated enum ZoomPan {
         clamp(scale: scale * pow(2, dy / liftDoubling))
     }
 
+    /// The scale and offset that frame `region` — a rect in the view's
+    /// at-rest coordinates — inside `size`, for the 「にしにほん」「ひがしにほん」
+    /// buttons on the nationwide map.
+    ///
+    /// A destination, not a gesture: a child who cannot yet pinch reliably gets
+    /// half the country in one press, already inside the same clamps every
+    /// other zoom obeys, so a button can never strand the map anywhere a pinch
+    /// could not have.
+    ///
+    /// Derivation: a point `p` is drawn at `C + (p - C) * scale + offset`, so
+    /// landing the region's centre `r` on the frame's centre `C` needs
+    /// `offset = (C - r) * scale`.
+    ///
+    /// - Parameter margin: breathing room around the region, as a fraction of
+    ///   its size, so a coastline never sits against the frame's edge.
+    static func framing(_ region: CGRect, in size: CGSize,
+                        margin: CGFloat = GameRules.mapPaddingRatio
+    ) -> (scale: CGFloat, offset: CGSize) {
+        guard region.width > 0, region.height > 0,
+              size.width > 0, size.height > 0 else { return (minScale, .zero) }
+        let padded = region.insetBy(dx: -region.width * margin,
+                                    dy: -region.height * margin)
+        let scale = clamp(scale: min(size.width / padded.width,
+                                     size.height / padded.height))
+        let centred = CGSize(width: (size.width / 2 - padded.midX) * scale,
+                             height: (size.height / 2 - padded.midY) * scale)
+        return (scale, clamp(offset: centred, scale: scale, in: size))
+    }
+
+    /// Whether a point in the content's own coordinates is on the glass —
+    /// inside the frame — once the zoom and pan are applied. The mapping is
+    /// the one everything here uses: `C + (p - C) * scale + offset`.
+    ///
+    /// `scaleEffect` magnifies the touch geometry along with the drawing, so
+    /// a zoomed map's tap gesture reaches far outside its clipped panel —
+    /// over headers, buttons and page margins where nothing is drawn. The
+    /// clip hides the pixels but not the touches. A tap whose screen image
+    /// falls outside the frame is a tap the child never saw land, and the
+    /// caller must drop it.
+    ///
+    /// A zero-sized frame answers yes: before layout has settled there is no
+    /// geometry to test against, and swallowing every tap would be the worse
+    /// failure.
+    static func isVisible(_ point: CGPoint, scale: CGFloat, offset: CGSize,
+                          in size: CGSize) -> Bool {
+        guard size.width > 0, size.height > 0 else { return true }
+        let sx = size.width / 2 + (point.x - size.width / 2) * scale + offset.width
+        let sy = size.height / 2 + (point.y - size.height / 2) * scale + offset.height
+        return (0...size.width).contains(sx) && (0...size.height).contains(sy)
+    }
+
     /// The offset that holds `anchor` still while the scale changes.
     ///
     /// Without this the map zooms about the centre of its frame, so pinching
@@ -138,6 +189,12 @@ struct ZoomPanModifier: ViewModifier {
             // what reads as the map sticking.
             .simultaneousGesture(magnify)
             .simultaneousGesture(oneFinger)
+            // The hold completing changes nothing on screen until the finger
+            // moves, so the lightest tap is the only way to say "lifted — a
+            // slide now zooms" at the moment it becomes true.
+            .sensoryFeedback(.impact(weight: .light), trigger: lift.isActive) { _, isActive in
+                isActive
+            }
             .background {
                 GeometryReader { geo in
                     Color.clear
@@ -233,5 +290,33 @@ extension View {
                  oneFingerZoom: Bool = false) -> some View {
         modifier(ZoomPanModifier(scale: scale, offset: offset,
                                  oneFingerZoom: oneFingerZoom))
+    }
+}
+
+/// How the one-finger zoom gets discovered.
+///
+/// The gesture (hold, then slide up or down) is invisible, and a five-year-old
+/// will not find it by accident. The pill sits on empty sea while the map is at
+/// rest, and gives way once zoomed — at that point the child has found the
+/// gesture, and the screen belongs to the way back out.
+///
+/// One shared view rather than one per screen, so a map that can be lifted
+/// always announces it with the same pill. Which patch of sea it sits on is the
+/// caller's choice — each screen keeps it off its own occupied water.
+struct ZoomHintChip: View {
+    @Environment(\.textMode) private var mode
+    let zoom: CGFloat
+
+    var body: some View {
+        if !ZoomPan.isZoomed(zoom) {
+            Text("👆 \(mode.zoomHint)")
+                .font(AppFont.rounded(13, relativeTo: .caption))
+                .foregroundStyle(Palette.ink.opacity(0.72))
+                .padding(.horizontal, 12)
+                .padding(.vertical, 7)
+                .background(Capsule().fill(.white.opacity(0.88)))
+                .overlay(Capsule().strokeBorder(Palette.ink.opacity(0.10)))
+                .allowsHitTesting(false)
+        }
     }
 }

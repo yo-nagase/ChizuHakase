@@ -6,6 +6,7 @@ struct TitleView: View {
     @Environment(AppState.self) private var app
     @Environment(\.textMode) private var mode
     @Environment(\.horizontalSizeClass) private var hSize
+    @Environment(\.verticalSizeClass) private var vSize
 
     var onStart: () -> Void
     var onMyMap: () -> Void
@@ -19,6 +20,12 @@ struct TitleView: View {
         Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String
     }
 
+    /// iPad must support landscape. Keeping the portrait map width there
+    /// makes its 5:4 painted sea taller than the entire safe area, so the CTA
+    /// falls below the screen. The wide-short presentation keeps the same
+    /// single-column hierarchy, just at a compact scale.
+    private var isShort: Bool { vSize == .compact }
+
     var body: some View {
         ZStack {
             AlbumPage()
@@ -27,28 +34,36 @@ struct TitleView: View {
                 // country. Sharing this space gives the map the width and
                 // height the old separate logo row used to consume.
                 miniMap
-                    // On iPad the −52 bleed would inflate the sea to 756pt
-                    // and push the tallies onto the Okinawa inset; 680 keeps
-                    // the composition. iPhone proposals never reach the cap.
-                    .frame(maxWidth: 680)
-                    .padding(.top, 64)
+                    // On a portrait iPad the −52 bleed would inflate the sea
+                    // to 756pt; 680 keeps the composition. A short landscape
+                    // safe area gets the smaller ceiling below.
+                    .frame(maxWidth: isShort ? 450 : 680)
+                    // Keep a calm band below the status area, but do not let
+                    // it become a second header. The old 64pt inset made the
+                    // whole composition sit low, especially on tall phones.
+                    .padding(.top, isShort ? 8 : (hSize == .regular ? 42 : 44))
                     .overlay(alignment: .top) {
-                        // Two ceilings, both set by the 1000px art, not by
-                        // style: 320pt is 960px on a 3x phone, 420pt is
-                        // 840px on a 2x iPad — each the widest that still
-                        // renders sharp on its display.
+                        // The artwork has deliberate transparent breathing
+                        // room, so its painted width is about 85% of this
+                        // frame. These ceilings make the visible wordmark line
+                        // up with the tally row instead of looking pinched
+                        // above it. The overlay still consumes no map space.
                         Image("TitleLogoFloating")
                             .resizable()
                             .scaledToFit()
-                            .frame(maxWidth: hSize == .regular ? 420 : 320)
+                            .frame(maxWidth: isShort ? 390
+                                                    : (hSize == .regular ? 500 : 405))
                             .accessibilityLabel(
                                 "\(mode.appTitleTop) \(mode.appTitleMain)"
                             )
                             .accessibilityAddTraits(.isHeader)
                     }
-                    .layoutPriority(1)
-                    // −52 goes past cancelling the column's 24pt margin: the
-                    // frame runs 28pt off each screen edge, trading the art's
+                    // In a short landscape safe area the controls win any
+                    // final compression contest; the map is illustration,
+                    // while the CTA must remain visible and tappable.
+                    .layoutPriority(isShort ? 0 : 1)
+                    // −52 goes past cancelling the column's 20pt margin: the
+                    // frame runs 32pt off each screen edge, trading the art's
                     // transparent side margins for a visibly larger country.
                     .padding(.horizontal, -52)
                     .padding(.vertical, 2)
@@ -58,19 +73,24 @@ struct TitleView: View {
                     // Only ever water may go under them: at −170 the tallies
                     // covered the Okinawa inset frame, and hiding a real map
                     // element is where "the lower sea is margin" stops being
-                    // true. −95/−100 clears the inset's bottom edge on each
-                    // size class with water to spare.
-                    .padding(.bottom, hSize == .regular ? -100 : -75)
+                    // true. These per-presentation overlaps all clear the
+                    // inset's bottom edge with water to spare.
+                    .padding(.bottom, isShort ? -92
+                                             : (hSize == .regular ? -104 : -78))
 
                 progressLine
 
-                Spacer(minLength: 8)
+                Spacer(minLength: isShort ? 4 : 8)
 
                 // あそぶ is the only labelled button left. The two tallies
                 // above already open the my-map and the card book; a second,
                 // smaller pair of doors to the same two rooms just competed
                 // with the one door that matters.
-                Button(action: onStart) {
+                Button {
+                    SoundService.shared.play(
+                        .decide, enabled: app.save.data.settings.soundEnabled)
+                    onStart()
+                } label: {
                     Image(mode.isKids ? "TitlePlayButton" : "TitlePlayButtonAdult")
                         .resizable()
                         .scaledToFit()
@@ -78,13 +98,16 @@ struct TitleView: View {
                 }
                 .buttonStyle(TitleArtworkButtonStyle())
                 .accessibilityLabel(mode.play)
-                .frame(maxWidth: 256)
+                // Slightly broader than before so the three main horizontal
+                // masses step down cleanly: logo, tallies, then primary CTA.
+                .frame(maxWidth: isShort ? 248
+                                         : (hSize == .regular ? 284 : 264))
 
                 // Flexible again now that the map overlap keeps the leftover
                 // small: on a phone there is almost nothing to distribute,
                 // and on iPad splitting it above and below あそぶ reads as
                 // album margins instead of one dead block over the footer.
-                Spacer(minLength: 12)
+                Spacer(minLength: isShort ? 8 : 12)
 
                 VStack(spacing: 2) {
                     Text("ちずデータ: Global Map Japan (国土地理院) をもとに簡略化")
@@ -102,7 +125,10 @@ struct TitleView: View {
                 }
                 .padding(.bottom, 6)
             }
-            .padding(.horizontal, 24)
+            // The painted tally frames want to sit a little closer to the
+            // page edge than ordinary text. This also gives the logo and the
+            // two-card row the same optical left/right margins on phones.
+            .padding(.horizontal, 20)
             .pageColumn()
 
             // Both discs live in the bottom corners, beside the footer: the
@@ -205,12 +231,10 @@ struct TitleView: View {
     /// Two tallies, because there are two collections: the country and the
     /// cards.
     ///
-    /// The silver-and-up count used to be a third tile of its own, and out of
-    /// three tiles it was the one nobody could place. It shares a denominator
-    /// with the card count and is a *subset* of it, but sitting side by side at
-    /// equal weight the two read as unrelated collections — and 「5/141」 next
-    /// to 「38/141」 gives a child no way to see that the five are among the
-    /// thirty-eight. Inside the card tile the nesting is the layout.
+    /// The foil-card counts live inside the card tile because they are a
+    /// breakdown of that collection, not a third destination. Gold, silver
+    /// and rainbow are exclusive here: a rainbow card is no longer repeated
+    /// under gold, so the three numbers remain an honest inventory.
     private var progressLine: some View {
         HStack(spacing: 10) {
             // 「おぼえた」 is claimed at the top of the mastery ladder, not on
@@ -226,31 +250,50 @@ struct TitleView: View {
             // grid — one tap further, in the room where the cards already are.
             tally("TitleCardsHUD", app.save.data.totalOwnedCards, max(app.cards.count, 1),
                   mode.ownedCards, Palette.collected,
-                  note: TallyNote(emoji: "✨", label: mode.sparklingCards,
-                                  count: app.save.data.specialCardCount),
+                  breakdown: TallyBreakdown(items: [
+                    .init(tier: .silver,
+                          name: mode.cardTierName(.silver) ?? "シルバーカード",
+                          count: app.save.data.cardCount(ofTier: .silver),
+                          countTint: Palette.silverMark),
+                    .init(tier: .gold,
+                          name: mode.cardTierName(.gold) ?? "ゴールドカード",
+                          count: app.save.data.cardCount(ofTier: .gold),
+                          countTint: Palette.goldInk),
+                    .init(tier: .rainbow,
+                          name: mode.cardTierName(.rainbow) ?? "にじいろカード",
+                          count: app.save.data.cardCount(ofTier: .rainbow),
+                          countTint: Palette.rainbowMark),
+                  ]),
                   hint: mode.viewCards) {
                 onCardBook(.all)
             }
         }
         // Holds the row to its tallest tile instead of letting the flexible
-        // heights above stretch it down the screen. 330 rather than 360 on a
-        // phone: every point of tile height is a point taken from the map
-        // above. The iPad's wider stage reads the same tiles as small print,
-        // so it gets a wider row.
+        // heights above stretch it down the screen. The three tier counts need
+        // a little more breathing room than the old one-phrase note, while the
+        // row still fits inside the phone column without touching its edges.
         .fixedSize(horizontal: false, vertical: true)
-        .frame(maxWidth: hSize == .regular ? 380 : 330)
+        .frame(maxWidth: isShort ? 390
+                                 : (hSize == .regular ? 440 : 382))
     }
 
-    /// A second count that belongs *inside* the first.
-    ///
-    /// Only for genuine subsets — drawn under the meter, in the tile whose
-    /// number it is part of. Anything that is not a subset gets its own tile.
-    private struct TallyNote {
-        let emoji: String
-        let label: String
-        let count: Int
+    /// The exclusive rungs inside the owned-card total.
+    private struct TallyBreakdown {
+        struct Item: Identifiable {
+            let tier: CardTier
+            let name: String
+            let count: Int
+            let countTint: Color
 
-        var text: String { "\(emoji) \(label) \(count)" }
+            var id: String { name }
+            var accessibilityText: String { "\(name) \(count)まい" }
+        }
+
+        let items: [Item]
+
+        var accessibilityText: String {
+            items.map(\.accessibilityText).joined(separator: "、")
+        }
     }
 
     /// Each count opens the place its things live: the two prefecture counts go
@@ -259,14 +302,25 @@ struct TitleView: View {
     /// "where can I see them?".
     private func tally(_ artwork: String, _ have: Int, _ total: Int,
                        _ label: String, _ tint: Color,
-                       note: TallyNote? = nil,
+                       breakdown: TallyBreakdown? = nil,
                        hint: String = "",
                        action: @escaping () -> Void) -> some View {
-        Button(action: action) { tallyFace(artwork, have, total, label, tint, note) }
+        Button {
+            // Forward taps play their own decide (RootView listens only for
+            // the way back) — and these tiles are doors as much as あそぶ is.
+            SoundService.shared.play(
+                .decide, enabled: app.save.data.settings.soundEnabled)
+            action()
+        } label: {
+            tallyFace(artwork, have, total, label, tint, breakdown)
+        }
             .buttonStyle(TallyPressStyle())
             .accessibilityElement(children: .ignore)
-            .accessibilityLabel(note.map { "\(label) \(have) / \(total)。\($0.label) \($0.count)" }
-                                ?? "\(label) \(have) / \(total)")
+            .accessibilityLabel(
+                breakdown.map {
+                    "\(label) \(have) / \(total)。\($0.accessibilityText)"
+                } ?? "\(label) \(have) / \(total)"
+            )
             // Since the labelled マイマップ/カードをみる buttons left the
             // screen, the hint is where VoiceOver learns each tile is also
             // the door to its collection.
@@ -276,7 +330,7 @@ struct TitleView: View {
 
     private func tallyFace(_ artwork: String, _ have: Int, _ total: Int,
                            _ label: String, _ tint: Color,
-                           _ note: TallyNote?) -> some View {
+                           _ breakdown: TallyBreakdown?) -> some View {
         GeometryReader { geo in
             ZStack {
                 // The frame, corner ornaments and collection icon are artwork;
@@ -286,25 +340,28 @@ struct TitleView: View {
                     .scaledToFit()
                     .accessibilityHidden(true)
 
+                // Set in the heading face, not the round one: these run small
+                // over painted artwork, and the round family ships a single
+                // light weight — W6 is the bold this HUD can actually render.
                 VStack(spacing: 0) {
                     HStack(alignment: .firstTextBaseline, spacing: 2) {
                         // Verbatim: SwiftUI's localised interpolation groups
                         // integers, and a child reading 「1,120」 has to parse a
                         // comma first.
                         Text(verbatim: "\(have)")
-                            .font(AppFont.rounded(23, relativeTo: .title3))
+                            .font(AppFont.heading(25, relativeTo: .title3))
                             .foregroundStyle(Palette.ink)
                         Text(verbatim: "/\(total)")
-                            .font(AppFont.rounded(11, relativeTo: .caption2))
-                            .foregroundStyle(Palette.ink.opacity(0.48))
+                            .font(AppFont.heading(12, relativeTo: .caption2))
+                            .foregroundStyle(Palette.ink.opacity(0.55))
                     }
                     .monospacedDigit()
                     .lineLimit(1)
                     .minimumScaleFactor(0.7)
 
                     Text(label)
-                        .font(AppFont.rounded(11, relativeTo: .caption2))
-                        .foregroundStyle(Palette.ink.opacity(0.78))
+                        .font(AppFont.heading(12, relativeTo: .caption2))
+                        .foregroundStyle(Palette.ink.opacity(0.88))
                         .lineLimit(1)
                         .minimumScaleFactor(0.62)
                 }
@@ -321,22 +378,72 @@ struct TitleView: View {
                 .position(x: geo.size.width * 0.52,
                           y: geo.size.height * 0.69)
 
-                // One Text rather than an HStack of three, so the note remains
-                // one readable phrase while its count changes.
-                if let note {
-                    Text(verbatim: note.text)
-                        .font(AppFont.rounded(10, relativeTo: .caption2))
-                        .foregroundStyle(Palette.ink.opacity(0.72))
+                if let breakdown {
+                    HStack(spacing: 5) {
+                        ForEach(breakdown.items) { item in
+                            HStack(spacing: 2) {
+                                TierCardMark(tier: item.tier)
+                                Text(verbatim: "\(item.count)")
+                                    .foregroundStyle(item.countTint)
+                            }
+                        }
+                    }
+                        .font(AppFont.heading(11, relativeTo: .caption2))
                         .monospacedDigit()
                         .lineLimit(1)
-                        .minimumScaleFactor(0.68)
-                        .frame(width: geo.size.width * 0.72)
-                        .position(x: geo.size.width * 0.57,
+                        .minimumScaleFactor(0.75)
+                        .frame(width: geo.size.width * 0.82)
+                        .position(x: geo.size.width * 0.52,
                                   y: geo.size.height * 0.84)
                 }
             }
         }
         .aspectRatio(800 / 483, contentMode: .fit)
+    }
+
+    /// A tiny piece of the actual card finish, rather than a kanji abbreviation.
+    /// The order and the material now match the ladder in the card book:
+    /// silver, gold, then rainbow.
+    private struct TierCardMark: View {
+        let tier: CardTier
+
+        private var stops: [Gradient.Stop] {
+            switch tier {
+            case .silver: Palette.silverRamp
+            case .gold: Palette.foilRamp
+            case .rainbow: Palette.rainbowRamp
+            case .none, .plain: []
+            }
+        }
+
+        private var edge: Color {
+            switch tier {
+            case .silver: Palette.silverEdge
+            case .gold: Palette.foilEdge
+            case .rainbow: Palette.rainbowEdge
+            case .none, .plain: .white
+            }
+        }
+
+        var body: some View {
+            RoundedRectangle(cornerRadius: 2.5, style: .continuous)
+                .fill(LinearGradient(stops: stops,
+                                     startPoint: .topLeading,
+                                     endPoint: .bottomTrailing))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 2.5, style: .continuous)
+                        .stroke(edge, lineWidth: 1)
+                }
+                .overlay {
+                    Image(systemName: tier == .rainbow ? "sparkles" : "star.fill")
+                        .font(.system(size: 5, weight: .bold))
+                        .foregroundStyle(.white.opacity(0.92))
+                }
+                .frame(width: 12, height: 15)
+                .rotationEffect(.degrees(-5))
+                .shadow(color: Palette.ink.opacity(0.16), radius: 0.7, y: 1)
+                .accessibilityHidden(true)
+        }
     }
 }
 

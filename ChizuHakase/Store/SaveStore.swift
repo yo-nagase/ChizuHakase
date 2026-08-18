@@ -116,28 +116,37 @@ final class SaveStore {
             }
         }
 
+        // Which of each asked prefecture's cards were already gold, captured
+        // before the draws move the stars: the streak walk decides for itself
+        // when each promotion lands, and needs the state the stage started
+        // from to tell a promotion from a duplicate.
+        var goldBefore: [Int: Set<String>] = [:]
+        for code in result.outcomesByPrefecture.keys {
+            goldBefore[code] = Set(catalog.cards(for: code)
+                .filter { data.stars(of: $0.id) >= GameRules.maxCardStars }
+                .map(\.id))
+        }
+
         for draw in result.cardDraws {
             data.cards = GameRules.applyDraw(draw, to: data.cards)
         }
 
+        // Streaks and the rainbow latch move together: pairing each clean
+        // answer with its draw is what lets the latch fire at the moment the
+        // count crosses, and only for cards whose gold predates the run.
         for (code, outcomes) in result.outcomesByPrefecture {
-            data.streaks[code] = GameRules.nextStreak(current: data.streak(of: code),
-                                                      outcomes: outcomes)
-        }
-
-        // The rainbow latch, checked after stars and streaks have both moved so
-        // either order of arrival — gold first or streak first — catches here.
-        // Only prefectures this stage touched can have changed.
-        for code in result.outcomesByPrefecture.keys {
-            let streak = data.streak(of: code)
-            for card in catalog.cards(for: code)
-            where GameRules.qualifiesForRainbow(stars: data.stars(of: card.id),
-                                                streak: streak) {
-                // Only the cards the latch actually caught this time. A card
-                // that was already rainbow is not news, and re-announcing it
-                // every stage would turn the rarest thing in the game into
-                // wallpaper.
-                if data.rainbow.insert(card.id).inserted { newlyRainbow.append(card.id) }
+            let walked = GameRules.nextStreak(
+                current: data.streak(of: code),
+                outcomes: outcomes,
+                draws: result.cardDraws.filter { $0.card.prefectureCode == code },
+                goldCardIDs: goldBefore[code] ?? [])
+            data.streaks[code] = walked.streak
+            // Only the cards the latch actually caught this time. A card
+            // that was already rainbow is not news, and re-announcing it
+            // every stage would turn the rarest thing in the game into
+            // wallpaper.
+            for id in walked.latched where data.rainbow.insert(id).inserted {
+                newlyRainbow.append(id)
             }
         }
 
@@ -184,8 +193,9 @@ nonisolated struct StageGains: Sendable, Hashable {
     /// Prefecture codes that reached mastery level 3.
     var sparklingPrefectures: [Int] = []
     /// Card IDs the rainbow latch caught. Can name cards this run never drew:
-    /// crossing a fifteen-streak promotes every gold card the prefecture has
-    /// at once, which is the whole point of it being the streak's medal.
+    /// the streak crossing its line promotes every card whose gold predates
+    /// the run, at once — that is the whole point of it being the streak's
+    /// medal.
     var rainbowCards: [String] = []
 }
 

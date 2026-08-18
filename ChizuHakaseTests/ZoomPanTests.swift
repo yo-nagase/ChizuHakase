@@ -137,6 +137,102 @@ struct ZoomPanTests {
         #expect(clamped == .zero)
     }
 
+    // MARK: - Visibility
+
+    /// At rest every point of the panel is its own screen point, so nothing
+    /// legitimate is dropped.
+    @Test func atRestTheWholePanelIsVisible() {
+        #expect(ZoomPan.isVisible(.zero, scale: 1, offset: .zero, in: frame))
+        #expect(ZoomPan.isVisible(CGPoint(x: 300, y: 400), scale: 1, offset: .zero, in: frame))
+        #expect(!ZoomPan.isVisible(CGPoint(x: -1, y: 0), scale: 1, offset: .zero, in: frame))
+        #expect(!ZoomPan.isVisible(CGPoint(x: 0, y: 401), scale: 1, offset: .zero, in: frame))
+    }
+
+    /// Zoomed about the centre, the middle stays on the glass and the corners
+    /// scale off it — the region the clip hides but the touch geometry keeps,
+    /// which is how a zoomed map used to swallow the back button.
+    @Test func zoomingPushesTheCornersOffTheGlass() {
+        #expect(ZoomPan.isVisible(CGPoint(x: 150, y: 200), scale: 4, offset: .zero, in: frame))
+        #expect(!ZoomPan.isVisible(CGPoint(x: 10, y: 10), scale: 4, offset: .zero, in: frame))
+    }
+
+    /// Panning toward a hidden corner brings its taps back with its pixels —
+    /// visibility has to follow the same mapping the drawing uses.
+    @Test func panningBringsAHiddenCornerBack() {
+        let corner = CGPoint(x: 10, y: 10)
+        #expect(!ZoomPan.isVisible(corner, scale: 2, offset: .zero, in: frame))
+        let toCorner = ZoomPan.clamp(offset: CGSize(width: 9_999, height: 9_999),
+                                     scale: 2, in: frame)
+        #expect(ZoomPan.isVisible(corner, scale: 2, offset: toCorner, in: frame))
+    }
+
+    /// Before layout settles the frame is zero; treating that as "nothing is
+    /// visible" would swallow every tap, which is the worse failure.
+    @Test func zeroSizedFrameKeepsTapsAlive() {
+        #expect(ZoomPan.isVisible(CGPoint(x: 50, y: 50), scale: 1, offset: .zero, in: .zero))
+    }
+
+    // MARK: - Region framing
+
+    /// The whole promise of the 「にしにほん」「ひがしにほん」 buttons: one press
+    /// puts the half being asked about in the middle of the frame.
+    @Test func framingCentresTheRegion() {
+        let region = CGRect(x: 30, y: 40, width: 100, height: 100)
+        let (scale, offset) = ZoomPan.framing(region, in: frame, margin: 0)
+        // A point p is drawn at C + (p - C) * scale + offset.
+        let drawnX = frame.width / 2 + (region.midX - frame.width / 2) * scale
+            + offset.width
+        let drawnY = frame.height / 2 + (region.midY - frame.height / 2) * scale
+            + offset.height
+        #expect(abs(drawnX - frame.width / 2) < 0.001)
+        #expect(abs(drawnY - frame.height / 2) < 0.001)
+    }
+
+    /// The tighter axis decides, exactly like the map's own aspect fit — a
+    /// region must never be stretched or overflow the frame.
+    @Test func framingFillsTheFrameAlongTheTightAxis() {
+        let region = CGRect(x: 50, y: 50, width: 150, height: 100)
+        let (scale, _) = ZoomPan.framing(region, in: frame, margin: 0)
+        #expect(abs(scale - 2) < 0.001)   // 300/150, not 400/100
+    }
+
+    /// Margin is breathing room: it grows the rect being fitted, so the
+    /// coastline stops short of the frame's edge.
+    @Test func framingMarginLeavesAir() {
+        let region = CGRect(x: 100, y: 100, width: 100, height: 100)
+        let (scale, _) = ZoomPan.framing(region, in: frame, margin: 0.25)
+        #expect(abs(scale - 2) < 0.001)   // fits 150, not 100
+    }
+
+    /// A tiny region is not a licence to zoom past the pinch's own ceiling.
+    @Test func framingObeysTheScaleCap() {
+        let speck = CGRect(x: 140, y: 190, width: 10, height: 10)
+        let (scale, _) = ZoomPan.framing(speck, in: frame, margin: 0)
+        #expect(scale == ZoomPan.maxScale)
+    }
+
+    /// A region hugging a corner wants more offset than the clamp allows; the
+    /// button must settle for the closest legal view, never a blank edge.
+    @Test func framingNeverUncoversAnEdge() {
+        let corner = CGRect(x: 0, y: 0, width: 50, height: 50)
+        let (scale, offset) = ZoomPan.framing(corner, in: frame, margin: 0)
+        #expect(scale == ZoomPan.maxScale)
+        #expect(offset.width == frame.width * (scale - 1) / 2)
+        #expect(offset.height == frame.height * (scale - 1) / 2)
+    }
+
+    /// Before layout settles the sizes are zero; the button must be inert
+    /// rather than produce NaN.
+    @Test func framingDegenerateInputsComeBackToRest() {
+        let (s1, o1) = ZoomPan.framing(.zero, in: frame)
+        #expect(s1 == ZoomPan.minScale)
+        #expect(o1 == .zero)
+        let (s2, o2) = ZoomPan.framing(CGRect(x: 0, y: 0, width: 10, height: 10),
+                                       in: .zero)
+        #expect(s2 == ZoomPan.minScale)
+        #expect(o2 == .zero)
+    }
+
     // MARK: - Hold and slide
 
     /// Up grows the map, down shrinks it — the direction a child expects from

@@ -23,17 +23,25 @@ struct QuizView: View {
     @State private var rearmTask: Task<Void, Never>?
     @State private var zoom: CGFloat = 1
     @State private var pan: CGSize = .zero
+    /// The map's frame, measured for the region buttons' framing maths.
+    @State private var mapSize: CGSize = .zero
     @State private var comboBurst: ComboBurst?
     @State private var burstCount = 0
 
     var body: some View {
         ZStack {
-            AlbumPage()
+            StageAtlasBackground()
             if let quiz {
                 content(quiz)
             }
         }
         .navigationBarBackButtonHidden()
+        // The stage the child picked, in the same spot that read 「ステージ」
+        // one screen earlier — the generic label hands over to the actual
+        // destination. The header row below stays free for progress and score.
+        .navigationTitle(stage.displayName(mode))
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbarBackground(.hidden, for: .navigationBar)
         .task {
             guard quiz == nil else { return }
             let model = QuizViewModel(stage: stage,
@@ -74,8 +82,13 @@ struct QuizView: View {
 
     private func content(_ quiz: QuizViewModel) -> some View {
         VStack(spacing: 12) {
-            header(quiz)
-            question(quiz)
+            // Above the map for hit testing: scaleEffect magnifies the touch
+            // region along with the drawing, so the zoomed map — a later
+            // sibling — otherwise swallows the taps aimed at these rows, and
+            // the back button died exactly while a child was zoomed in and
+            // most lost. Later siblings (choices, footer) already win.
+            header(quiz).zIndex(1)
+            question(quiz).zIndex(1)
             Spacer(minLength: 0)
             map(quiz)
             Spacer(minLength: 0)
@@ -220,24 +233,49 @@ struct QuizView: View {
     /// shape cannot learn it. The tap allowance shrinks with the zoom so
     /// magnifying never turns into a wider net.
     private func map(_ quiz: QuizViewModel) -> some View {
-        PrefectureMapView(
-            mapData: app.mapData,
-            codes: quiz.order,
-            appearance: { appearance(for: $0, quiz: quiz) },
-            interactiveCodes: quiz.mode == .nameIt ? [] : quiz.interactiveCodes,
-            targetCode: quiz.target?.code,
-            hintCode: quiz.hintCode,
-            effect: quiz.effect,
-            zoom: zoom,
-            comboBurst: comboBurst,
-            onTap: { handleTap($0, at: .point($1), quiz: quiz) })
-        .aspectRatio(PrefectureGeometry.aspectRatio(
-            of: app.mapData.prefectures(in: quiz.order)), contentMode: .fit)
+        Group {
+            // Regional stages hug the country's own proportions. 全国チャレンジ
+            // takes every point of height the column has spare instead: the
+            // country cannot be drawn any bigger — the screen's width already
+            // caps it — so all the spare height becomes sea, and a zoomed-in
+            // child gets that much more viewport to move around in. A frame
+            // rather than a taller fixed ratio, so a short screen simply
+            // yields a shorter panel instead of shrinking the country to
+            // honour a ratio it has no room for.
+            if stage.isNationwide {
+                mapView(quiz).frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else {
+                mapView(quiz).aspectRatio(PrefectureGeometry.aspectRatio(
+                    of: app.mapData.prefectures(in: quiz.order)), contentMode: .fit)
+            }
+        }
         .zoomPan(scale: $zoom, offset: $pan, oneFingerZoom: true)
+        // The frame the region buttons aim their zoom at — the same size the
+        // zoom-pan clamps against, so a framed region obeys the same limits.
+        .background {
+            GeometryReader { geo in
+                Color.clear
+                    .onAppear { mapSize = geo.size }
+                    .onChange(of: geo.size) { _, new in mapSize = new }
+            }
+        }
         .clipShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
         .background(Palette.seaGradient)
         .stickerCard(fill: .clear, cornerRadius: 26)
-        .overlay(alignment: .topTrailing) { resetZoomButton }
+        // In the same corner as the region buttons it swaps in for, so the way
+        // back out appears exactly where the finger that zoomed just pressed.
+        .overlay(alignment: .bottomTrailing) { resetZoomButton }
+        // The same pill as my map, but only on 全国チャレンジ: that is the map
+        // where Kagawa is a few points across and zooming is how the question
+        // becomes answerable. On regional stages the prefectures are already
+        // finger-sized, and a pill repeated on every question would be
+        // furniture in front of the thing being aimed at. It sits on the
+        // northern sea here — the southern edge belongs to the region buttons,
+        // and to Okinawa's inset.
+        .overlay(alignment: .top) {
+            if stage.isNationwide { ZoomHintChip(zoom: zoom).padding(.top, 10) }
+        }
+        .overlay(alignment: .bottomTrailing) { regionZoomButtons }
         // Reaches wider than the rest of the column. The map is limited by the
         // screen's width, never its height, so every point of margin here is a
         // point off how big each prefecture is drawn — and this is the one
@@ -251,6 +289,32 @@ struct QuizView: View {
             pan = .zero
             comboBurst = nil
         }
+        // Ahead of the surrounding Spacers, or the flexible nationwide panel
+        // would be offered only an equal split of the leftover height and the
+        // rest would sit in the margins it was meant to absorb.
+        .layoutPriority(stage.isNationwide ? 1 : 0)
+    }
+
+    private func mapView(_ quiz: QuizViewModel) -> some View {
+        PrefectureMapView(
+            mapData: app.mapData,
+            codes: quiz.order,
+            appearance: { appearance(for: $0, quiz: quiz) },
+            interactiveCodes: quiz.mode == .nameIt ? [] : quiz.interactiveCodes,
+            targetCode: quiz.target?.code,
+            hintCode: quiz.hintCode,
+            effect: quiz.effect,
+            zoom: zoom,
+            comboBurst: comboBurst,
+            onTap: { prefecture, point in
+                // The clip hides everything outside the panel; the touch
+                // region does not honour it (ZoomPan.isVisible). A tap that
+                // landed where the child sees page, not map, must not answer
+                // the question.
+                guard ZoomPan.isVisible(point, scale: zoom, offset: pan,
+                                        in: mapSize) else { return }
+                handleTap(prefecture, at: .point(point), quiz: quiz)
+            })
     }
 
     @ViewBuilder private var resetZoomButton: some View {
@@ -267,6 +331,56 @@ struct QuizView: View {
             .overlay(Capsule().strokeBorder(Palette.ink.opacity(0.12)))
             .padding(10)
         }
+    }
+
+    /// One press to a third of the country, for the child the hold-and-slide
+    /// is still too fiddly for — 全国チャレンジ only, where the whole point of
+    /// zooming is that 47 prefectures in one frame leaves Kagawa unreachable.
+    ///
+    /// Only while at rest: once zoomed the stack gives way to
+    /// 「もとの おおきさ」 in this same corner, and a "zoom somewhere else"
+    /// button on top of a zoomed map would teleport the child instead of
+    /// letting them look. Stacked down the
+    /// south-eastern corner in the country's own order — east at the top,
+    /// west at the bottom, the way the archipelago runs diagonally above. That
+    /// corner is open Pacific on every layout, however short the panel gets;
+    /// a row along the foot reached far enough left to cover Okinawa's inset
+    /// on the smallest phones, and a button must never sit on a prefecture a
+    /// tap might be aiming for.
+    @ViewBuilder private var regionZoomButtons: some View {
+        if stage.isNationwide, !ZoomPan.isZoomed(zoom) {
+            VStack(alignment: .trailing, spacing: 6) {
+                regionButton(mode.eastJapan, codes: Stage.eastJapanCodes)
+                regionButton(mode.middleJapan, codes: Stage.middleJapanCodes)
+                regionButton(mode.westJapan, codes: Stage.westJapanCodes)
+            }
+            .padding(10)
+        }
+    }
+
+    private func regionButton(_ title: String, codes: [Int]) -> some View {
+        Button(title) { zoomToRegion(codes) }
+            .font(AppFont.rounded(13, relativeTo: .caption))
+            .foregroundStyle(Palette.ink)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 7)
+            .background(Capsule().fill(.white.opacity(0.92)))
+            .overlay(Capsule().strokeBorder(Palette.ink.opacity(0.12)))
+    }
+
+    private func zoomToRegion(_ codes: [Int]) {
+        guard mapSize.width > 0, mapSize.height > 0 else { return }
+        // The same fit the map itself draws with, so the framed rect is the
+        // region exactly as it sits on screen.
+        let transform = PrefectureGeometry.fitTransform(
+            bounds: PrefectureGeometry.boundingBox(
+                of: app.mapData.prefectures(in: stage.codes)),
+            into: mapSize)
+        let region = PrefectureGeometry.boundingBox(
+            of: app.mapData.prefectures(in: codes)).applying(transform)
+        let (scale, offset) = ZoomPan.framing(region, in: mapSize)
+        let apply = { zoom = scale; pan = offset }
+        if reduceMotion { apply() } else { withAnimation(.spring(duration: 0.35), apply) }
     }
 
     @ViewBuilder
@@ -346,7 +460,12 @@ struct QuizView: View {
         if app.voice.isListening { app.voice.stop() }
         switch quiz.answer(prefecture.code) {
         case .correct:
-            SoundService.shared.play(.correct, enabled: app.save.data.settings.soundEnabled)
+            // The cue climbs one scale step per clean answer in the run —
+            // answer() has already updated the combo, so this reads the run
+            // this answer just extended (or, after a fumble, restarted).
+            SoundService.shared.play(
+                .correct, enabled: app.save.data.settings.soundEnabled,
+                semitonesUp: SoundService.semitoneRise(forCombo: quiz.combo))
             showComboBurst(quiz, at: anchor)
             scheduleAdvance(quiz)
         case .wrong:

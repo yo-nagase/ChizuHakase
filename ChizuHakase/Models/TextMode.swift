@@ -88,6 +88,19 @@ nonisolated extension TextMode {
         case .rainbow: "にじいろカード"
         }
     }
+    /// The book's tier filter chips. Shorter than `cardTierName` — on a chip
+    /// the word カード is the whole bar repeating itself — and fronted by a
+    /// medal the way the category chips front their emoji. The medals lean on
+    /// the same knowledge the katakana does: second and first place are
+    /// pictures a six-year-old already reads.
+    func tierFilterName(_ tier: CardTier) -> String? {
+        switch tier {
+        case .none, .plain: nil
+        case .silver: "🥈 シルバー"
+        case .gold: "🥇 ゴールド"
+        case .rainbow: "🌈 にじいろ"
+        }
+    }
     /// The 「あと◯」 line under a card (CLAUDE.md §5). It only ever counts
     /// toward the next thing — a streak that broke is not mentioned, because
     /// naming the loss is the loss (CLAUDE.md §12).
@@ -136,6 +149,16 @@ nonisolated extension TextMode {
     var ownedCards: String { isKids ? "もっている カード" : "持っているカード" }
     var learnedCount: String { isKids ? "おぼえた" : "覚えた" }
     var resetZoom: String { isKids ? "もとの おおきさ" : "元の大きさ" }
+    /// How the one-finger zoom is discovered: press and hold, then slide up
+    /// or down. Pinch works too, but nobody needs a label to find a pinch.
+    var zoomHint: String { isKids ? "ながおしして うえしたで おおきく できるよ"
+                                  : "長押しして上下で拡大縮小できます" }
+    /// The nationwide map's one-press zooms. 「にほん」 spelt out rather than
+    /// 「にし」「なか」「ひがし」 alone: a five-year-old meets these words here
+    /// first, and the regions should sound like parts of the country.
+    var westJapan: String { isKids ? "にしにほん" : "西日本" }
+    var middleJapan: String { isKids ? "なかにほん" : "中日本" }
+    var eastJapan: String { isKids ? "ひがしにほん" : "東日本" }
     var eraseEverything: String { isKids ? "きろくを ぜんぶ けす" : "記録をすべて消去" }
     var eraseConfirm1: String { isKids ? "ほんとうに けしても いい?" : "本当に消去しますか?" }
     var eraseConfirm2: String { isKids ? "けすと もどせないよ。いい?" : "消去すると元に戻せません" }

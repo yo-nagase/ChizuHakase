@@ -3,10 +3,10 @@ import Foundation
 /// What a card has grown into (CLAUDE.md §5).
 ///
 /// One star per copy won. The first win puts the card in the book with one
-/// star; every later win on the same card adds another, to fifteen. Five make
-/// it silver and fifteen make it gold. Above gold sits rainbow, which is not a
-/// star count at all: gold held while its prefecture's clean streak stood at
-/// fifteen, recorded on the save and never washed off.
+/// star; every later win on the same card adds another, to ten. Five make it
+/// silver and ten make it gold. Above gold sits rainbow, which is not a star
+/// count at all: gold held through a clean streak on its prefecture, recorded
+/// on the save and never washed off.
 ///
 /// This replaced a plain/キラ pair, where the second copy was the end of the
 /// line. Two states meant a prefecture whose three cards were collected had

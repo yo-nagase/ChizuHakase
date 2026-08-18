@@ -72,6 +72,11 @@ struct CardArtTests {
         ) == card.art)
     }
 
+    @Test func uncollectedCardUsesBundledArtwork() {
+        #expect(UIImage(named: CardFaceView.uncollectedArtName) != nil,
+                "the uncollected-card painting is missing from the asset catalog")
+    }
+
     /// Emoji remains a lightweight fallback for places that do not render the
     /// painted card, even though every card now has art.
     @Test func everyCardRetainsFallbackEmoji() {

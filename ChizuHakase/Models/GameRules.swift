@@ -11,13 +11,19 @@ nonisolated enum GameRules {
     /// week is not having learned a prefecture (CLAUDE.md §5).
     static let maxMastery = 5
 
-    /// A card's stars: one per copy won. Five make it silver, fifteen make it
-    /// gold, and fifteen is the cap (CLAUDE.md §5).
-    static let maxCardStars = 15
+    /// A card's stars: one per copy won. Five make it silver, ten make it
+    /// gold, and ten is the cap (CLAUDE.md §5). Down from fifteen: with the
+    /// draw spreading stars across a prefecture's three cards, the first gold
+    /// sat about eighteen clean runs of one stage away, and a top tier no
+    /// child ever reaches is not a goal, it is a ceiling.
+    static let maxCardStars = 10
     static let silverStars = 5
-    /// Consecutive clean answers a prefecture needs before its gold cards
-    /// turn rainbow.
-    static let rainbowStreak = 15
+    /// Consecutive clean answers *after* a card reaches gold before it turns
+    /// rainbow. Five — down from seven, originally fifteen — and the run only
+    /// opens once the gold exists: finishing the stars resets the count, so
+    /// the rainbow is always earned on top of the completed card, never
+    /// alongside it (CLAUDE.md §5).
+    static let rainbowStreak = 5
 
     static let firstTryBaseScore = 100
     static let comboBonus = 20
@@ -170,22 +176,50 @@ nonisolated enum GameRules {
 
     // MARK: - Prefecture streak
 
-    /// The prefecture's consecutive-clean count after a stage asked about it.
+    /// The prefecture's consecutive-clean count after a stage asked about it,
+    /// and every rainbow that run latched on the way.
     ///
-    /// `outcomes` are this stage's questions on the prefecture, in the order
-    /// they were asked. A fumble puts the count back to zero, and the answers
-    /// after it start a fresh run inside the same stage. The count is the only
-    /// thing that resets — stars and tiers stand — and the reset itself is
-    /// never announced (CLAUDE.md §12).
-    static func nextStreak(current: Int, outcomes: [Bool]) -> Int {
-        outcomes.reduce(max(0, current)) { $1 ? $0 + 1 : 0 }
-    }
-
-    /// Rainbow is gold held through a fifteen-streak: the card at its star cap
-    /// while the prefecture's streak stands at `rainbowStreak` or better. The
-    /// moment both are true is recorded on the save and never re-examined.
-    static func qualifiesForRainbow(stars: Int, streak: Int) -> Bool {
-        stars >= maxCardStars && streak >= rainbowStreak
+    /// `outcomes` are this stage's questions on the prefecture in the order
+    /// asked; `draws` are the same stage's card draws for this prefecture,
+    /// which pair one-to-one with the clean outcomes (a draw happens exactly
+    /// on a first-try answer) — that pairing is how the walk knows *when* a
+    /// card finished its gold. A fumble puts the count back to zero, and so
+    /// does a promotion to gold: the rainbow run opens only once the gold
+    /// exists, so the answer that completed it does not also start the count.
+    /// The count is the only thing either reset touches — stars and tiers
+    /// stand — and neither reset is ever announced (CLAUDE.md §12).
+    ///
+    /// The moment the count touches `rainbowStreak`, every card that is gold
+    /// *at that moment* latches. Checked mid-walk rather than on the final
+    /// count: a fumble on the stage's second asking must not swallow a
+    /// rainbow the first asking had already earned. And any promotion resets
+    /// the count, so a qualifying run is always entirely later than every
+    /// gold in the set — a card promoted after the crossing starts its own.
+    static func nextStreak(
+        current: Int, outcomes: [Bool],
+        draws: [CardDraw] = [], goldCardIDs: Set<String> = []
+    ) -> (streak: Int, latched: Set<String>) {
+        var gold = goldCardIDs
+        var streak = max(0, current)
+        var latched: Set<String> = []
+        // A count already over the line latches on arrival: saves written
+        // under an older, higher threshold can hold a qualified streak that
+        // never met a check at the current line.
+        if streak >= rainbowStreak { latched.formUnion(gold) }
+        var drawIndex = 0
+        for clean in outcomes {
+            guard clean else { streak = 0; continue }
+            let draw = drawIndex < draws.count ? draws[drawIndex] : nil
+            drawIndex += 1
+            if let draw, draw.stars >= maxCardStars, !gold.contains(draw.card.id) {
+                gold.insert(draw.card.id)
+                streak = 0
+            } else {
+                streak += 1
+                if streak >= rainbowStreak { latched.formUnion(gold) }
+            }
+        }
+        return (streak, latched)
     }
 
     // MARK: - Next goal

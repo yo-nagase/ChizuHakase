@@ -19,6 +19,11 @@ final class MusicService {
         Bundle.main.url(forResource: "theme-song", withExtension: "m4a")
     }
 
+    /// Below full scale (about −3 dB): the bundled track is mastered loud,
+    /// and the theme is the title's furniture — it should sit under the tap
+    /// sounds and the read-aloud voice, not compete with them.
+    static let themeVolume: Float = 0.7
+
     private let log = Logger(subsystem: "com.wakuwaku.chizuhakase", category: "Music")
 
     private var player: AVAudioPlayer?
@@ -37,7 +42,7 @@ final class MusicService {
 
         if let player {
             // Mid-fade return: take the volume back, keep the song where it is.
-            player.setVolume(1, fadeDuration: 0)
+            player.setVolume(Self.themeVolume, fadeDuration: 0)
             if !player.isPlaying { player.play() }
             return
         }
@@ -50,6 +55,7 @@ final class MusicService {
             AudioSession.configureForPlayback()
             let player = try AVAudioPlayer(contentsOf: url)
             player.numberOfLoops = -1
+            player.volume = Self.themeVolume
             player.play()
             self.player = player
         } catch {
