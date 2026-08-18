@@ -52,8 +52,8 @@ struct CardFaceView: View {
 
     /// Every owned card shows its painted subject; rarity is communicated by
     /// the board, edge, stars and foil rather than by hiding the illustration.
-    /// An unowned slot remains a question mark, and missing art falls back to
-    /// the card's emoji.
+    /// An unowned slot uses one shared hand-painted question mark, and missing
+    /// owned art falls back to the card's emoji.
     private var shownArt: String? {
         Self.artNameToDisplay(for: card, stars: stars, rainbow: rainbow)
     }
@@ -62,6 +62,10 @@ struct CardFaceView: View {
                                  rainbow: Bool = false) -> String? {
         CardTier(stars: stars, rainbow: rainbow) == .none ? nil : card.art
     }
+
+    /// A real illustration rather than the system's rendered question-mark
+    /// emoji. Shared because an uncollected card must not reveal its subject.
+    static let uncollectedArtName = "card-uncollected"
 
     struct Metrics {
         /// How much stock shows around the panel — the border, in other words.
@@ -291,8 +295,18 @@ struct CardFaceView: View {
                     : Palette.emptyMat
             if let shownArt {
                 Image(shownArt).resizable().scaledToFit().padding(4)
+            } else if !isOwned {
+                Image(Self.uncollectedArtName)
+                    .resizable()
+                    .scaledToFit()
+                    .padding(4)
+                    // A full book can show more than a hundred of these at
+                    // once. Keep the painting visible without letting the
+                    // repeated mystery parcel outshine cards already earned.
+                    .saturation(0.52)
+                    .opacity(0.82)
             } else {
-                Text(isOwned ? card.emoji : "❓")
+                Text(card.emoji)
                     .font(.system(size: metrics.emojiSize))
                     .minimumScaleFactor(0.5)
             }

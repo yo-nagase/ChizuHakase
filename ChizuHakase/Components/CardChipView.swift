@@ -30,8 +30,8 @@ struct CardChipView: View {
             .accessibilityElement(children: .ignore)
             .accessibilityLabel(accessibilityText)
             // Only a card you own opens: there is nothing to look at behind a
-            // 「？」, and a slot that responds to a tap by showing nothing is a
-            // small lie.
+            // mystery illustration, and a slot that responds to a tap by
+            // showing nothing is a small lie.
             .modifier(OpenOnTap(action: isOwned ? onOpen : nil))
     }
 
