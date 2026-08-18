@@ -30,12 +30,18 @@ struct QuizView: View {
 
     var body: some View {
         ZStack {
-            AlbumPage()
+            StageAtlasBackground()
             if let quiz {
                 content(quiz)
             }
         }
         .navigationBarBackButtonHidden()
+        // The stage the child picked, in the same spot that read 「ステージ」
+        // one screen earlier — the generic label hands over to the actual
+        // destination. The header row below stays free for progress and score.
+        .navigationTitle(stage.displayName(mode))
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbarBackground(.hidden, for: .navigationBar)
         .task {
             guard quiz == nil else { return }
             let model = QuizViewModel(stage: stage,
