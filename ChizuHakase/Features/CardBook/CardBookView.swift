@@ -67,7 +67,7 @@ struct CardBookView: View {
             .padding(16)
             .pageColumn()
         }
-        .background(AlbumPage())
+        .background(CardBookParchmentBackground())
         .navigationTitle(mode.cardBook)
         .navigationBarTitleDisplayMode(.inline)
         .task {
@@ -196,6 +196,17 @@ struct CardBookView: View {
     }
 }
 
+/// A quiet centre keeps the cards and labels readable while the painted map
+/// details around the edge make the collection feel like an explorer's atlas.
+private struct CardBookParchmentBackground: View {
+    var body: some View {
+        Image("card-book-parchment-background")
+            .resizable()
+            .scaledToFill()
+            .ignoresSafeArea()
+            .accessibilityHidden(true)
+    }
+}
 
 /// What the card book is showing.
 nonisolated enum CardFilter: Hashable, Sendable {
