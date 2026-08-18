@@ -900,7 +900,7 @@ footer p {
 
 .screens-gallery {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: clamp(0.7rem, 2vw, 1.25rem);
 }
 
@@ -938,6 +938,10 @@ footer p {
 
 .screen-frame--yellow {
   background: linear-gradient(145deg, #fff3bd, #ffd263);
+}
+
+.screen-frame--green {
+  background: linear-gradient(145deg, #def7e4, #6fce9d);
 }
 
 .screens-gallery figcaption {
@@ -1107,6 +1111,13 @@ footer p {
   .screens-gallery {
     grid-template-columns: repeat(2, 1fr);
     gap: 2rem 1rem;
+  }
+
+  /* 5枚目(結果画面)の孤立行: 隣と同じ幅のまま中央に置く */
+  .screens-gallery figure:nth-child(5) {
+    grid-column: 1 / -1;
+    width: calc(50% - 0.5rem);
+    justify-self: center;
   }
 }
 
