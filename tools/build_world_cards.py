@@ -106,18 +106,24 @@ def main():
     # 「各国の最初の札 = 国旗」をこの並びから受け取り、抽選ゲートが
     # その先頭札に星を積む。連番はセーブキー (id) の一部なので、
     # オリジナル ({code}-2) を足すときもこのソートが順序を保証する。
+    # 検査は sys.exit で行う (build_world_map_data.py と同じ流儀) —
+    # bare assert は python3 -O で剥がれ、通っても何も検査していない
+    # 偽の合格になる。
     cards.sort(key=lambda c: (c["prefectureCode"],
                               int(c["id"].split("-", 1)[1])))
     seen = set()
     for card in cards:
         code = card["prefectureCode"]
         if code not in seen:
-            assert card["id"] == f"{code}-1", \
-                (card["id"], "first card per country must be the flag")
+            if card["id"] != f"{code}-1":
+                sys.exit(f"first card for country {code} is {card['id']}, "
+                         "not the flag")
             seen.add(code)
 
-    assert len(cards) == len(recorded), (len(cards), len(recorded))
-    assert len({c["id"] for c in cards}) == len(cards), "duplicate card id"
+    if len(cards) != len(recorded):
+        sys.exit(f"card count drifted: {len(cards)} != {len(recorded)}")
+    if len({c["id"] for c in cards}) != len(cards):
+        sys.exit("duplicate card id")
 
     dst = os.path.join(here, DST)
     with open(dst, "w", encoding="utf-8") as fh:

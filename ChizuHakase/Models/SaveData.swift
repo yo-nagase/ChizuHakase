@@ -341,7 +341,9 @@ nonisolated struct SaveData: Codable, Sendable, Equatable {
 
     func owns(_ cardID: String) -> Bool { stars(of: cardID) > 0 }
 
-    func isRainbow(_ cardID: String) -> Bool { rainbow.contains(cardID) }
+    func isRainbow(_ cardID: String) -> Bool {
+        atlas(Self.japanAtlas).isRainbow(cardID)
+    }
 
     func tier(of cardID: String) -> CardTier {
         atlas(Self.japanAtlas).tier(of: cardID)

@@ -49,3 +49,4 @@ tools/ne_10m_countries.geojson
 tools/node_modules/
 tools/package-lock.json
 tools/package.json
+tools/__pycache__/

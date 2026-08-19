@@ -249,6 +249,12 @@ struct RootView: View {
     private func destination(_ route: Route) -> some View {
         switch route {
         case .stageSelect:
+            // P6 trap: this picker lists JAPAN's stages only, but its taps
+            // resolve against the session atlas below. Finishing a world debug
+            // quiz and backing out lands here, where tapping かんとう (index 1)
+            // would launch カリブかい — the world book's stage 1. Harmless while
+            // `-atlas world` is debug-only; the world stage picker (P6) must
+            // either feed from `atlas.stages` or reset `atlasKey` on the way in.
             StageSelectView(quizMode: $quizMode,
                             onPlay: { path.append(.quiz(stageIndex: $0.index,
                                                         mode: quizMode)) })
@@ -294,9 +300,11 @@ struct RootView: View {
     /// Persist once, at stage end (CLAUDE.md §6), then show the result.
     /// The atlas key routes the write into the book that was played — a world
     /// result written without it would land ISO codes in japan's namespace.
+    /// Taken from the atlas value itself (`saveKey` is the single carrier of
+    /// book-played + record-destination), not from the session state next to it.
     private func finish(_ result: StageResult, stage: Stage) {
         let gains = app.save.applyStageResult(result, catalog: atlas.cards,
-                                              atlas: atlasKey)
+                                              atlas: atlas.saveKey)
         path = [.stageSelect, .result(result, gains: gains)]
     }
 
