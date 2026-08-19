@@ -21,13 +21,13 @@ Run from tools/:
 
 from __future__ import annotations
 
-import heapq
 import json
-import math
 import os
 import sys
 
 import world_countries as wc
+from map_geometry import (bbox_gap, bbox_of, dist_to_segment_sq,
+                          point_in_rings, pole_of_inaccessibility, ring_area)
 
 SRC = "ne_50m_simplified.geojson"
 RAW_SRC = "ne_50m_countries.geojson"
@@ -54,6 +54,12 @@ HAND_RESOLVED_N3 = {"FRA": 250, "NOR": 578}
 # 例外で足す。
 SOVEREIGN_TYPES = {"Country", "Sovereign country", "Sovereignty"}
 SOVEREIGN_DESPITE_TYPE = {376}  # イスラエル (ステージ表「+ イスラエル」)
+
+
+def is_sovereign(props, code):
+    """収録国として採ってよい地物か (上の 2 定数のコメント参照)。"""
+    return (props.get("TYPE") in SOVEREIGN_TYPES
+            or code in SOVEREIGN_DESPITE_TYPE)
 
 # --- 遠隔領土の除去 ---------------------------------------------------------
 # Natural Earth のフランスは仏領ギアナ・レユニオン等を含む 1 地物で、
@@ -119,6 +125,12 @@ INSET_MAX_RING_PTS = 80
 # 三角形への退行をビルドで捕まえる床。モルディブは最大の島でも生 16 点
 # しかない (国が環礁の集まり) ので、リング単位ではなく国の総点数で見る。
 INSET_MIN_TOTAL_PTS = 20
+# thin_rings が収まるまで許容誤差を掛け上げる倍率。DP は誤差の増加で点数が
+# 単調に減るので、この幾何級数で必ず止まる。
+THIN_TOL_GROWTH = 1.3
+# 停止性の前提: simplify_ring は RESOURCE_DP_MIN_PTS 以下のリングに触れない。
+# この関係が崩れると「間引けないのに上限超過」で thin_rings が回り続ける。
+assert RESOURCE_DP_MIN_PTS < INSET_MAX_RING_PTS
 
 # --- かな変換 ---------------------------------------------------------------
 # 機械変換の契約 (world_countries.py KANA_OVERRIDES の冒頭コメントと対):
@@ -162,117 +174,8 @@ def kana_for(code: int, name_ja: str) -> str:
     return kana
 
 
-# --- geometry helpers (日本版と同じ純関数) ----------------------------------
-
-def ring_area(ring):
-    """Unsigned shoelace area."""
-    s = 0.0
-    for i in range(len(ring) - 1):
-        x1, y1 = ring[i]
-        x2, y2 = ring[i + 1]
-        s += x1 * y2 - x2 * y1
-    return abs(s) * 0.5
-
-
-def bbox_of(points):
-    xs = [p[0] for p in points]
-    ys = [p[1] for p in points]
-    return [min(xs), min(ys), max(xs), max(ys)]
-
-
-def bbox_gap(a, b):
-    """Shortest distance between two axis-aligned bboxes (0 if they overlap)."""
-    dx = max(a[0] - b[2], b[0] - a[2], 0.0)
-    dy = max(a[1] - b[3], b[1] - a[3], 0.0)
-    return math.hypot(dx, dy)
-
-
-def point_in_rings(px, py, rings):
-    """Even-odd containment, matching Path.contains(_:eoFill: true) on iOS."""
-    inside = False
-    for ring in rings:
-        for i in range(len(ring) - 1):
-            x1, y1 = ring[i]
-            x2, y2 = ring[i + 1]
-            if (y1 > py) != (y2 > py):
-                t = (py - y1) / (y2 - y1)
-                if px < x1 + t * (x2 - x1):
-                    inside = not inside
-    return inside
-
-
-def dist_to_segment_sq(px, py, x1, y1, x2, y2):
-    dx, dy = x2 - x1, y2 - y1
-    if dx == 0.0 and dy == 0.0:
-        return (px - x1) ** 2 + (py - y1) ** 2
-    t = ((px - x1) * dx + (py - y1) * dy) / (dx * dx + dy * dy)
-    t = max(0.0, min(1.0, t))
-    ox, oy = x1 + t * dx, y1 + t * dy
-    return (px - ox) ** 2 + (py - oy) ** 2
-
-
-def signed_distance(px, py, rings):
-    """Distance to the nearest edge; positive inside, negative outside."""
-    best = float("inf")
-    for ring in rings:
-        for i in range(len(ring) - 1):
-            best = min(best, dist_to_segment_sq(px, py, *ring[i], *ring[i + 1]))
-    d = math.sqrt(best)
-    return d if point_in_rings(px, py, rings) else -d
-
-
-def pole_of_inaccessibility(rings, precision_ratio=0.002):
-    """内部で最も縁から遠い点 (Mapbox polylabel の quadtree 版)。
-
-    面積重心はここでは使えない: 群島国 (フィリピン等) や凹形状の国
-    (クロアチア等) で海に落ちる。ラベル・エフェクトの錨は必ず自国の中に
-    要るので、平均ではなく保証つきの内部点を探す。日本版と同じ実装。
-    """
-    x0, y0, x1, y1 = bbox_of([p for r in rings for p in r])
-    w, h = x1 - x0, y1 - y0
-    cell = min(w, h)
-    if cell == 0:
-        return (x0, y0)
-
-    precision = max(w, h) * precision_ratio
-    half = cell / 2.0
-
-    def potential(cx, cy, hh):
-        return signed_distance(cx, cy, rings) + hh * math.sqrt(2)
-
-    queue = []
-    counter = 0
-    best_x = x0 + w / 2.0
-    best_y = y0 + h / 2.0
-    best_d = signed_distance(best_x, best_y, rings)
-
-    cy = y0 + half
-    while cy < y1 + half:
-        cx = x0 + half
-        while cx < x1 + half:
-            d = signed_distance(cx, cy, rings)
-            if d > best_d:
-                best_d, best_x, best_y = d, cx, cy
-            heapq.heappush(queue, (-(d + half * math.sqrt(2)), counter, cx, cy, half))
-            counter += 1
-            cx += cell
-        cy += cell
-
-    while queue:
-        neg_pot, _, cx, cy, hh = heapq.heappop(queue)
-        if -neg_pot - best_d <= precision:
-            break
-        hh /= 2.0
-        for ox, oy in ((-hh, -hh), (hh, -hh), (-hh, hh), (hh, hh)):
-            nx, ny = cx + ox, cy + oy
-            d = signed_distance(nx, ny, rings)
-            if d > best_d:
-                best_d, best_x, best_y = d, nx, ny
-            heapq.heappush(queue, (-potential(nx, ny, hh), counter, nx, ny, hh))
-            counter += 1
-
-    return (best_x, best_y)
-
+# 幾何の純関数 (ring_area, polylabel など) は map_geometry.py にあり、
+# 日本版パイプラインと共有する。
 
 # --- world-specific transforms ----------------------------------------------
 
@@ -378,7 +281,7 @@ def thin_rings(rings, base_tol, max_pts):
     tol = base_tol
     out = [simplify_ring(r, tol) for r in rings]
     while max(len(r) for r in out) > max_pts:
-        tol *= 1.3
+        tol *= THIN_TOL_GROWTH
         out = [simplify_ring(r, tol) for r in rings]
     return out
 
@@ -496,8 +399,7 @@ def main():
     for feat in feats:
         code = resolve_code(feat["props"])
         if code in wc.STAGE_OF_COUNTRY:
-            if (feat["props"].get("TYPE") in SOVEREIGN_TYPES
-                    or code in SOVEREIGN_DESPITE_TYPE):
+            if is_sovereign(feat["props"], code):
                 if code in recorded_feats:
                     sys.exit(f"two sovereign features claim code {code}")
                 recorded_feats[code] = feat
@@ -514,18 +416,14 @@ def main():
     raw_by_code = {}
     for feat in load_features(raw_src):
         code = resolve_code(feat["props"])
-        if code in wc.STAGE_OF_COUNTRY and (
-                feat["props"].get("TYPE") in SOVEREIGN_TYPES
-                or code in SOVEREIGN_DESPITE_TYPE):
+        if code in wc.STAGE_OF_COUNTRY and is_sovereign(feat["props"], code):
             raw_by_code[code] = feat
 
     # インセット国専用の 1:10m データ (INSET_MAX_RING_PTS のコメント参照)
     feats_10m = {}
     for feat in load_features(raw_10m):
         code = resolve_code(feat["props"])
-        if code in wc.INSET_COUNTRIES and (
-                feat["props"].get("TYPE") in SOVEREIGN_TYPES
-                or code in SOVEREIGN_DESPITE_TYPE):
+        if code in wc.INSET_COUNTRIES and is_sovereign(feat["props"], code):
             feats_10m[code] = feat
     missing_10m = sorted(wc.INSET_COUNTRIES - set(feats_10m))
     if missing_10m:
@@ -548,6 +446,8 @@ def main():
 
         rings = normalize_dateline(feat["rings"])
         main_pts = len(max(rings, key=ring_area))
+        # 頂点照合は読み込んだままの座標 (feat["rings"]) で行う。shared も
+        # 同じ生座標で作ってあり、正規化で +360 した座標では完全一致が壊れる。
         touches_border = any(pt in shared for r in feat["rings"] for pt in r)
 
         if code in wc.INSET_COUNTRIES:
@@ -594,6 +494,9 @@ def main():
         if pruned:
             pruned_entries.append((props["ADMIN"], rounded_rings(pruned)))
 
+        # 面積重心はここでは使えない: 群島国 (フィリピン等) や凹形状の国
+        # (クロアチア等) で海に落ちる。ラベル・エフェクトの錨は必ず自国の
+        # 中に要るので、平均ではなく保証つきの内部点を探す。
         cx, cy = pole_of_inaccessibility(kept)
         if not point_in_rings(cx, cy, kept):
             sys.exit(f"centroid outside shape for code {code} ({name_ja})")
@@ -608,10 +511,13 @@ def main():
         if not 0.0 < bx1 - bx0 < 180.0:
             sys.exit(f"bbox span not normalized for code {code}: {bx1 - bx0}")
 
+        # かなも表示名から引く。将来カタカナだけの NAMEJA_OVERRIDES が入った
+        # とき、ひらがな検査が旧名ではなく実際に見せる名前に掛かるように。
+        display_name = wc.NAMEJA_OVERRIDES.get(code, name_ja)
         entry = {
             "code": code,
-            "nameJa": wc.NAMEJA_OVERRIDES.get(code, name_ja),
-            "kana": kana_for(code, name_ja),
+            "nameJa": display_name,
+            "kana": kana_for(code, display_name),
             "stage": wc.STAGE_OF_COUNTRY[code],
             "bbox": [round(v, COORD_DECIMALS) for v in (bx0, by0, bx1, by1)],
             "centroid": [round(cx, COORD_DECIMALS), round(cy, COORD_DECIMALS)],
@@ -623,6 +529,9 @@ def main():
             # (全土だとベーリング海峡まで伸びてモルドバが 13pt になる)。
             # シベリアは枠外へはみ出す背景として描く — 枠と描画の分離。
             west = [p for r in kept for p in r if p[0] < URAL_LON]
+            if not west:
+                sys.exit("russia has no vertex west of the ural line - "
+                         "upstream data changed?")
             wx0, wy0, _, wy1 = bbox_of(west)
             # 領土はウラル線をまたいで続くので、東端は線そのもの。
             entry["europeBbox"] = [round(wx0, COORD_DECIMALS),
