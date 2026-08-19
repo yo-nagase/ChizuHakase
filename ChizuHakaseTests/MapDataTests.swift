@@ -194,9 +194,12 @@ struct CardCatalogTests {
         }
     }
 
+    /// Every category except `flag`, which belongs to the world atlas —
+    /// asserting its absence here is what keeps the japan book free of a
+    /// flag filter chip that could never show a card.
     @Test func everyCategoryIsRepresented() {
         let used = Set(catalog.all.map(\.category))
-        #expect(used == Set(SpecialtyCard.Category.allCases))
+        #expect(used == Set(SpecialtyCard.Category.allCases).subtracting([.flag]))
     }
 }
 

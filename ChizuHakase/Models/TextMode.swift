@@ -238,6 +238,8 @@ nonisolated extension SpecialtyCard.Category {
         case (.nature, false): "自然"
         case (.craft, true): "つくるもの"
         case (.craft, false): "工芸"
+        case (.flag, true): "こっき"
+        case (.flag, false): "国旗"
         }
     }
 }

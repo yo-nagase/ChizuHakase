@@ -21,6 +21,11 @@ struct CardBookView: View {
         if case .card = active { true } else { false }
     }
 
+    /// The categories with at least one card in this book's catalog.
+    private var dealtCategories: Set<SpecialtyCard.Category> {
+        Set(app.cards.all.map(\.category))
+    }
+
     private var groups: [(prefecture: Prefecture, cards: [SpecialtyCard])] {
         app.mapData.prefectures.compactMap { pref in
             let cards = app.cards.cards(for: pref.code).filter { matches($0) }
@@ -104,7 +109,11 @@ struct CardBookView: View {
                 ForEach([CardTier.silver, .gold, .rainbow], id: \.self) { tier in
                     tierChip(tier)
                 }
-                ForEach(SpecialtyCard.Category.allCases, id: \.self) { c in
+                // Only the categories this book actually deals: `flag` exists
+                // for the world atlas, and a chip whose filter can never show
+                // a card is a button that teaches "buttons do nothing".
+                ForEach(SpecialtyCard.Category.allCases.filter(dealtCategories.contains),
+                        id: \.self) { c in
                     chip(title: "\(c.emoji) \(c.label(mode))",
                          isOn: active == .category(c)) {
                         filter = active == .category(c) ? .all : .category(c)
