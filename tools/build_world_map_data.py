@@ -2,7 +2,8 @@
 """GeoJSON -> WorldShapes.json (世界アトラス版。日本版 build_map_data.py の姉妹編).
 
 ne_50m_simplified.geojson (mapshaper 出力) と world_countries.py (収録国マスタ)
-を突き合わせ、世界地図リソースを出す。
+を突き合わせ、世界地図リソースを出す。国境を接しない小国の形は生データ
+ne_50m_countries.geojson から取り直すので、両方のファイルが要る。
 
 日本版との最大の違い: 座標は緯度経度のまま出す。地球儀モード (設計文書
 2026-08-16 §7) が平面への焼き込みを許さないため、投影は実行時に行う。
@@ -26,6 +27,7 @@ import sys
 import world_countries as wc
 
 SRC = "ne_50m_simplified.geojson"
+RAW_SRC = "ne_50m_countries.geojson"
 DST = "WorldShapes.json"
 
 # 0.0001° ≈ 赤道で 11m。世界地図の視認単位よりはるかに細かく、
@@ -72,6 +74,25 @@ GAP_OVERRIDES = {
     578: 4.0,  # ノルウェー: スバールバル (本土から ≈5.2°) を落とす。残すと
                # きたヨーロッパの枠が北へ 10° 伸び、本土側の国が皆小さくなる
 }
+
+# --- 小国の形の取り直し -----------------------------------------------------
+# 4% 簡略化は世界全体には十分だが、小さい国を三角形まで潰す (シンガポール・
+# マルタ・モルディブは 4 点リングになる)。主リングがこの点数を割った国は
+# 生データから形を取り直し、控えめな Douglas-Peucker で間引き直す。
+# ただし**陸の国境を接する国は取り直さない**: mapshaper は隣接国の共有国境を
+# 同じ折れ線として簡略化しており、片側だけ生データに替えると国境が二重に
+# ずれて隙間と重なりのすき間ができる (タップ判定も曖昧になる)。国境を接する
+# かどうかは「簡略化データで他の地物と頂点を共有するか」で機械判定する —
+# インセット 4 カ国を含む島国だけが取り直しの対象になる。
+RESOURCE_MIN_MAIN_PTS = 8
+RESOURCE_DP_RATIO = 0.003  # 許容誤差 = 国の bbox 長辺 x これ。国の大きさに比例
+                           # させ、極小国 (シンガポール等) は生の点をほぼ全部残す
+RESOURCE_DP_MIN_PTS = 30   # これ以下のリングは間引かない。取り直しの目的は輪郭を
+                           # 返すことで、モルディブの環礁 (生 13 点) は 1 点も
+                           # 無駄にできない
+# 取り直した国は国自体が小さく、絶対面積の床 (MIN_RING_AREA_DEG2) では
+# ゴゾ島 (マルタの 1/4) まで消える。日本版と同じ相対床に切り替える。
+RESOURCE_RING_AREA_RATIO = 0.015
 
 # ロシアの「ヨーロッパ側」の東端 (ウラル線)。ひがしヨーロッパのステージ枠を
 # ベーリング海峡まで伸ばさないための分離線 (ステージ表の技術ノート)。
@@ -259,15 +280,21 @@ def normalize_dateline(rings):
     return shifted
 
 
-def prune_rings(code, rings):
-    """遠隔領土と岩礁を刈る (冒頭の定数と例外表を参照)。大きい順で返す。"""
+def prune_rings(code, rings, min_area=MIN_RING_AREA_DEG2):
+    """遠隔領土と岩礁を刈る (冒頭の定数と例外表を参照)。
+
+    (残すリング, 距離で外した遠隔リング) を返す。どちらも大きい順。
+    遠隔リングは捨てずに呼び出し側が背景へ回す — 仏領ギアナを消すと南米に
+    嘘の海岸線ができる (ステージ表の技術ノート「属領は背景描画」)。
+    床面積未満の岩礁と飛び地の穴だけは黙って捨てる。
+    """
     scored = sorted(((ring_area(r), r) for r in rings), key=lambda t: -t[0])
     main_ring = scored[0][1]
     candidates = [(area, ring) for area, ring in scored[1:]
-                  if area >= MIN_RING_AREA_DEG2]
+                  if area >= min_area]
 
     if code in KEEP_ALL_RINGS:
-        return [main_ring] + [ring for _, ring in candidates]
+        return [main_ring] + [ring for _, ring in candidates], []
 
     max_gap = GAP_OVERRIDES.get(code, MAX_RING_GAP_DEG)
     kept = [main_ring]
@@ -285,7 +312,49 @@ def prune_rings(code, rings):
             else:
                 rest.append((area, ring, box))
         pending = rest
-    return sorted(kept, key=lambda r: -ring_area(r))
+    pruned = [ring for _, ring, _ in pending]
+    return (sorted(kept, key=lambda r: -ring_area(r)),
+            sorted(pruned, key=lambda r: -ring_area(r)))
+
+
+def simplify_ring(ring, tolerance):
+    """Douglas-Peucker (閉リング版)。始点と最遠点を錨に両弧を別々に間引く。"""
+    if len(ring) <= RESOURCE_DP_MIN_PTS:
+        return ring
+    pts = ring[:-1]
+    x0, y0 = pts[0]
+    far = max(range(1, len(pts)),
+              key=lambda i: (pts[i][0] - x0) ** 2 + (pts[i][1] - y0) ** 2)
+    tol_sq = tolerance * tolerance
+
+    def dp(seq):
+        keep = [False] * len(seq)
+        keep[0] = keep[-1] = True
+        stack = [(0, len(seq) - 1)]
+        while stack:
+            i0, i1 = stack.pop()
+            if i1 - i0 < 2:
+                continue
+            ax, ay = seq[i0]
+            bx, by = seq[i1]
+            best_d, best_i = -1.0, -1
+            for i in range(i0 + 1, i1):
+                d = dist_to_segment_sq(seq[i][0], seq[i][1], ax, ay, bx, by)
+                if d > best_d:
+                    best_d, best_i = d, i
+            if best_d > tol_sq:
+                keep[best_i] = True
+                stack.append((i0, best_i))
+                stack.append((best_i, i1))
+        return [seq[i] for i in range(len(seq)) if keep[i]]
+
+    arc1 = dp(pts[: far + 1])
+    arc2 = dp(pts[far:] + [pts[0]])
+    out = arc1[:-1] + arc2[:-1]
+    if len(out) < 3:
+        return ring
+    out.append(out[0])
+    return out
 
 
 def rounded_rings(rings):
@@ -338,11 +407,32 @@ def resolve_code(props):
     return code if code > 0 else None
 
 
+def shared_vertex_set(feats):
+    """2 つ以上の地物が使っている頂点の集合。
+
+    mapshaper は共有国境を 1 本の折れ線として簡略化するので、陸の国境は
+    両側の地物にまったく同じ座標で現れる。これが「国境を接するか」の
+    機械判定になる (島国は 0 個)。
+    """
+    owner = {}
+    shared = set()
+    for idx, feat in enumerate(feats):
+        for ring in feat["rings"]:
+            for pt in ring:
+                prev = owner.setdefault(pt, idx)
+                if prev != idx:
+                    shared.add(pt)
+    return shared
+
+
 def main():
     here = os.path.dirname(os.path.abspath(__file__))
     src = os.path.join(here, SRC)
+    raw_src = os.path.join(here, RAW_SRC)
     if not os.path.exists(src):
         sys.exit(f"missing {SRC} - run the mapshaper step first (module docstring)")
+    if not os.path.exists(raw_src):
+        sys.exit(f"missing {RAW_SRC} - download it first (module docstring)")
 
     feats = load_features(src)
 
@@ -366,9 +456,22 @@ def main():
     if missing:
         sys.exit(f"source is missing recorded country codes: {missing}")
 
+    # 取り直し用の生データ (収録国ぶんだけ引ければよい)
+    raw_by_code = {}
+    for feat in load_features(raw_src):
+        code = resolve_code(feat["props"])
+        if code in wc.STAGE_OF_COUNTRY and (
+                feat["props"].get("TYPE") in SOVEREIGN_TYPES
+                or code in SOVEREIGN_DESPITE_TYPE):
+            raw_by_code[code] = feat
+
+    shared = shared_vertex_set(feats)
+
     countries = []
     total_pts = 0
-    dropped_rings = 0
+    speck_rings = 0
+    resourced = []
+    pruned_entries = []  # (地物の ADMIN 名, 丸めたリング群) — 背景へ回す
     ring_counts = {}
     for code in sorted(recorded_feats):
         feat = recorded_feats[code]
@@ -378,8 +481,27 @@ def main():
             sys.exit(f"NAME_JA missing for recorded country {code}")
 
         rings = normalize_dateline(feat["rings"])
-        kept = prune_rings(code, rings)
-        dropped_rings += len(rings) - len(kept)
+        main_pts = len(max(rings, key=ring_area))
+        touches_border = any(pt in shared for r in feat["rings"] for pt in r)
+
+        if main_pts < RESOURCE_MIN_MAIN_PTS and not touches_border and code in raw_by_code:
+            # 三角形に潰れた島国は生データから形を取り直す (冒頭のコメント)。
+            raw_rings = normalize_dateline(raw_by_code[code]["rings"])
+            floor = (ring_area(max(raw_rings, key=ring_area))
+                     * RESOURCE_RING_AREA_RATIO)
+            kept, pruned = prune_rings(code, raw_rings, min_area=floor)
+            gx0, gy0, gx1, gy1 = bbox_of([p for r in kept for p in r])
+            tol = RESOURCE_DP_RATIO * max(gx1 - gx0, gy1 - gy0)
+            kept = [simplify_ring(r, tol) for r in kept]
+            pruned = [simplify_ring(r, tol) for r in pruned]
+            speck_rings += len(raw_rings) - len(kept) - len(pruned)
+            resourced.append(code)
+        else:
+            kept, pruned = prune_rings(code, rings)
+            speck_rings += len(rings) - len(kept) - len(pruned)
+
+        if pruned:
+            pruned_entries.append((props["ADMIN"], rounded_rings(pruned)))
 
         cx, cy = pole_of_inaccessibility(kept)
         if not point_in_rings(cx, cy, kept):
@@ -397,7 +519,7 @@ def main():
 
         entry = {
             "code": code,
-            "nameJa": name_ja,
+            "nameJa": wc.NAMEJA_OVERRIDES.get(code, name_ja),
             "kana": kana_for(code, name_ja),
             "stage": wc.STAGE_OF_COUNTRY[code],
             "bbox": [round(v, COORD_DECIMALS) for v in (bx0, by0, bx1, by1)],
@@ -419,19 +541,21 @@ def main():
 
         countries.append(entry)
 
-    # 背景: 属領・収録外の国・南極。コード無しの海岸線 (海にすると嘘になる)。
-    # 遠隔領土の距離刈りはしない — 属領は元々 1 地物 1 領土で、刈る対象の
+    # 背景: 属領・収録外の国・南極、それに収録国から距離で外した遠隔領土
+    # (仏領ギアナ・スバールバル等)。コード無しの海岸線 (海にすると嘘になる)。
+    # 属領そのものへの距離刈りはしない — 元々 1 地物 1 領土で、刈る対象の
     # 「本土」概念が無い。岩礁の面積刈りだけ同じ規則で通す。
-    background = []
-    bg_pts = 0
-    for feat in sorted(background_feats, key=lambda f: f["props"]["ADMIN"]):
+    # 並びは地物名 (ADMIN) で固定して diff を安定させる。
+    bg_entries = list(pruned_entries)
+    for feat in background_feats:
         rings = normalize_dateline(feat["rings"])
         scored = sorted(((ring_area(r), r) for r in rings), key=lambda t: -t[0])
         kept = [scored[0][1]] + [r for a, r in scored[1:]
                                  if a >= MIN_RING_AREA_DEG2]
-        rounded = rounded_rings(kept)
-        bg_pts += sum(len(r) for r in rounded)
-        background.append({"rings": rounded})
+        bg_entries.append((feat["props"]["ADMIN"], rounded_rings(kept)))
+    bg_entries.sort(key=lambda e: e[0])
+    background = [{"rings": rings} for _, rings in bg_entries]
+    bg_pts = sum(len(r) for _, rings in bg_entries for r in rings)
 
     # --- ビルド時の健全性ガード (Task 1 レビューでパイプライン側に置いた) ---
     if len(countries) != len(wc.STAGE_OF_COUNTRY):
@@ -459,7 +583,11 @@ def main():
     max_rings = max(ring_counts, key=ring_counts.get)
     print(f"wrote {DST}")
     print(f"  recorded   : {len(countries)} countries, {total_pts} pts "
-          f"(dropped {dropped_rings} remote/speck rings)")
+          f"(dropped {speck_rings} speck rings)")
+    print(f"  resourced  : {len(resourced)} island countries from raw "
+          f"({sorted(resourced)})")
+    print(f"  to backgrnd: {sum(len(r) for _, r in pruned_entries)} pruned "
+          f"remote rings from {len(pruned_entries)} countries")
     print(f"  background : {len(background)} features, {bg_pts} pts")
     print(f"  rings      : min {ring_counts[min_rings]} (code {min_rings}), "
           f"max {ring_counts[max_rings]} (code {max_rings})")
