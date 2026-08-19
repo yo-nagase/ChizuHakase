@@ -4,6 +4,14 @@ import SwiftUI
 /// reached mastery level 3 (CLAUDE.md §5).
 ///
 /// Everything here is a gain. There is no "you lost" state to show.
+///
+/// ⚠️ 日本の本(japan atlas)に固定されている。`app.cards` / `app.mapData` /
+/// `record(forStage:)` / `streak(of:)` はすべて日本側を読むため、世界ステージの
+/// デバッグ経路からこの画面に来ると、ベスト記録は日本の同 index のステージを、
+/// カード絵は日本の札を出す。しかもカード ID は文字列として 7 件衝突する
+/// (日本 "12-1"〜"47-1" と ISO 2 桁の世界 "12-1" 等 — 例: アルジェリアの国旗
+/// 札 ID が千葉県の札に解決する)。世界の結果画面を開くときは Atlas を
+/// ここへ通すこと(RootView の .stageSelect と同じ罠。P6 の必須作業)。
 struct ResultView: View {
     @Environment(AppState.self) private var app
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
