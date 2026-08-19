@@ -7,7 +7,8 @@ Run from tools/:
     python3 validate_world_data.py [path/to/WorldShapes.json]
 
 引数を省略するとスクリプト位置基準で ../ChizuHakase/Resources/WorldShapes.json
-を見る (CWD に依存しない)。検査はすべて assert で、失敗すれば非ゼロ終了。
+を見る (CWD に依存しない)。検査はすべて assert で、失敗すれば非ゼロ終了
+(assert が剥がれる -O での実行は冒頭で拒否する)。
 ファイルサイズ超過だけは警告に留める — 黙って簡略化率を上げず、人が判断する
 (build_world_map_data.py の WARNING と同じ扱い)。
 """
@@ -17,16 +18,18 @@ from __future__ import annotations
 import json
 import os
 import sys
+from collections import Counter
 
 import world_countries as wc
 
 DEFAULT_DST = os.path.join("..", "ChizuHakase", "Resources", "WorldShapes.json")
 
 # build_world_map_data.py の COORD_DECIMALS / INSET_MIN_TOTAL_PTS /
-# サイズ予算と同じ値。生成側の契約をこちらでも言い直して、片側だけ
-# 変わったらここで気づけるようにする。
+# URAL_LON / サイズ予算と同じ値。生成側の契約をこちらでも言い直して、
+# 片側だけ変わったらここで気づけるようにする。
 COORD_DECIMALS = 4
 INSET_MIN_TOTAL_PTS = 20
+URAL_LON = 60.0
 SIZE_BUDGET = 400 * 1024
 
 
@@ -50,6 +53,10 @@ def check_rings(rings, where):
 
 
 def main():
+    # -O は assert を剥がす — 通っても何も検査していない偽の合格になる
+    if sys.flags.optimize:
+        sys.exit("assert が消えるので -O では実行しない")
+
     here = os.path.dirname(os.path.abspath(__file__))
     path = sys.argv[1] if len(sys.argv) > 1 else os.path.join(here, DEFAULT_DST)
     with open(path, encoding="utf-8") as fh:
@@ -57,13 +64,19 @@ def main():
 
     countries = data["countries"]
     recorded = [c for c in countries if "stage" in c]
-    assert len(recorded) == len(wc.STAGE_OF_COUNTRY), \
-        (len(recorded), len(wc.STAGE_OF_COUNTRY))
+    # 数の比較では「1 国消えて別の 1 国が湧いた」相殺ドリフトが見えない。
+    # 集合差で両方向を名指しする
+    recorded_codes = {c["code"] for c in recorded}
+    master_codes = set(wc.STAGE_OF_COUNTRY)
+    assert recorded_codes == master_codes, \
+        ("出力に無い", sorted(master_codes - recorded_codes),
+         "マスタに無い", sorted(recorded_codes - master_codes))
 
     # 昇順・重複なしは Swift ローダが辞書化・二分探索で前提にしてよい契約
     codes = [c["code"] for c in countries]
     assert codes == sorted(codes), "countries がコード昇順でない"
-    assert len(codes) == len(set(codes)), "国コードが重複している"
+    dupes = sorted(code for code, n in Counter(codes).items() if n > 1)
+    assert not dupes, ("国コードが重複している", dupes)
 
     for c in recorded:
         code = c["code"]
@@ -75,7 +88,9 @@ def main():
             (code, c["stage"], "ステージがマスタと食い違う")
 
         x0, y0, x1, y1 = c["bbox"]
-        assert 0 < x1 - x0 < 360, (code, "日付変更線の正規化漏れ")
+        # 正規化後の最小スパンは実在の国なら必ず 180° 未満に収まる。
+        # ここで落ちたら上流データの変化 (build と同じ契約)
+        assert 0 < x1 - x0 < 180, (code, "日付変更線の正規化漏れ")
         xs = [x for r in c["rings"] for x, _ in r]
         ys = [y for r in c["rings"] for _, y in r]
         assert [x0, y0, x1, y1] == [min(xs), min(ys), max(xs), max(ys)], \
@@ -99,15 +114,16 @@ def main():
     assert [c["code"] for c in euro] == [643], \
         ("europeBbox の持ち主がロシアだけでない", [c["code"] for c in euro])
     ex0, ey0, ex1, ey1 = euro[0]["europeBbox"]
-    assert ex1 == 60.0, ("europeBbox の東端がウラル線でない", ex1)
+    assert ex1 == URAL_LON, ("europeBbox の東端がウラル線でない", ex1)
     assert ex0 < ex1 and ey0 < ey1, ("europeBbox が潰れている", euro[0]["europeBbox"])
     check_decimals(euro[0]["europeBbox"], 643)
 
-    # 背景はコード無しの海岸線 (出題対象に見えるメタデータを持ってはいけない)
-    for entry in data["background"]:
-        assert not ({"code", "stage", "kana"} & set(entry)), \
-            ("背景に収録国のメタデータが混ざっている", sorted(entry))
-        check_rings(entry["rings"], "background")
+    # 背景はコード無しの海岸線。持ってよいキーは rings だけ (白リスト) —
+    # 収録国に見えるメタデータの混入をキー単位で締め出す
+    for i, entry in enumerate(data["background"]):
+        assert set(entry) == {"rings"}, \
+            (f"background[{i}]", "rings 以外のキーがある", sorted(set(entry) - {"rings"}))
+        check_rings(entry["rings"], f"background[{i}]")
 
     inset_codes = [i["code"] for i in data["insets"]]
     assert len(inset_codes) == len(set(inset_codes)) \
