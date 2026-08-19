@@ -11,6 +11,10 @@ struct QuizView: View {
 
     let stage: Stage
     var quizMode: QuizMode = .findOnMap
+    /// The map book (ちずちょう) this stage is played out of. The view never
+    /// asks which one it is — map, cards, draw policy and save namespace all
+    /// travel inside the value (design doc §3).
+    let atlas: Atlas
     var onFinish: (StageResult) -> Void
 
     @State private var quiz: QuizViewModel?
@@ -46,9 +50,13 @@ struct QuizView: View {
             guard quiz == nil else { return }
             let model = QuizViewModel(stage: stage,
                                       mode: quizMode,
-                                      mapData: app.mapData,
-                                      catalog: app.cards,
-                                      ownedCards: app.save.data.cards)
+                                      mapData: atlas.mapData,
+                                      catalog: atlas.cards,
+                                      // The atlas's own namespace: japan's cards
+                                      // must not shadow the world's (codes and
+                                      // ids overlap across the two books).
+                                      ownedCards: app.save.data.atlas(atlas.saveKey).cards,
+                                      drawPolicy: atlas.drawPolicy)
             quiz = model
             // The first question was the only one never read aloud: speech
             // fired on advancing to the *next* question, and the first question
@@ -246,7 +254,7 @@ struct QuizView: View {
                 mapView(quiz).frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 mapView(quiz).aspectRatio(PrefectureGeometry.aspectRatio(
-                    of: app.mapData.prefectures(in: quiz.order)), contentMode: .fit)
+                    of: atlas.mapData.prefectures(in: quiz.order)), contentMode: .fit)
             }
         }
         .zoomPan(scale: $zoom, offset: $pan, oneFingerZoom: true)
@@ -297,7 +305,7 @@ struct QuizView: View {
 
     private func mapView(_ quiz: QuizViewModel) -> some View {
         PrefectureMapView(
-            mapData: app.mapData,
+            mapData: atlas.mapData,
             codes: quiz.order,
             appearance: { appearance(for: $0, quiz: quiz) },
             interactiveCodes: quiz.mode == .nameIt ? [] : quiz.interactiveCodes,
@@ -374,10 +382,10 @@ struct QuizView: View {
         // region exactly as it sits on screen.
         let transform = PrefectureGeometry.fitTransform(
             bounds: PrefectureGeometry.boundingBox(
-                of: app.mapData.prefectures(in: stage.codes)),
+                of: atlas.mapData.prefectures(in: stage.codes)),
             into: mapSize)
         let region = PrefectureGeometry.boundingBox(
-            of: app.mapData.prefectures(in: codes)).applying(transform)
+            of: atlas.mapData.prefectures(in: codes)).applying(transform)
         let (scale, offset) = ZoomPan.framing(region, in: mapSize)
         let apply = { zoom = scale; pan = offset }
         if reduceMotion { apply() } else { withAnimation(.spring(duration: 0.35), apply) }
@@ -393,7 +401,7 @@ struct QuizView: View {
         LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: 2),
                   spacing: 10) {
             ForEach(quiz.choices, id: \.self) { code in
-                if let pref = app.mapData[code] {
+                if let pref = atlas.mapData[code] {
                     ChoiceButton(
                         title: pref.displayName(mode),
                         isRuledOut: quiz.ruledOut.contains(code),
@@ -529,7 +537,7 @@ struct QuizView: View {
         // Only the names actually on offer: a child saying a prefecture that
         // is not one of the four choices has not answered the question, and
         // scoring it would be scoring the wrong thing.
-        let candidates = app.mapData.prefectures(in: quiz.choices)
+        let candidates = atlas.mapData.prefectures(in: quiz.choices)
         app.voice.start { heard in
             guard let match = PrefectureNameMatcher.match(heard, among: candidates) else { return }
             // A spoken answer has no fingertip to aim at.

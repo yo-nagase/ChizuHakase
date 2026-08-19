@@ -10,6 +10,16 @@ struct RootView: View {
     /// Which way the questions run. Chosen on the stage picker and kept for
     /// the session, so a child does not have to re-pick it every stage.
     @State private var quizMode: QuizMode = .findOnMap
+    /// Which map book (ちずちょう) the session is playing out of — session
+    /// state shaped like `quizMode`. The one place the japan/world branch will
+    /// live is the title's two pages (design doc §2, P6); until that page
+    /// exists, only the debug launch argument `-atlas world` moves this, so
+    /// there is deliberately no user-visible way into the world yet.
+    @State private var atlasKey = SaveData.japanAtlas
+
+    private var atlas: Atlas {
+        atlasKey == SaveData.worldAtlas ? app.world : app.japan
+    }
 
     enum Route: Hashable {
         case stageSelect
@@ -183,6 +193,12 @@ struct RootView: View {
                     stage.codes.map { ($0, true) }),
                 cardDraws: []), catalog: app.cards)
         }
+        // Before -startAt, so `-atlas world -startAt quiz:15` resolves the
+        // stage index against the world's stages.
+        if let i = arguments.firstIndex(of: "-atlas"), i + 1 < arguments.count,
+           arguments[i + 1] == "world" {
+            atlasKey = SaveData.worldAtlas
+        }
         guard let index = arguments.firstIndex(of: "-startAt"),
               index + 1 < arguments.count else { return }
         switch arguments[index + 1] {
@@ -238,14 +254,17 @@ struct RootView: View {
                                                         mode: quizMode)) })
 
         case .quiz(let stageIndex, let mode):
-            if let stage = Stage.stage(at: stageIndex) {
-                QuizView(stage: stage, quizMode: mode) { result in
+            // Resolved against the session's atlas: index 3 is きんき in one
+            // book and きたヨーロッパ in the other, and the route carries only
+            // the index (it is the save key, same as `records`).
+            if let stage = atlas.stage(at: stageIndex) {
+                QuizView(stage: stage, quizMode: mode, atlas: atlas) { result in
                     finish(result, stage: stage)
                 }
             }
 
         case .result(let result, let gains):
-            if let stage = Stage.stage(at: result.stageIndex) {
+            if let stage = atlas.stage(at: result.stageIndex) {
                 ResultView(stage: stage,
                            result: result,
                            gains: gains,
@@ -273,8 +292,11 @@ struct RootView: View {
     // assign the array and so never reproduced it.
 
     /// Persist once, at stage end (CLAUDE.md §6), then show the result.
+    /// The atlas key routes the write into the book that was played — a world
+    /// result written without it would land ISO codes in japan's namespace.
     private func finish(_ result: StageResult, stage: Stage) {
-        let gains = app.save.applyStageResult(result, catalog: app.cards)
+        let gains = app.save.applyStageResult(result, catalog: atlas.cards,
+                                              atlas: atlasKey)
         path = [.stageSelect, .result(result, gains: gains)]
     }
 

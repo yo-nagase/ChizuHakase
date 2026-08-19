@@ -16,6 +16,7 @@ struct AtlasTests {
 
     static let japanMap = MapDataLoader.loadMapData(contentsOf: TestResources.require("PrefectureShapes"))
     static let japanCards = MapDataLoader.loadCards(contentsOf: TestResources.require("SpecialtyCards"))
+    static let worldCards = MapDataLoader.loadCards(contentsOf: TestResources.require("WorldCards"))
 
     /// WorldDataTests と同じく `Result` 包み: static 初期化子では try が
     /// 書けず、`try!`(§11 で禁止)を避けるため。
@@ -28,7 +29,7 @@ struct AtlasTests {
     }
 
     private func worldAtlas() throws -> Atlas {
-        Atlas.world(from: try Self.world.get())
+        Atlas.world(from: try Self.world.get(), cards: Self.worldCards)
     }
 
     // MARK: - 日本アトラス(現行データがそのまま出てくること)
@@ -128,12 +129,78 @@ struct AtlasTests {
         }
     }
 
-    /// WorldCards.json は Task 8 まで存在しない。それまで世界アトラスの
-    /// カードは空 — 空であることが「まだ配らない」の表明になっている。
-    @Test func 世界アトラスのカードはまだ空() throws {
+    // MARK: - 世界のカード目録(WorldCards.json)
+
+    /// 1 国 1 枚の国旗カード。オリジナル札(-2)は P6 の手描きが揃ってから。
+    @Test func 世界の目録は167カ国ぶんの国旗カード() throws {
         let atlas = try worldAtlas()
-        #expect(atlas.cards.count == 0)
-        #expect(atlas.cards.all.isEmpty)
+        #expect(atlas.cards.count == 167)
+        for card in atlas.cards.all {
+            #expect(card.category == .flag, "\(card.id) is not a flag card")
+            #expect(card.art == nil, "\(card.id): 絵文字が国旗そのもの、絵は持たない")
+        }
+        // 収録国とカードの持ち主が過不足なく一致する。
+        let countryCodes = Set(atlas.mapData.prefectures.map(\.code))
+        #expect(Set(atlas.cards.all.map(\.prefectureCode)) == countryCodes)
+    }
+
+    /// 各国の先頭札は国旗 — `GameRules.DrawPolicy.flagFirstSilverGate` が
+    /// `catalog.cards(for:).first` から受け取る契約。テストは id を読んで
+    /// 確かめてよいが、製品コードは並びだけを信じる(id の解析はしない)。
+    @Test func 各国の先頭札は国旗() throws {
+        let atlas = try worldAtlas()
+        for pref in atlas.mapData.prefectures {
+            let cards = atlas.cards.cards(for: pref.code)
+            #expect(!cards.isEmpty, "code \(pref.code) has no cards")
+            #expect(cards.first?.id == "\(pref.code)-1",
+                    "code \(pref.code): first card is \(cards.first?.id ?? "nil")")
+        }
+    }
+
+    /// 国旗の絵文字は地域指標記号 2 文字(端末フォントが描く実物の国旗)。
+    @Test func 国旗カードの絵文字は地域指標記号() throws {
+        let indicators: ClosedRange<UInt32> = 0x1F1E6...0x1F1FF
+        for card in try worldAtlas().cards.all {
+            let scalars = card.emoji.unicodeScalars
+            #expect(scalars.count == 2 && scalars.allSatisfy { indicators.contains($0.value) },
+                    "\(card.id): \(card.emoji) is not a flag emoji")
+        }
+    }
+
+    /// 出荷される WorldCards.json そのものの並びの契約(生成器のソートを
+    /// リソース側で固定する): (国コード, 連番) 昇順で、各国の先頭が連番 1。
+    /// `CardCatalog` は Dictionary(grouping:) で並びを保持するだけなので、
+    /// この配列順が崩れたら抽選ゲートは静かに壊れる — だからファイルを直接読む。
+    @Test func 出荷リソースの並びは国コードと連番の昇順() throws {
+        struct File: Decodable {
+            struct Card: Decodable {
+                let id: String
+                let prefectureCode: Int
+            }
+            let cards: [Card]
+        }
+        let file = try JSONDecoder().decode(
+            File.self, from: Data(contentsOf: TestResources.require("WorldCards")))
+        let keys = try file.cards.map { card -> (Int, Int) in
+            let ordinal = try #require(Int(card.id.split(separator: "-").last ?? ""),
+                                       "malformed id \(card.id)")
+            #expect(card.id == "\(card.prefectureCode)-\(ordinal)",
+                    "id \(card.id) does not carry its own country code")
+            return (card.prefectureCode, ordinal)
+        }
+        #expect(zip(keys, keys.dropFirst()).allSatisfy { $0 < $1 },
+                "cards are not sorted by (code, ordinal)")
+        var seen = Set<Int>()
+        for (code, ordinal) in keys where seen.insert(code).inserted {
+            #expect(ordinal == 1, "code \(code): first card is not the flag")
+        }
+    }
+
+    /// バンドル配線の確認: 実バンドルの `loadWorld()` が目録まで運ぶこと。
+    /// (上のテストはテスト用 URL 経由なので、リソースがアプリターゲットに
+    /// 入り忘れてもすり抜ける。)
+    @Test func バンドルからの読み込みもカードを運ぶ() {
+        #expect(Atlas.loadWorld().cards.count == 167)
     }
 
     @Test func 世界アトラスの地図寸法が投影と一致する() throws {
@@ -166,6 +233,26 @@ struct AtlasTests {
         // カードが空でも「どの本か」までは失わない。
         let missing = URL(fileURLWithPath: "/nonexistent/WorldShapes.json")
         #expect(Atlas.loadWorld(contentsOf: missing).drawPolicy == .flagFirstSilverGate)
+    }
+
+    // MARK: - セーブの名前空間とステージ引き
+
+    /// セーブの名前空間は資源と同じ値の中を旅する。空へ倒れた世界アトラスも
+    /// 世界のキーのまま — 間違っても日本の記録へ書きにいかない。
+    @Test func アトラスはセーブの名前空間キーを運ぶ() throws {
+        #expect(japanAtlas.saveKey == SaveData.japanAtlas)
+        #expect(try worldAtlas().saveKey == SaveData.worldAtlas)
+        let missing = URL(fileURLWithPath: "/nonexistent/WorldShapes.json")
+        #expect(Atlas.loadWorld(contentsOf: missing).saveKey == SaveData.worldAtlas)
+    }
+
+    /// index → ステージはアトラス内で引く。3 は日本では きんき、世界では
+    /// きたヨーロッパ — 同じ数字が本ごとに別の場所を指す(records と同じ)。
+    @Test func ステージはアトラス内のindexで引く() throws {
+        #expect(japanAtlas.stage(at: 3)?.name == "きんき")
+        #expect(try worldAtlas().stage(at: 3)?.name == "きたヨーロッパ")
+        #expect(try worldAtlas().stage(at: 15)?.name == "ひがしアジア")
+        #expect(try worldAtlas().stage(at: 18) == nil)
     }
 
     // MARK: - 読み込み失敗(CLAUDE.md §11: 握って初期状態へ)

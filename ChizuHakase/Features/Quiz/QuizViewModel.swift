@@ -29,6 +29,9 @@ final class QuizViewModel {
     let mode: QuizMode
     private let mapData: MapData
     private let catalog: CardCatalog
+    /// How the asked region's cards enter the draw — the atlas's one rule
+    /// difference, handed in as data so no view branches on which book this is.
+    private let drawPolicy: GameRules.DrawPolicy
     private var rng: AnyRandomNumberGenerator
 
     private(set) var order: [Int] = []
@@ -64,12 +67,14 @@ final class QuizViewModel {
          mapData: MapData,
          catalog: CardCatalog,
          ownedCards: [String: Int] = [:],
+         drawPolicy: GameRules.DrawPolicy = .random,
          generator: AnyRandomNumberGenerator = AnyRandomNumberGenerator()) {
         self.stage = stage
         self.mode = mode
         self.mapData = mapData
         self.catalog = catalog
         self.ownedCards = ownedCards
+        self.drawPolicy = drawPolicy
         self.rng = generator
         // Only prefectures that actually have shapes become questions, so a
         // truncated resource shortens the stage instead of asking the
@@ -160,7 +165,7 @@ final class QuizViewModel {
 
         let draw = GameRules.earnsCard(afterMisses: attempts)
             ? GameRules.drawCard(from: catalog.cards(for: target.code),
-                                 owned: ownedCards, using: &rng)
+                                 owned: ownedCards, policy: drawPolicy, using: &rng)
             : nil
         if let draw {
             ownedCards = GameRules.applyDraw(draw, to: ownedCards)
