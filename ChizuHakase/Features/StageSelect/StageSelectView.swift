@@ -10,25 +10,40 @@ struct StageSelectView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
+    /// The book this shelf pages through. Stages, map, records and mastery all
+    /// come off this one value, so the view never asks which book it is in —
+    /// japan and world differ only in the data handed here (design doc §3).
+    let atlas: Atlas
     @Binding var quizMode: QuizMode
     var onPlay: (Stage) -> Void
+
+    /// The played book's slice of the save. Every read below goes through this
+    /// slice: a world signboard showing japan's records would be a lie twice
+    /// over (wrong stars, and stage index 3 means a different place per book).
+    private var save: AtlasSave { app.save.data.atlas(atlas.saveKey) }
 
     var body: some View {
         ScrollView {
             VStack(spacing: 0) {
                 modeSwitch
 
-                ForEach(Stage.all) { stage in
-                    StageSignboard(
-                        stage: stage,
-                        mapData: app.mapData,
-                        record: app.save.data.record(forStage: stage.index,
-                                                     mode: quizMode),
-                        save: app.save.data
-                    ) {
-                        SoundService.shared.play(
-                            .decide, enabled: app.save.data.settings.soundEnabled)
-                        onPlay(stage)
+                ForEach(atlas.stageShelves) { shelf in
+                    if let title = shelf.title {
+                        sectionHeader(title)
+                    }
+
+                    ForEach(shelf.stages) { stage in
+                        StageSignboard(
+                            stage: stage,
+                            mapData: atlas.mapData,
+                            record: save.record(forStage: stage.index,
+                                                mode: quizMode),
+                            save: save
+                        ) {
+                            SoundService.shared.play(
+                                .decide, enabled: app.save.data.settings.soundEnabled)
+                            onPlay(stage)
+                        }
                     }
                 }
             }
@@ -56,6 +71,22 @@ struct StageSelectView: View {
                 .accessibilityLabel("もどる")
             }
         }
+    }
+
+    /// A continent label between shelf groups — rendered only when the atlas
+    /// carries sections (the world; japan's shelf stays one unbroken run).
+    /// Quiet on purpose: the signboards are the content, this is a finger
+    /// between the pages, so it takes the same small-caption treatment as the
+    /// my-map legend labels rather than any new asset.
+    private func sectionHeader(_ title: String) -> some View {
+        Text(title)
+            .font(AppFont.rounded(13, relativeTo: .caption))
+            .foregroundStyle(Palette.ink.opacity(0.6))
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 8)
+            .padding(.top, 14)
+            .padding(.bottom, 2)
+            .accessibilityAddTraits(.isHeader)
     }
 
     /// The question direction is part of the stage choice: records and stars
@@ -129,7 +160,9 @@ private struct StageSignboard: View {
     let stage: Stage
     let mapData: MapData
     let record: StageRecord?
-    let save: SaveData
+    /// One atlas's slice, not the whole save: the board can only ever read the
+    /// book it belongs to, so a world signboard cannot show japan's mastery.
+    let save: AtlasSave
     var action: () -> Void
 
     private var learnedCount: Int {
@@ -250,6 +283,10 @@ private struct StageCardBackground: View {
 
     /// Sampled from the supplied screenshot's signboard washes. The seventh
     /// stage continues the sequence with quiet mint.
+    ///
+    /// The world's 18 signboards reuse these seven by the same `% count`
+    /// cycle: neighbouring boards never share a wash, and a repeat only comes
+    /// back seven rows later — further apart than one screen shows at once.
     private static let tints: [Color] = [
         Color(hex: 0xFFDCDA), Color(hex: 0xFFEFD8), Color(hex: 0xFFFBD6),
         Color(hex: 0xE4F2E3), Color(hex: 0xDAF2FE), Color(hex: 0xF0DFF2),
@@ -270,6 +307,12 @@ private struct StageLandmark: View {
         .accessibilityHidden(true)
     }
 
+    /// Seven stamps for japan's seven stages. The world's 18 boards cycle
+    /// through the same seven (`% count` above) — 富士山 on みなみアメリカ is
+    /// admittedly a postcard from the wrong continent, but a decorative stamp,
+    /// not a fact the quiz teaches. World-specific landmark art is deliberately
+    /// deferred out of P6 (plan Task 1); drawing 18 honest landmarks is its
+    /// own art task.
     private static let assetNames = [
         "stage-icon-balloon", "stage-icon-tower", "stage-icon-fuji",
         "stage-icon-castle", "stage-icon-yuzu", "stage-icon-hibiscus",

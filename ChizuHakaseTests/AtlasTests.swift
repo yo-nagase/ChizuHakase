@@ -129,6 +129,54 @@ struct AtlasTests {
         }
     }
 
+    // MARK: - ステージ棚のセクション(大陸見出し — UI 決定 2026-08-20)
+
+    /// 日本は見出しなし: 棚は 1 段で、今日のステージ選択と 1 ピクセルも
+    /// 変わらない並びのまま。
+    @Test func 日本の棚は見出しなしの1段() {
+        let atlas = japanAtlas
+        #expect(atlas.sections.isEmpty)
+        #expect(atlas.stageShelves == [Atlas.StageShelf(title: nil, stages: Stage.all)])
+    }
+
+    /// 見出しは stage index 区間から機械的に引く
+    /// (0–2 アメリカ / 3–6 ヨーロッパ / 7–11 アフリカ / 12–16 アジア / 17 オセアニア)。
+    @Test func 世界の棚は5大陸の見出しで区切られる() throws {
+        let atlas = try worldAtlas()
+        #expect(atlas.sections == WorldStage.sections)
+        let shelves = atlas.stageShelves
+        #expect(shelves.map(\.title)
+                == ["アメリカ", "ヨーロッパ", "アフリカ", "アジア", "オセアニア"])
+        #expect(shelves.map { $0.stages.map(\.index) }
+                == [[0, 1, 2], [3, 4, 5, 6], [7, 8, 9, 10, 11],
+                    [12, 13, 14, 15, 16], [17]])
+        // 棚に組み替えてもステージは 1 面も消えず、順も変わらない。
+        #expect(shelves.flatMap(\.stages) == atlas.stages)
+    }
+
+    /// 空へ倒れた世界アトラスは見出し定義こそ世界のままだが、中身のない
+    /// 見出しは棚に立てない(空の棚 > 空の見出しの列)。
+    @Test func 空へ倒れた世界アトラスの棚は空() {
+        let missing = URL(fileURLWithPath: "/nonexistent/WorldShapes.json")
+        let atlas = Atlas.loadWorld(contentsOf: missing)
+        #expect(atlas.sections == WorldStage.sections)
+        #expect(atlas.stageShelves.isEmpty)
+    }
+
+    /// 区間が尽くしていないステージも棚から消えない — 見出しなしで末尾に残る。
+    /// (データの食い違いでステージが遊べなくなる壊れ方だけはしない。)
+    @Test func 区間から漏れたステージは見出しなしで末尾に残る() {
+        let stray = Stage(index: 99, name: "はぐれ", kanjiName: "逸れ", codes: [1])
+        let atlas = Atlas(mapData: .empty, stages: Stage.all + [stray],
+                          sections: [AtlasSection(title: "テスト", stageIndexes: 0..<7)],
+                          cards: .empty, drawPolicy: .random, saveKey: "test")
+        let shelves = atlas.stageShelves
+        #expect(shelves.count == 2)
+        #expect(shelves.first?.title == "テスト")
+        #expect(shelves.first?.stages == Stage.all)
+        #expect(shelves.last == Atlas.StageShelf(title: nil, stages: [stray]))
+    }
+
     // MARK: - 世界のカード目録(WorldCards.json)
 
     /// 1 国 1 枚の国旗カード。オリジナル札(-2)は P6 の手描きが揃ってから。

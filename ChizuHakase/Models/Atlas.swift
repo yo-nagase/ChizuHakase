@@ -2,6 +2,19 @@ import CoreGraphics
 import Foundation
 import OSLog
 
+/// ステージ棚のセクション見出し。世界は大陸ごと、日本は空 = 見出しなし。
+/// View は `Atlas.stageShelves` を並べるだけで japan/world を知らない(設計 §3)—
+/// 見出しの有無も文言も、この値がアトラスと一緒に運ぶ。
+nonisolated struct AtlasSection: Sendable, Equatable {
+    /// 見出しの文字。大陸名はこども・おとな表記ともカタカナなので 1 本で足りる
+    /// (漢字にするのが自然な大陸名は無い)。
+    let title: String
+    /// この見出しの下に並ぶステージ index の区間。名前ではなく区間で持つのは、
+    /// ステージ index が大陸ごとに連続していて機械的に引けるから
+    /// (ステージ選択 UI 決定 2026-08-20 — docs/plans/2026-08-18-world-stages.md)。
+    let stageIndexes: Range<Int>
+}
+
 /// ちずちょう 1 冊ぶんの資源の束: 地図 + ステージ + カード(設計 §3)。
 ///
 /// 「View はアトラス非依存のまま保つ」を、共通プロトコルではなく
@@ -20,6 +33,8 @@ import OSLog
 nonisolated struct Atlas: Sendable {
     let mapData: MapData
     let stages: [Stage]
+    /// ステージ棚の区切り(世界 = 大陸見出し、日本 = 空)。
+    let sections: [AtlasSection]
     /// 日本は SpecialtyCards.json、世界は WorldCards.json(国旗のみ。
     /// オリジナル札は P6)。読み込み失敗は空(空の本 > クラッシュ)。
     let cards: CardCatalog
@@ -45,6 +60,37 @@ nonisolated struct Atlas: Sendable {
         stages.first { $0.index == index }
     }
 
+    /// ステージ選択の棚 1 段: 見出し(なければ nil)とその下のステージ。
+    nonisolated struct StageShelf: Sendable, Equatable, Identifiable {
+        let title: String?
+        let stages: [Stage]
+        /// 棚は空では作られない(下の compactMap / isEmpty ガード)ので
+        /// 先頭ステージの index がそのまま棚の同一性になる。
+        var id: Int { stages.first?.index ?? -1 }
+    }
+
+    /// ステージ選択が並べる棚。sections が空(日本)なら見出しなしの 1 段 —
+    /// 今日の日本版と 1 ピクセルも変わらない形。世界は大陸ごとの段になる。
+    ///
+    /// 区間に入らないステージは落とさず見出しなしで末尾へ、中身のない見出しは
+    /// 並べない: データが食い違ったとき、棚からステージが消える・空の見出しが
+    /// 立つ、のどちらの壊れ方もしない。
+    var stageShelves: [StageShelf] {
+        guard !sections.isEmpty else {
+            return stages.isEmpty ? [] : [StageShelf(title: nil, stages: stages)]
+        }
+        var shelves = sections.compactMap { section -> StageShelf? in
+            let members = stages.filter { section.stageIndexes.contains($0.index) }
+            return members.isEmpty ? nil : StageShelf(title: section.title, stages: members)
+        }
+        let covered = sections.reduce(into: Set<Int>()) { $0.formUnion($1.stageIndexes) }
+        let leftovers = stages.filter { !covered.contains($0.index) }
+        if !leftovers.isEmpty {
+            shelves.append(StageShelf(title: nil, stages: leftovers))
+        }
+        return shelves
+    }
+
     private static let log = Logger(subsystem: "com.wakuwaku.chizuhakase", category: "Atlas")
 
     // MARK: - 日本
@@ -52,7 +98,7 @@ nonisolated struct Atlas: Sendable {
     /// 現行アプリそのまま: ローダの結果と `Stage.all` を束ねるだけで、
     /// データにも挙動にも手を加えない。
     static func japan(mapData: MapData, cards: CardCatalog) -> Atlas {
-        Atlas(mapData: mapData, stages: Stage.all, cards: cards,
+        Atlas(mapData: mapData, stages: Stage.all, sections: [], cards: cards,
               drawPolicy: .random, saveKey: SaveData.japanAtlas)
     }
 
@@ -90,10 +136,11 @@ nonisolated struct Atlas: Sendable {
             return world(from: try load(), cards: cards)
         } catch {
             log.error("world atlas load failed: \(error.localizedDescription, privacy: .public)")
-            // 空へ倒れても方針と名前空間は世界のまま — カードを失っても
-            // 「どの本か」までは失わない。
-            return Atlas(mapData: .empty, stages: [], cards: .empty,
-                         drawPolicy: .flagFirstSilverGate, saveKey: SaveData.worldAtlas)
+            // 空へ倒れても方針・名前空間・見出し定義は世界のまま — カードを
+            // 失っても「どの本か」までは失わない(棚はステージが無いので空)。
+            return Atlas(mapData: .empty, stages: [], sections: WorldStage.sections,
+                         cards: .empty, drawPolicy: .flagFirstSilverGate,
+                         saveKey: SaveData.worldAtlas)
         }
     }
 
@@ -128,8 +175,9 @@ nonisolated struct Atlas: Sendable {
         // bbox の和の右下がそのままキャンバス寸法になる。
         let bounds = prefectures.map(\.bbox).reduce(CGRect.null) { $0.union($1) }
         guard !bounds.isNull else {
-            return Atlas(mapData: .empty, stages: stages, cards: cards,
-                         drawPolicy: .flagFirstSilverGate, saveKey: SaveData.worldAtlas)
+            return Atlas(mapData: .empty, stages: stages, sections: WorldStage.sections,
+                         cards: cards, drawPolicy: .flagFirstSilverGate,
+                         saveKey: SaveData.worldAtlas)
         }
         let mapData = MapData(width: bounds.maxX,
                               height: bounds.maxY,
@@ -138,7 +186,8 @@ nonisolated struct Atlas: Sendable {
                               okinawaInset: .zero,
                               prefectures: prefectures)
         // 国旗カードが銀になるまでオリジナルを配らないゲート(設計 §5)。
-        return Atlas(mapData: mapData, stages: stages, cards: cards,
-                     drawPolicy: .flagFirstSilverGate, saveKey: SaveData.worldAtlas)
+        return Atlas(mapData: mapData, stages: stages, sections: WorldStage.sections,
+                     cards: cards, drawPolicy: .flagFirstSilverGate,
+                     saveKey: SaveData.worldAtlas)
     }
 }

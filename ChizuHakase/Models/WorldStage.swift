@@ -41,4 +41,17 @@ nonisolated struct WorldStage: Identifiable, Sendable, Equatable {
         ("とうなんアジア", "東南アジア"),                  // 16
         ("オセアニア", "オセアニア"),                      // 17
     ]
+
+    /// ステージ選択の棚を区切る大陸見出し(UI 決定 2026-08-20 —
+    /// docs/plans/2026-08-18-world-stages.md「ステージ選択 UI」)。
+    /// 上の `names` はすでに大陸ごとに連続して並んでいるので、見出しは
+    /// index 区間から機械的に引ける。`names` の並びを変えるなら
+    /// (index はセーブキーなので変えないが)ここも必ず一緒に動かすこと。
+    static let sections: [AtlasSection] = [
+        AtlasSection(title: "アメリカ", stageIndexes: 0..<3),
+        AtlasSection(title: "ヨーロッパ", stageIndexes: 3..<7),
+        AtlasSection(title: "アフリカ", stageIndexes: 7..<12),
+        AtlasSection(title: "アジア", stageIndexes: 12..<17),
+        AtlasSection(title: "オセアニア", stageIndexes: 17..<18),
+    ]
 }

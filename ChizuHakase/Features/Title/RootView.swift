@@ -249,13 +249,12 @@ struct RootView: View {
     private func destination(_ route: Route) -> some View {
         switch route {
         case .stageSelect:
-            // P6 trap: this picker lists JAPAN's stages only, but its taps
-            // resolve against the session atlas below. Finishing a world debug
-            // quiz and backing out lands here, where tapping かんとう (index 1)
-            // would launch カリブかい — the world book's stage 1. Harmless while
-            // `-atlas world` is debug-only; the world stage picker (P6) must
-            // either feed from `atlas.stages` or reset `atlasKey` on the way in.
-            StageSelectView(quizMode: $quizMode,
+            // Fed the session atlas, so the list, the records and the taps all
+            // read one book. (Its predecessor listed japan's stages while taps
+            // resolved against the session atlas below — backing out of a world
+            // quiz made かんとう launch カリブかい, both index 1 in their books.)
+            StageSelectView(atlas: atlas,
+                            quizMode: $quizMode,
                             onPlay: { path.append(.quiz(stageIndex: $0.index,
                                                         mode: quizMode)) })
 
