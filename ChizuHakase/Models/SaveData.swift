@@ -87,6 +87,36 @@ nonisolated struct AtlasSave: Codable, Sendable, Equatable {
         askedInChallenge = try c.decodeIfPresent([String: Set<Int>].self,
                                                  forKey: .askedInChallenge) ?? [:]
     }
+
+    // MARK: - Derived reads
+    //
+    // The one implementation of every clamp, for both atlases: SaveData's
+    // japan-facing reads delegate here, and `SaveStore.applyStageResult`
+    // reads whichever atlas it was handed. Two copies would drift.
+
+    func masteryLevel(of code: Int) -> Int {
+        min(GameRules.maxMastery, max(0, mastery[code] ?? 0))
+    }
+
+    func stars(of cardID: String) -> Int {
+        min(GameRules.maxCardStars, max(0, cards[cardID] ?? 0))
+    }
+
+    func owns(_ cardID: String) -> Bool { stars(of: cardID) > 0 }
+
+    func isRainbow(_ cardID: String) -> Bool { rainbow.contains(cardID) }
+
+    func tier(of cardID: String) -> CardTier {
+        CardTier(stars: stars(of: cardID), rainbow: isRainbow(cardID))
+    }
+
+    func streak(of prefectureCode: Int) -> Int {
+        max(0, streaks[prefectureCode] ?? 0)
+    }
+
+    func record(forStage index: Int, mode: QuizMode) -> StageRecord? {
+        records[mode.rawValue]?[index]
+    }
 }
 
 nonisolated struct SaveData: Codable, Sendable, Equatable {
@@ -123,7 +153,9 @@ nonisolated struct SaveData: Codable, Sendable, Equatable {
 
     // MARK: - Japan forwards
 
-    // 日本版の既存呼び出し口。世界版の書き込み口は P5 で開ける。
+    // 日本版の既存呼び出し口。世界版はここを通らない —
+    // 読みは `atlas(SaveData.worldAtlas)`、書き込みは
+    // `SaveStore.applyStageResult(_:catalog:atlas:)` が名前空間ごと書く。
     // Thin get/set forwards onto `atlases["japan"]`, so the views, SaveStore
     // and GameRules paths that predate the namespace keep compiling and
     // behaving identically. Every write through them is a get-copy, mutate,
@@ -288,12 +320,23 @@ nonisolated struct SaveData: Codable, Sendable, Equatable {
 
     // MARK: - Derived reads
 
+    /// One atlas's slice of the save. Reading an unvisited atlas is an empty
+    /// slice, never an invention — nothing is written until a stage is played
+    /// there. This is the world atlas's read path (the properties above stay
+    /// japan's); `Atlas.saveKey` supplies the key.
+    func atlas(_ key: String) -> AtlasSave {
+        atlases[key] ?? AtlasSave()
+    }
+
+    // The japan-facing reads every existing screen calls. Delegated to the
+    // japan slice so the clamping rules live once, in `AtlasSave`.
+
     func masteryLevel(of code: Int) -> Int {
-        min(GameRules.maxMastery, max(0, mastery[code] ?? 0))
+        atlas(Self.japanAtlas).masteryLevel(of: code)
     }
 
     func stars(of cardID: String) -> Int {
-        min(GameRules.maxCardStars, max(0, cards[cardID] ?? 0))
+        atlas(Self.japanAtlas).stars(of: cardID)
     }
 
     func owns(_ cardID: String) -> Bool { stars(of: cardID) > 0 }
@@ -301,15 +344,15 @@ nonisolated struct SaveData: Codable, Sendable, Equatable {
     func isRainbow(_ cardID: String) -> Bool { rainbow.contains(cardID) }
 
     func tier(of cardID: String) -> CardTier {
-        CardTier(stars: stars(of: cardID), rainbow: isRainbow(cardID))
+        atlas(Self.japanAtlas).tier(of: cardID)
     }
 
     func streak(of prefectureCode: Int) -> Int {
-        max(0, streaks[prefectureCode] ?? 0)
+        atlas(Self.japanAtlas).streak(of: prefectureCode)
     }
 
     func record(forStage index: Int, mode: QuizMode) -> StageRecord? {
-        records[mode.rawValue]?[index]
+        atlas(Self.japanAtlas).record(forStage: index, mode: mode)
     }
 
     /// The best a stage has ever gone, whichever way it was played. Used where

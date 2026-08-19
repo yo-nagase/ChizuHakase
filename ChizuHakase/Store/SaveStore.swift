@@ -102,15 +102,24 @@ final class SaveStore {
     /// The catalog is how a streak finds the rest of its prefecture's cards —
     /// without it gold can never turn rainbow, so only tests that are not
     /// about cards pass `.empty`.
+    ///
+    /// `atlas` names the save namespace the whole result lands in
+    /// (`Atlas.saveKey`). One key for everything: region codes and stage
+    /// indexes collide across atlases, so letting a world result touch any
+    /// japan field would file バハマ's mastery under 大分県.
     @discardableResult
-    func applyStageResult(_ result: StageResult, catalog: CardCatalog) -> StageGains {
+    func applyStageResult(_ result: StageResult, catalog: CardCatalog,
+                          atlas key: String = SaveData.japanAtlas) -> StageGains {
+        // The one slice this stage may move, mutated whole and written back
+        // once — no per-field write can end up in the other book.
+        var atlas = data.atlases[key] ?? AtlasSave()
         var newlySparkling: [Int] = []
         var newlyRainbow: [String] = []
 
         for (code, firstTry) in result.firstTryByPrefecture {
-            let before = data.masteryLevel(of: code)
+            let before = atlas.masteryLevel(of: code)
             let after = GameRules.nextMastery(current: before, firstTry: firstTry)
-            data.mastery[code] = after
+            atlas.mastery[code] = after
             if after == GameRules.maxMastery && before < GameRules.maxMastery {
                 newlySparkling.append(code)
             }
@@ -123,12 +132,12 @@ final class SaveStore {
         var goldBefore: [Int: Set<String>] = [:]
         for code in result.outcomesByPrefecture.keys {
             goldBefore[code] = Set(catalog.cards(for: code)
-                .filter { data.stars(of: $0.id) >= GameRules.maxCardStars }
+                .filter { atlas.stars(of: $0.id) >= GameRules.maxCardStars }
                 .map(\.id))
         }
 
         for draw in result.cardDraws {
-            data.cards = GameRules.applyDraw(draw, to: data.cards)
+            atlas.cards = GameRules.applyDraw(draw, to: atlas.cards)
         }
 
         // Streaks and the rainbow latch move together: pairing each clean
@@ -136,16 +145,16 @@ final class SaveStore {
         // count crosses, and only for cards whose gold predates the run.
         for (code, outcomes) in result.outcomesByPrefecture {
             let walked = GameRules.nextStreak(
-                current: data.streak(of: code),
+                current: atlas.streak(of: code),
                 outcomes: outcomes,
                 draws: result.cardDraws.filter { $0.card.prefectureCode == code },
                 goldCardIDs: goldBefore[code] ?? [])
-            data.streaks[code] = walked.streak
+            atlas.streaks[code] = walked.streak
             // Only the cards the latch actually caught this time. A card
             // that was already rainbow is not news, and re-announcing it
             // every stage would turn the rarest thing in the game into
             // wallpaper.
-            for id in walked.latched where data.rainbow.insert(id).inserted {
+            for id in walked.latched where atlas.rainbow.insert(id).inserted {
                 newlyRainbow.append(id)
             }
         }
@@ -153,11 +162,12 @@ final class SaveStore {
         // Stars and score are kept per mode; mastery and cards above are not,
         // because they measure the prefecture rather than the run.
         let record = StageRecord(stars: result.stars, score: result.score)
-        data.records[result.mode.rawValue, default: [:]][result.stageIndex] =
+        atlas.records[result.mode.rawValue, default: [:]][result.stageIndex] =
             GameRules.bestRecord(
-                existing: data.record(forStage: result.stageIndex, mode: result.mode),
+                existing: atlas.record(forStage: result.stageIndex, mode: result.mode),
                 new: record)
 
+        data.atlases[key] = atlas
         save()
         // Both sorted: the loops above walk dictionary keys, and a celebration
         // that lists the same two prefectures in a different order each run

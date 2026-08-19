@@ -385,6 +385,92 @@ struct SaveStoreTests {
         #expect(store.data.tier(of: "01-1") == .rainbow)
     }
 
+    // MARK: - Atlas namespaces (world write path)
+
+    /// The same integers mean different places in different books (44 is
+    /// 大分県 and バハマ; stage 3 is きんき and きたヨーロッパ), so a world
+    /// result must land in `atlases["world"]` and nowhere else.
+    @Test func aWorldStageResultLandsOnlyInTheWorldAtlas() throws {
+        let dir = try makeScratch()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let flag = SpecialtyCard(id: "392-1", prefectureCode: 392, emoji: "🇯🇵",
+                                 nameKana: "こっき", nameKanji: "国旗",
+                                 category: .flag, description: "にほんの こっきだよ")
+
+        let store = SaveStore(directory: dir)
+        store.applyStageResult(
+            StageResult(mode: .findOnMap, stageIndex: 15, score: 640, stars: 3,
+                        firstTryByPrefecture: [392: true, 156: true],
+                        cardDraws: [.new(flag)],
+                        outcomesByPrefecture: [392: [true, true]]),
+            catalog: CardCatalog(cards: [flag]),
+            atlas: SaveData.worldAtlas)
+
+        let world = store.data.atlas(SaveData.worldAtlas)
+        #expect(world.mastery == [392: 1, 156: 1])
+        #expect(world.cards == ["392-1": 1])
+        #expect(world.streaks == [392: 2])
+        #expect(world.record(forStage: 15, mode: .findOnMap) == StageRecord(stars: 3, score: 640))
+        // Japan stays exactly untouched — absent, not merely empty.
+        #expect(store.data.atlases[SaveData.japanAtlas] == nil)
+        #expect(store.data.mastery.isEmpty)
+        #expect(store.data.records.isEmpty)
+        // And the write survives a reload in its namespace.
+        #expect(SaveStore(directory: dir).data.atlas(SaveData.worldAtlas).mastery[392] == 1)
+    }
+
+    /// The other direction: the default (japan) call sites must not leak into
+    /// the world, and colliding codes stay independent per book.
+    @Test func japanAndWorldWritesDoNotCross() throws {
+        let dir = try makeScratch()
+        defer { try? FileManager.default.removeItem(at: dir) }
+
+        let store = SaveStore(directory: dir)
+        // 44 is 大分県 in one book and バハマ in the other.
+        store.applyStageResult(StageResult(mode: .findOnMap, stageIndex: 5, score: 100, stars: 1,
+                                           firstTryByPrefecture: [44: true],
+                                           cardDraws: []), catalog: .empty)
+        store.applyStageResult(StageResult(mode: .findOnMap, stageIndex: 5, score: 900, stars: 3,
+                                           firstTryByPrefecture: [44: true],
+                                           cardDraws: []), catalog: .empty,
+                               atlas: SaveData.worldAtlas)
+        store.applyStageResult(StageResult(mode: .findOnMap, stageIndex: 5, score: 900, stars: 3,
+                                           firstTryByPrefecture: [44: true],
+                                           cardDraws: []), catalog: .empty,
+                               atlas: SaveData.worldAtlas)
+
+        #expect(store.data.masteryLevel(of: 44) == 1, "japan's 大分県 gained a world answer")
+        #expect(store.data.atlas(SaveData.worldAtlas).masteryLevel(of: 44) == 2)
+        #expect(store.data.record(forStage: 5, mode: .findOnMap) == StageRecord(stars: 1, score: 100),
+                "japan's best record took the world's score")
+        #expect(store.data.atlas(SaveData.worldAtlas)
+            .record(forStage: 5, mode: .findOnMap) == StageRecord(stars: 3, score: 900))
+    }
+
+    /// Owned cards read per atlas: the quiz seeds its draw from the book it
+    /// is playing, and "1-1"-shaped world ids must not shadow japan's "01-1".
+    @Test func ownedCardsAreReadPerAtlas() throws {
+        let dir = try makeScratch()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let flag = SpecialtyCard(id: "44-1", prefectureCode: 44, emoji: "🇧🇸",
+                                 nameKana: "こっき", nameKanji: "国旗",
+                                 category: .flag, description: "ばはまの こっきだよ")
+
+        let store = SaveStore(directory: dir)
+        store.applyStageResult(StageResult(mode: .findOnMap, stageIndex: 0, score: 0, stars: 3,
+                                           firstTryByPrefecture: [:],
+                                           cardDraws: [.new(card("44-1"))]), catalog: .empty)
+        store.applyStageResult(StageResult(mode: .findOnMap, stageIndex: 1, score: 0, stars: 3,
+                                           firstTryByPrefecture: [:],
+                                           cardDraws: [.star(flag, stars: GameRules.silverStars)]),
+                               catalog: .empty, atlas: SaveData.worldAtlas)
+
+        #expect(store.data.atlas(SaveData.japanAtlas).cards == ["44-1": 1])
+        #expect(store.data.atlas(SaveData.worldAtlas).cards == ["44-1": GameRules.silverStars])
+        #expect(store.data.atlas(SaveData.worldAtlas).stars(of: "44-1") == GameRules.silverStars)
+        #expect(store.data.stars(of: "44-1") == 1, "the japan-facing read moved")
+    }
+
     private func card(_ id: String) -> SpecialtyCard {
         SpecialtyCard(id: id, prefectureCode: Int(id.prefix(2)) ?? 1, emoji: "🍎",
                       nameKana: "てすと", nameKanji: "試験",
