@@ -48,10 +48,15 @@ nonisolated struct CardCatalog: Sendable {
 
     init(cards: [SpecialtyCard]) {
         self.all = cards
+        // Dictionary(grouping:) keeps each group in source order — load-bearing:
+        // the world draw gate (GameRules.DrawPolicy.flagFirstSilverGate) takes
+        // "the first card is the flag" from this order, and WorldCards.json
+        // lists the flag first on that promise. Never re-sort these groups.
         self.byPrefecture = Dictionary(grouping: cards, by: \.prefectureCode)
         self.byID = Dictionary(cards.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
     }
 
+    /// One prefecture's (or country's) cards, in catalog order.
     func cards(for prefectureCode: Int) -> [SpecialtyCard] {
         byPrefecture[prefectureCode] ?? []
     }

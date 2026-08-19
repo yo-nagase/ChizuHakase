@@ -432,6 +432,147 @@ struct GameRulesTests {
         }
     }
 
+    // MARK: - 世界版の抽選(国旗先行・シルバー解放、設計 §5)
+
+    /// 世界版の 1 国ぶん: 2 枚で、目録は国旗を先頭に置く。
+    /// この並びが WorldCards.json の契約(Task 8)— ゲートは id を解析しない。
+    private static let worldPair = [
+        SpecialtyCard(id: "392-1", prefectureCode: 392, emoji: "🇯🇵",
+                      nameKana: "にほんの こっき", nameKanji: "日本の国旗",
+                      category: .landmark, description: "ひのまる"),
+        SpecialtyCard(id: "392-2", prefectureCode: 392, emoji: "🗻",
+                      nameKana: "ふじさん", nameKanji: "富士山",
+                      category: .nature, description: "たかい やま"),
+    ]
+
+    /// 最初の 1 枚は必ず国旗。乱数がどう転んでもオリジナルから始まらない。
+    @Test func 世界版は未所持なら国旗から渡す() {
+        for seed in UInt64(1)...20 {
+            var rng = SeededGenerator(seed: seed)
+            let draw = GameRules.drawCard(from: Self.worldPair, owned: [:],
+                                          policy: .flagFirstSilverGate, using: &rng)
+            #expect(draw == .new(Self.worldPair[0]), "seed \(seed)")
+        }
+    }
+
+    /// 国旗がシルバー未満のあいだ、正解はすべて国旗の星になる。
+    /// オリジナルは「未所持優先」の対象にすら入らない。
+    @Test func 世界版は国旗がシルバー未満のあいだオリジナルを出さない() {
+        for stars in 1..<GameRules.silverStars {
+            for seed in UInt64(1)...10 {
+                var rng = SeededGenerator(seed: seed)
+                let draw = GameRules.drawCard(from: Self.worldPair,
+                                              owned: ["392-1": stars],
+                                              policy: .flagFirstSilverGate, using: &rng)
+                #expect(draw == .star(Self.worldPair[0], stars: stars + 1),
+                        "国旗★\(stars) seed \(seed)")
+            }
+        }
+    }
+
+    /// 国旗が ★5 に触れた次の正解でオリジナル ★1(解放後は未所持優先が働く)。
+    @Test func 世界版は国旗がシルバーに触れた次の正解でオリジナルが渡る() {
+        for seed in UInt64(1)...10 {
+            var rng = SeededGenerator(seed: seed)
+            let draw = GameRules.drawCard(from: Self.worldPair,
+                                          owned: ["392-1": GameRules.silverStars],
+                                          policy: .flagFirstSilverGate, using: &rng)
+            #expect(draw == .new(Self.worldPair[1]), "seed \(seed)")
+        }
+    }
+
+    /// 両方を持った後は日本版と同じ「★10 未満からランダム」。
+    /// シードを散らして、抽選が両方の札に実際に散ることまで確かめる。
+    @Test func 世界版は両方持てば星10未満からランダムに積む() {
+        var drawnIDs: Set<String> = []
+        for seed in UInt64(1)...40 {
+            var rng = SeededGenerator(seed: seed)
+            let draw = GameRules.drawCard(from: Self.worldPair,
+                                          owned: ["392-1": 6, "392-2": 1],
+                                          policy: .flagFirstSilverGate, using: &rng)
+            guard case .star(let card, _) = draw else {
+                Issue.record("seed \(seed): expected a star, got \(String(describing: draw))")
+                continue
+            }
+            drawnIDs.insert(card.id)
+        }
+        #expect(drawnIDs == ["392-1", "392-2"], "抽選が片方に固定されている: \(drawnIDs)")
+    }
+
+    /// 金の国旗はもう星を取れないので、未完成のオリジナルに積まれる
+    /// (日本版の「★10 未満から引く」がそのまま働くこと)。
+    @Test func 世界版は金の国旗を避けて未完成のオリジナルに星を積む() {
+        for seed in UInt64(1)...10 {
+            var rng = SeededGenerator(seed: seed)
+            let draw = GameRules.drawCard(
+                from: Self.worldPair,
+                owned: ["392-1": GameRules.maxCardStars, "392-2": 7],
+                policy: .flagFirstSilverGate, using: &rng)
+            #expect(draw == .star(Self.worldPair[1], stars: 8), "seed \(seed)")
+        }
+    }
+
+    @Test func 世界版も全部金ならもっているカードだね() {
+        var rng = SeededGenerator(seed: 7)
+        let owned = Dictionary(uniqueKeysWithValues:
+            Self.worldPair.map { ($0.id, GameRules.maxCardStars) })
+        let draw = GameRules.drawCard(from: Self.worldPair, owned: owned,
+                                      policy: .flagFirstSilverGate, using: &rng)
+        if case .duplicate = draw {} else {
+            Issue.record("expected a duplicate, got \(String(describing: draw))")
+        }
+    }
+
+    /// 通し: 何十回引いても、国旗が銀になる前にオリジナルが出た瞬間は無く、
+    /// 最後は両方が星の上限に届く(解放が完成を妨げない)。
+    @Test func 世界版の繰り返し抽選は銀の解放を守って両方を完成させる() {
+        var rng = SeededGenerator(seed: 21)
+        var owned: [String: Int] = [:]
+        for _ in 0..<60 {
+            guard let draw = GameRules.drawCard(from: Self.worldPair, owned: owned,
+                                                policy: .flagFirstSilverGate, using: &rng)
+            else { break }
+            if draw.card.id == "392-2" {
+                #expect((owned["392-1"] ?? 0) >= GameRules.silverStars,
+                        "国旗★\(owned["392-1"] ?? 0) でオリジナルが出た")
+            }
+            owned = GameRules.applyDraw(draw, to: owned)
+        }
+        #expect(owned["392-1"] == GameRules.maxCardStars)
+        #expect(owned["392-2"] == GameRules.maxCardStars)
+    }
+
+    /// 日本版の回帰: 方針の既定値は従来ランダムで、方針を明示しても
+    /// 既定引数の呼び出しと 1 ビットも変わらない(view の呼び出しは無改修)。
+    @Test func 抽選方針の既定は従来ランダムのまま() {
+        let ownedStates: [[String: Int]] = [
+            [:],
+            ["01-1": 1, "01-2": 1],
+            ["01-1": 3, "01-2": GameRules.maxCardStars, "01-3": 7],
+            Dictionary(uniqueKeysWithValues: Self.sample.map { ($0.id, GameRules.maxCardStars) }),
+        ]
+        for owned in ownedStates {
+            for seed in UInt64(1)...10 {
+                var defaultRNG = SeededGenerator(seed: seed)
+                var explicitRNG = SeededGenerator(seed: seed)
+                let byDefault = GameRules.drawCard(from: Self.sample, owned: owned,
+                                                   using: &defaultRNG)
+                let byPolicy = GameRules.drawCard(from: Self.sample, owned: owned,
+                                                  policy: .random, using: &explicitRNG)
+                #expect(byDefault == byPolicy, "seed \(seed), owned \(owned)")
+            }
+        }
+    }
+
+    /// Task 8 が頼る契約の錨: 目録は 1 国のカードを収載順のまま返す。
+    /// 世界のゲートは「先頭 = 国旗」というこの並びに乗り、id は解析しない。
+    /// 3 枚の日本の県と 2 枚の世界の国が同じ目録機構で共存できることも兼ねる。
+    @Test func 目録は国のカードを収載順のまま返す() {
+        let catalog = CardCatalog(cards: Self.worldPair + Self.sample)
+        #expect(catalog.cards(for: 392) == Self.worldPair)
+        #expect(catalog.cards(for: 1) == Self.sample)
+    }
+
     // MARK: - Records
 
     @Test func bestRecordKeepsTheHighestOfEachField() {

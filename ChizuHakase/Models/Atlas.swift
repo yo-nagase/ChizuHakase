@@ -20,9 +20,11 @@ nonisolated struct Atlas: Sendable {
     let mapData: MapData
     let stages: [Stage]
     /// 世界版はいまは空 — WorldCards.json の生成と読み込みは Task 8。
-    /// 世界版の抽選差分(国旗カードが銀になるまでオリジナルを配らない、
-    /// 設計 §5)も Task 8 でアトラスの属性として GameRules へ渡す。
     let cards: CardCatalog
+    /// カード抽選の方針(設計 §5「規則の差分」)。日本と世界の唯一の規則差で、
+    /// アトラスが値として運び、利用側は `GameRules.drawCard` へ渡すだけ —
+    /// view にもViewModel にも「どちらの本か」の分岐は生まれない(P5 で配線)。
+    let drawPolicy: GameRules.DrawPolicy
 
     /// 音声入力へ渡す語彙(よみ + 表記)。AppState が起動時に組み立てていた
     /// 式をアトラス側へ移しただけで、日本版の挙動は変えていない。世界版の
@@ -38,7 +40,7 @@ nonisolated struct Atlas: Sendable {
     /// 現行アプリそのまま: ローダの結果と `Stage.all` を束ねるだけで、
     /// データにも挙動にも手を加えない。
     static func japan(mapData: MapData, cards: CardCatalog) -> Atlas {
-        Atlas(mapData: mapData, stages: Stage.all, cards: cards)
+        Atlas(mapData: mapData, stages: Stage.all, cards: cards, drawPolicy: .random)
     }
 
     // MARK: - 世界
@@ -62,7 +64,9 @@ nonisolated struct Atlas: Sendable {
             return world(from: try load())
         } catch {
             log.error("world atlas load failed: \(error.localizedDescription, privacy: .public)")
-            return Atlas(mapData: .empty, stages: [], cards: .empty)
+            // 空へ倒れても方針は世界のまま — カードを失っても「どの本か」までは失わない。
+            return Atlas(mapData: .empty, stages: [], cards: .empty,
+                         drawPolicy: .flagFirstSilverGate)
         }
     }
 
@@ -97,7 +101,8 @@ nonisolated struct Atlas: Sendable {
         // bbox の和の右下がそのままキャンバス寸法になる。
         let bounds = prefectures.map(\.bbox).reduce(CGRect.null) { $0.union($1) }
         guard !bounds.isNull else {
-            return Atlas(mapData: .empty, stages: stages, cards: .empty)
+            return Atlas(mapData: .empty, stages: stages, cards: .empty,
+                         drawPolicy: .flagFirstSilverGate)
         }
         let mapData = MapData(width: bounds.maxX,
                               height: bounds.maxY,
@@ -105,6 +110,9 @@ nonisolated struct Atlas: Sendable {
                               // zero = 枠なし(MapData.empty と同じ流儀)。
                               okinawaInset: .zero,
                               prefectures: prefectures)
-        return Atlas(mapData: mapData, stages: stages, cards: .empty)
+        // 国旗カードが銀になるまでオリジナルを配らないゲート(設計 §5)。
+        // カード目録が Task 8 で入るより先に、方針だけ先に本へ綴じておく。
+        return Atlas(mapData: mapData, stages: stages, cards: .empty,
+                     drawPolicy: .flagFirstSilverGate)
     }
 }

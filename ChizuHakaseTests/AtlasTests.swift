@@ -152,6 +152,22 @@ struct AtlasTests {
         #expect(vocabulary.contains("日本"))
     }
 
+    // MARK: - 抽選方針(設計 §5: 日本との差分は抽選だけ、データが運ぶ)
+
+    /// 方針はアトラスの属性。view は分岐を見ず、QuizViewModel は
+    /// この値を GameRules.drawCard へ渡すだけになる(P5 の配線)。
+    @Test func 日本アトラスは従来ランダムの抽選方針を運ぶ() {
+        #expect(japanAtlas.drawPolicy == .random)
+    }
+
+    @Test func 世界アトラスは国旗先行の抽選方針を運ぶ() throws {
+        #expect(try worldAtlas().drawPolicy == .flagFirstSilverGate)
+        // 読み込みに失敗して空へ倒れたアトラスも世界の方針のまま —
+        // カードが空でも「どの本か」までは失わない。
+        let missing = URL(fileURLWithPath: "/nonexistent/WorldShapes.json")
+        #expect(Atlas.loadWorld(contentsOf: missing).drawPolicy == .flagFirstSilverGate)
+    }
+
     // MARK: - 読み込み失敗(CLAUDE.md §11: 握って初期状態へ)
 
     @Test func 世界データが無ければ空のアトラスに倒れる() {

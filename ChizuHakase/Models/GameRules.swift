@@ -295,30 +295,67 @@ nonisolated enum GameRules {
         var promoted: Bool { tier.isSpecial && CardTier(stars: stars - 1) != tier }
     }
 
+    /// How one prefecture's (or country's) cards enter the draw. The one rule
+    /// that differs between atlases (world design §5 「規則の差分」): star
+    /// growth, tiers and rainbow sit above the pool and are shared. `Atlas`
+    /// carries the value so the branch lives in data — views never see it.
+    enum DrawPolicy: Sendable {
+        /// 日本版: every card of the prefecture is in the pool from the start.
+        case random
+        /// 世界版: the first-listed card (the flag) is dealt alone until it
+        /// reaches silver; only then do the others join the pool. Learning
+        /// order — first the flag, then what is behind it — made a draw rule.
+        ///
+        /// "First-listed" is a contract on the catalog, not on the id: the
+        /// country's entry lists the flag card first (WorldCards.json, Task 8).
+        /// Parsing "-1" out of ids here would hide that dependency instead of
+        /// naming it.
+        case flagFirstSilverGate
+    }
+
     /// Draw one card for a correct answer.
     ///
     /// Unowned cards come first so the collection fills up quickly. After that
     /// the draw is among the cards that can still take a star, which is what
     /// keeps a cleared prefecture worth playing (CLAUDE.md §5) — drawing from
     /// all of them instead would spend wins on cards already at the cap while
-    /// others sat at one.
+    /// others sat at one. `policy` narrows the pool before any of that; the
+    /// default keeps every existing call site on the Japan behavior unchanged.
     static func drawCard(
         from cards: [SpecialtyCard],
         owned: [String: Int],
+        policy: DrawPolicy = .random,
         using generator: inout some RandomNumberGenerator
     ) -> CardDraw? {
-        guard !cards.isEmpty else { return nil }
+        let pool = drawPool(cards, owned: owned, policy: policy)
+        guard !pool.isEmpty else { return nil }
 
-        let unowned = cards.filter { (owned[$0.id] ?? 0) <= 0 }
+        let unowned = pool.filter { (owned[$0.id] ?? 0) <= 0 }
         if let pick = unowned.randomElement(using: &generator) {
             return .new(pick)
         }
-        let unfinished = cards.filter { (owned[$0.id] ?? 0) < maxCardStars }
+        let unfinished = pool.filter { (owned[$0.id] ?? 0) < maxCardStars }
         if let pick = unfinished.randomElement(using: &generator) {
             return .star(pick, stars: (owned[pick.id] ?? 0) + 1)
         }
-        guard let pick = cards.randomElement(using: &generator) else { return nil }
+        guard let pick = pool.randomElement(using: &generator) else { return nil }
         return .duplicate(pick)
+    }
+
+    /// The cards this answer can land on. Under the gate, every win goes to
+    /// the flag until it is silver — so the original is never the "unowned"
+    /// pick, and the win after the flag touches silver hands it over.
+    private static func drawPool(
+        _ cards: [SpecialtyCard], owned: [String: Int], policy: DrawPolicy
+    ) -> [SpecialtyCard] {
+        switch policy {
+        case .random:
+            return cards
+        case .flagFirstSilverGate:
+            guard let flag = cards.first, (owned[flag.id] ?? 0) < silverStars
+            else { return cards }
+            return [flag]
+        }
     }
 
     /// Stars after a draw, capped at `maxCardStars`.
