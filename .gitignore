@@ -39,8 +39,12 @@ tmp/
 
 ## tools/ — large intermediates. PrefectureShapes.json itself IS committed
 ## (see CLAUDE.md §3: generated but checked in, never rebuilt at build time).
+## Same rule for the world atlas: WorldShapes.json is committed, the raw and
+## simplified Natural Earth geojson stay out.
 tools/japan.geojson
 tools/japan_simplified.geojson
+tools/ne_50m_countries.geojson
+tools/ne_50m_simplified.geojson
 tools/node_modules/
 tools/package-lock.json
 tools/package.json
