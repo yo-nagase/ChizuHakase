@@ -3,14 +3,17 @@
 
 ne_50m_simplified.geojson (mapshaper 出力) と world_countries.py (収録国マスタ)
 を突き合わせ、世界地図リソースを出す。国境を接しない小国の形は生データ
-ne_50m_countries.geojson から取り直すので、両方のファイルが要る。
+ne_50m_countries.geojson から、インセット 4 カ国はさらに詳細な 1:10m から
+取り直すので、3 つの入力ファイルが要る (10m は無ければ自動ダウンロード)。
 
 日本版との最大の違い: 座標は緯度経度のまま出す。地球儀モード (設計文書
 2026-08-16 §7) が平面への焼き込みを許さないため、投影は実行時に行う。
 
 Run from tools/:
-    npx mapshaper ne_50m_countries.geojson \
-        -simplify visvalingam 4% keep-shapes -clean \
+    curl -sL -o ne_10m_countries.geojson \\
+        https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_10m_admin_0_countries.geojson
+    npx mapshaper ne_50m_countries.geojson \\
+        -simplify visvalingam 4% keep-shapes -clean \\
         -o ne_50m_simplified.geojson format=geojson
     python3 build_world_map_data.py
     mv WorldShapes.json ../ChizuHakase/Resources/
@@ -28,6 +31,9 @@ import world_countries as wc
 
 SRC = "ne_50m_simplified.geojson"
 RAW_SRC = "ne_50m_countries.geojson"
+RAW_10M_SRC = "ne_10m_countries.geojson"
+NE_10M_URL = ("https://raw.githubusercontent.com/nvkelso/natural-earth-vector/"
+              "master/geojson/ne_10m_admin_0_countries.geojson")
 DST = "WorldShapes.json"
 
 # 0.0001° ≈ 赤道で 11m。世界地図の視認単位よりはるかに細かく、
@@ -103,6 +109,16 @@ URAL_LON = 60.0
 # 倍率は日本版の沖縄 1.6 より強い 2.5 — どの国も単独では 10pt に届かないため。
 # 実機で見て調整する暫定値。
 INSET_SCALE = {702: 2.5, 470: 2.5, 462: 2.5, 242: 2.5}
+
+# インセット国は 2.5 倍に拡大して見せる国そのものなので、形だけは 1:10m から
+# 取る (1:50m のマルタは 8 点、シンガポールは 9 点しかなく、拡大すると
+# 多角形の種明かしになる)。全て島国で陸国境を接しないから、50m 側の
+# 共有国境トポロジー (取り直し規則のコメント参照) を壊す心配はない —
+# それでもビルド時に検証する。主リングは DP でこの点数まで間引く。
+INSET_MAX_RING_PTS = 80
+# 三角形への退行をビルドで捕まえる床。モルディブは最大の島でも生 16 点
+# しかない (国が環礁の集まり) ので、リング単位ではなく国の総点数で見る。
+INSET_MIN_TOTAL_PTS = 20
 
 # --- かな変換 ---------------------------------------------------------------
 # 機械変換の契約 (world_countries.py KANA_OVERRIDES の冒頭コメントと対):
@@ -357,6 +373,16 @@ def simplify_ring(ring, tolerance):
     return out
 
 
+def thin_rings(rings, base_tol, max_pts):
+    """全リングを DP で間引き、最大点数に収まるまで許容誤差を上げる。"""
+    tol = base_tol
+    out = [simplify_ring(r, tol) for r in rings]
+    while max(len(r) for r in out) > max_pts:
+        tol *= 1.3
+        out = [simplify_ring(r, tol) for r in rings]
+    return out
+
+
 def rounded_rings(rings):
     out = []
     for ring in rings:
@@ -407,6 +433,32 @@ def resolve_code(props):
     return code if code > 0 else None
 
 
+def ensure_10m(path):
+    """1:10m の生データを確保する。あればそのまま使い、無ければ落としてくる。
+
+    落とせない環境では止めて手順を示す — 黙って 50m の三角形に
+    フォールバックすると、インセットの意味が静かに壊れるため。
+    """
+    if os.path.exists(path):
+        return
+    print(f"downloading {RAW_10M_SRC} (one-time, ~13MB)...")
+    part = path + ".part"
+    try:
+        import urllib.request
+        with urllib.request.urlopen(NE_10M_URL, timeout=300) as resp:
+            with open(part, "wb") as out:
+                out.write(resp.read())
+        os.replace(part, path)
+    except Exception as exc:
+        if os.path.exists(part):
+            os.remove(part)
+        sys.exit(
+            f"could not download {RAW_10M_SRC} ({exc}).\n"
+            "Fetch it manually and re-run:\n"
+            f"    curl -sL -o {RAW_10M_SRC} {NE_10M_URL}"
+        )
+
+
 def shared_vertex_set(feats):
     """2 つ以上の地物が使っている頂点の集合。
 
@@ -429,10 +481,12 @@ def main():
     here = os.path.dirname(os.path.abspath(__file__))
     src = os.path.join(here, SRC)
     raw_src = os.path.join(here, RAW_SRC)
+    raw_10m = os.path.join(here, RAW_10M_SRC)
     if not os.path.exists(src):
         sys.exit(f"missing {SRC} - run the mapshaper step first (module docstring)")
     if not os.path.exists(raw_src):
         sys.exit(f"missing {RAW_SRC} - download it first (module docstring)")
+    ensure_10m(raw_10m)
 
     feats = load_features(src)
 
@@ -465,6 +519,18 @@ def main():
                 or code in SOVEREIGN_DESPITE_TYPE):
             raw_by_code[code] = feat
 
+    # インセット国専用の 1:10m データ (INSET_MAX_RING_PTS のコメント参照)
+    feats_10m = {}
+    for feat in load_features(raw_10m):
+        code = resolve_code(feat["props"])
+        if code in wc.INSET_COUNTRIES and (
+                feat["props"].get("TYPE") in SOVEREIGN_TYPES
+                or code in SOVEREIGN_DESPITE_TYPE):
+            feats_10m[code] = feat
+    missing_10m = sorted(wc.INSET_COUNTRIES - set(feats_10m))
+    if missing_10m:
+        sys.exit(f"{RAW_10M_SRC} is missing inset countries: {missing_10m}")
+
     shared = shared_vertex_set(feats)
 
     countries = []
@@ -484,21 +550,46 @@ def main():
         main_pts = len(max(rings, key=ring_area))
         touches_border = any(pt in shared for r in feat["rings"] for pt in r)
 
-        if main_pts < RESOURCE_MIN_MAIN_PTS and not touches_border and code in raw_by_code:
+        if code in wc.INSET_COUNTRIES:
+            # インセット国は 1:10m から形を取る (INSET_MAX_RING_PTS のコメント)。
+            # 島国であることが前提なので、上流データが変わって陸国境が
+            # 生えたら黙って進めずここで止まる。
+            if touches_border:
+                sys.exit(f"inset country {code} shares a land border in {SRC}; "
+                         "resourcing from 10m would tear the shared topology")
+            source_rings = normalize_dateline(feats_10m[code]["rings"])
+            max_ring_pts = INSET_MAX_RING_PTS
+        elif (main_pts < RESOURCE_MIN_MAIN_PTS and not touches_border
+                and code in raw_by_code):
             # 三角形に潰れた島国は生データから形を取り直す (冒頭のコメント)。
-            raw_rings = normalize_dateline(raw_by_code[code]["rings"])
-            floor = (ring_area(max(raw_rings, key=ring_area))
+            source_rings = normalize_dateline(raw_by_code[code]["rings"])
+            max_ring_pts = None
+        else:
+            source_rings = None
+            max_ring_pts = None
+
+        if source_rings is not None:
+            floor = (ring_area(max(source_rings, key=ring_area))
                      * RESOURCE_RING_AREA_RATIO)
-            kept, pruned = prune_rings(code, raw_rings, min_area=floor)
+            kept, pruned = prune_rings(code, source_rings, min_area=floor)
             gx0, gy0, gx1, gy1 = bbox_of([p for r in kept for p in r])
             tol = RESOURCE_DP_RATIO * max(gx1 - gx0, gy1 - gy0)
-            kept = [simplify_ring(r, tol) for r in kept]
-            pruned = [simplify_ring(r, tol) for r in pruned]
-            speck_rings += len(raw_rings) - len(kept) - len(pruned)
+            if max_ring_pts is None:
+                kept = [simplify_ring(r, tol) for r in kept]
+                pruned = [simplify_ring(r, tol) for r in pruned]
+            else:
+                kept = thin_rings(kept, tol, max_ring_pts)
+                pruned = thin_rings(pruned, tol, max_ring_pts) if pruned else []
+            speck_rings += len(source_rings) - len(kept) - len(pruned)
             resourced.append(code)
         else:
             kept, pruned = prune_rings(code, rings)
             speck_rings += len(rings) - len(kept) - len(pruned)
+
+        if (code in wc.INSET_COUNTRIES
+                and sum(len(r) for r in kept) < INSET_MIN_TOTAL_PTS):
+            sys.exit(f"inset country {code} has no silhouette "
+                     f"({sum(len(r) for r in kept)} pts) - upstream data changed?")
 
         if pruned:
             pruned_entries.append((props["ADMIN"], rounded_rings(pruned)))
@@ -586,6 +677,10 @@ def main():
           f"(dropped {speck_rings} speck rings)")
     print(f"  resourced  : {len(resourced)} island countries from raw "
           f"({sorted(resourced)})")
+    inset_pts = {c["code"]: [len(r) for r in c["rings"]]
+                 for c in countries if c["code"] in wc.INSET_COUNTRIES}
+    print("  inset 10m  : " + "; ".join(f"{code} {pts}"
+                                        for code, pts in sorted(inset_pts.items())))
     print(f"  to backgrnd: {sum(len(r) for _, r in pruned_entries)} pruned "
           f"remote rings from {len(pruned_entries)} countries")
     print(f"  background : {len(background)} features, {bg_pts} pts")

@@ -45,6 +45,7 @@ tools/japan.geojson
 tools/japan_simplified.geojson
 tools/ne_50m_countries.geojson
 tools/ne_50m_simplified.geojson
+tools/ne_10m_countries.geojson
 tools/node_modules/
 tools/package-lock.json
 tools/package.json
