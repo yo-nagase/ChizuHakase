@@ -22,8 +22,9 @@ nonisolated struct WorldCountry: Identifiable, Sendable, Equatable {
     /// PrefectureShapes.json も同じ形で持っており、`closeSubpath` が零長辺として
     /// 無害に扱う。ここだけ落とすと 2 つの地図でデータ規約が割れる。
     let flatRings: [[CGPoint]]
-    /// pole of inaccessibility(tools/build_world_map_data.py)。
-    /// ラベル・エフェクトの錨として国の内側にあることをテストが検証する。
+    /// pole of inaccessibility(tools/build_world_map_data.py)。ラベル・
+    /// エフェクトの錨。テストが保証するのは「重心か bbox 中心のどちらかが
+    /// 自国内」まで — 環礁のような凹形状では重心が海に落ちることがある。
     let flatCentroid: CGPoint
     /// リングの正確な範囲(パイプラインが保証)。ステージ枠の計算に使う。
     let flatBbox: CGRect
@@ -119,12 +120,12 @@ nonisolated struct WorldProjection: Sendable, Equatable {
                 y: (latMax - lat) * scale)
     }
 
-    /// `[lon0, lat0, lon1, lat1]`(lat1 が北)→ 平面の CGRect。
-    /// y 反転により北端(lat1)が minY に来る。
-    func rect(bbox: [Double]) -> CGRect? {
-        guard bbox.count >= 4 else { return nil }
-        let topLeft = point(lon: bbox[0], lat: bbox[3])
-        let bottomRight = point(lon: bbox[2], lat: bbox[1])
+    /// 緯度経度の範囲 → 平面の CGRect。y 反転により北端(latMax)が
+    /// minY に来る。範囲が裏返っていたら nil(負のサイズの矩形を作らない)。
+    /// ワイヤ形式(`[lon0, lat0, lon1, lat1]`)の配列長検査はローダの仕事。
+    func rect(lonMin: Double, latMin: Double, lonMax: Double, latMax: Double) -> CGRect? {
+        let topLeft = point(lon: lonMin, lat: latMax)
+        let bottomRight = point(lon: lonMax, lat: latMin)
         guard bottomRight.x >= topLeft.x, bottomRight.y >= topLeft.y else { return nil }
         return CGRect(x: topLeft.x,
                       y: topLeft.y,
@@ -204,7 +205,7 @@ nonisolated enum WorldDataLoader {
             recordedCountries: countries,
             stages: makeStages(from: countries),
             background: file.background.map {
-                WorldBackgroundShape(flatRings: flatten($0.rings, with: projection))
+                WorldBackgroundShape(flatRings: projectRings($0.rings, with: projection))
             },
             insets: file.insets.map { WorldInset(code: $0.code, scale: $0.scale) })
     }
@@ -238,12 +239,16 @@ nonisolated enum WorldDataLoader {
     private static func makeCountry(_ country: WorldFile.Country,
                                     projection: WorldProjection,
                                     insetCodes: Set<Int>) throws -> WorldCountry {
-        let flatRings = flatten(country.rings, with: projection)
-        // 形の無い国は出題できない。日本版は 1 県落として続行するが、
-        // 世界版は生成データの破損なので全体を失敗させる(ファイル冒頭の方針)。
-        guard !flatRings.isEmpty, flatRings.allSatisfy({ $0.count >= 3 }),
+        // 国のリングは投影の前に生データのまま厳格に検証する。日本版は
+        // 1 県落として続行するが、世界版は生成データの破損として全体を
+        // 失敗させる方針(ファイル冒頭)。点が欠けた形を黙って繕うと、
+        // 出題での見た目とタップ判定がデータと食い違う。
+        guard !country.rings.isEmpty,
+              country.rings.allSatisfy({ ring in
+                  ring.count >= 3 && ring.allSatisfy { $0.count >= 2 }
+              }),
               country.centroid.count >= 2,
-              let flatBbox = projection.rect(bbox: country.bbox)
+              let flatBbox = rect(fromWire: country.bbox, with: projection)
         else {
             throw WorldDataError.malformedCountry(code: country.code)
         }
@@ -255,11 +260,13 @@ nonisolated enum WorldDataLoader {
             nameJa: country.nameJa,
             kana: country.kana,
             stage: country.stage,
-            flatRings: flatRings,
+            flatRings: country.rings.map { ring in
+                ring.map { projection.point(lon: $0[0], lat: $0[1]) }
+            },
             flatCentroid: projection.point(lon: country.centroid[0], lat: country.centroid[1]),
             flatBbox: flatBbox,
             isInset: insetCodes.contains(country.code),
-            europeBbox: country.europeBbox.flatMap { projection.rect(bbox: $0) })
+            europeBbox: country.europeBbox.flatMap { rect(fromWire: $0, with: projection) })
     }
 
     /// 名前は `WorldStage.names`(写し)、所属は JSON、という組み立て。
@@ -274,8 +281,21 @@ nonisolated enum WorldDataLoader {
         }
     }
 
-    private static func flatten(_ rings: [[[Double]]],
-                                with projection: WorldProjection) -> [[CGPoint]] {
+    /// `[lon0, lat0, lon1, lat1]` の生配列 → 平面の CGRect。
+    /// 配列長の検査はワイヤ形式の都合なので、投影(純関数)ではなく
+    /// ローダ側で行う。
+    private static func rect(fromWire bbox: [Double],
+                             with projection: WorldProjection) -> CGRect? {
+        guard bbox.count >= 4 else { return nil }
+        return projection.rect(lonMin: bbox[0], latMin: bbox[1],
+                               lonMax: bbox[2], latMax: bbox[3])
+    }
+
+    /// 背景専用の寛容な投影。欠けた点や退化したリングは黙って落とす —
+    /// 背景は装飾で、1 リング欠けても海が少し広く見えるだけだから。
+    /// 出題対象になる国のリングは `makeCountry` が投影前に厳格検証して投げる。
+    private static func projectRings(_ rings: [[[Double]]],
+                                     with projection: WorldProjection) -> [[CGPoint]] {
         rings.compactMap { ring -> [CGPoint]? in
             let points = ring.compactMap { pair -> CGPoint? in
                 pair.count >= 2 ? projection.point(lon: pair[0], lat: pair[1]) : nil

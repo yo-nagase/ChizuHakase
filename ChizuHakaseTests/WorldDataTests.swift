@@ -202,10 +202,10 @@ struct WorldProjectionTests {
         #expect(WorldProjection(lonMin: 20, lonMax: 10, latMax: 50) == nil)
     }
 
-    @Test func 緯度経度bboxが平面の矩形に写る() throws {
+    @Test func 緯度経度の範囲が平面の矩形に写る() throws {
         let projection = try makeProjection()
-        // [lon0, lat0, lon1, lat1](lat1 が北)。北端が minY に来る。
-        let rect = try #require(projection.rect(bbox: [20, 30, 40, 45]))
+        // 北端(latMax)が minY に来る(y 反転)。
+        let rect = try #require(projection.rect(lonMin: 20, latMin: 30, lonMax: 40, latMax: 45))
         let topLeft = projection.point(lon: 20, lat: 45)
         let bottomRight = projection.point(lon: 40, lat: 30)
         #expect(abs(rect.minX - topLeft.x) < 1e-9)
@@ -213,5 +213,68 @@ struct WorldProjectionTests {
         #expect(abs(rect.maxX - bottomRight.x) < 1e-9)
         #expect(abs(rect.maxY - bottomRight.y) < 1e-9)
         #expect(rect.width > 0 && rect.height > 0)
+        // 裏返った範囲は矩形にしない
+        #expect(projection.rect(lonMin: 40, latMin: 30, lonMax: 20, latMax: 45) == nil)
+    }
+}
+
+/// 壊れた生成データを黙って読まないことの検証。`WorldDataError` が
+/// Equatable なのは、ここで `#expect(throws:)` の比較に使うため。
+struct WorldDataLoaderErrorTests {
+
+    /// 最小限の妥当な国 1 件ぶんの JSON 断片。引数で壊し方を選ぶ。
+    private func countryJSON(code: Int, stage: Int = 0,
+                             rings: String = "[[[0, 0], [2, 0], [2, 2], [0, 0]]]") -> String {
+        """
+        {"code": \(code), "nameJa": "テスト", "kana": "てすと", "stage": \(stage), \
+        "bbox": [0, 0, 2, 2], "centroid": [1.2, 0.7], "rings": \(rings)}
+        """
+    }
+
+    private func writeFixture(countries: [String]) throws -> URL {
+        let json = """
+        {"countries": [\(countries.joined(separator: ","))], "background": [], "insets": []}
+        """
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("WorldDataTests-\(UUID().uuidString)")
+            .appendingPathExtension("json")
+        try Data(json.utf8).write(to: url)
+        return url
+    }
+
+    @Test func 国コードの並びが壊れていたら投げる() throws {
+        // コード昇順・一意は生成器の契約。降順はその破れの最小例。
+        let url = try writeFixture(countries: [countryJSON(code: 20), countryJSON(code: 10)])
+        defer { try? FileManager.default.removeItem(at: url) }
+        #expect(throws: WorldDataLoader.WorldDataError.countriesNotSortedUniquely) {
+            _ = try WorldDataLoader.load(contentsOf: url)
+        }
+    }
+
+    @Test func 知らないステージ番号は投げる() throws {
+        let url = try writeFixture(countries: [countryJSON(code: 10, stage: 99)])
+        defer { try? FileManager.default.removeItem(at: url) }
+        #expect(throws: WorldDataLoader.WorldDataError.unknownStage(countryCode: 10, stage: 99)) {
+            _ = try WorldDataLoader.load(contentsOf: url)
+        }
+    }
+
+    @Test func 面にならないリングは投げる() throws {
+        // 2 点では面にならない。背景と違って国は黙って落とさない。
+        let url = try writeFixture(countries: [countryJSON(code: 10, rings: "[[[0, 0], [2, 2]]]")])
+        defer { try? FileManager.default.removeItem(at: url) }
+        #expect(throws: WorldDataLoader.WorldDataError.malformedCountry(code: 10)) {
+            _ = try WorldDataLoader.load(contentsOf: url)
+        }
+    }
+
+    @Test func 座標が欠けた点は投げる() throws {
+        // 経度だけの点([2])が混ざったリング。
+        let url = try writeFixture(
+            countries: [countryJSON(code: 10, rings: "[[[0, 0], [2, 0], [2], [0, 0]]]")])
+        defer { try? FileManager.default.removeItem(at: url) }
+        #expect(throws: WorldDataLoader.WorldDataError.malformedCountry(code: 10)) {
+            _ = try WorldDataLoader.load(contentsOf: url)
+        }
     }
 }
