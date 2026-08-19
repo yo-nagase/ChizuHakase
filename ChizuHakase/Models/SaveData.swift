@@ -126,7 +126,9 @@ nonisolated struct SaveData: Codable, Sendable, Equatable {
     // 日本版の既存呼び出し口。世界版の書き込み口は P5 で開ける。
     // Thin get/set forwards onto `atlases["japan"]`, so the views, SaveStore
     // and GameRules paths that predate the namespace keep compiling and
-    // behaving identically.
+    // behaving identically. Every write through them is a get-copy, mutate,
+    // set-back of one atlas entry — fine at this scale (a few hundred entries
+    // at most, written at stage end, never per question).
 
     var mastery: [Int: Int] {
         get { atlases[Self.japanAtlas]?.mastery ?? [:] }
@@ -238,6 +240,12 @@ nonisolated struct SaveData: Codable, Sendable, Equatable {
             }
             atlases[Self.japanAtlas] = japan
         }
+
+        // Content lifts from version 8 on belong HERE, running on `atlases`
+        // values. The flat fields above only ever carry ≤6-shaped japan data,
+        // so a new `if stored < 8` in the lift block up there could never
+        // reach what a v7-native file stored — and would pass the whole test
+        // suite while missing it.
     }
 
     /// Version 3's five-step ladder lands by place on the current one. Counts

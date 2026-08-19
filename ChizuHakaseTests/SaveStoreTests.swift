@@ -702,6 +702,40 @@ struct SaveMigrationTests {
         #expect(data.atlases[SaveData.japanAtlas]?.cards == ["01-1": 10])
     }
 
+    /// A file carrying both shapes — a populated japan namespace AND stale
+    /// flat fields — keeps the namespaced value wherever the two collide, and
+    /// still rescues entries only the flat shape knows. This pins the merge
+    /// direction of every fold: flipping any `{ current, _ in current }` to
+    /// last-wins would pass the rest of the suite while walking a child's
+    /// namespaced progress backwards.
+    @Test func namespacedValuesBeatStaleFlatFieldsOnEveryFold() throws {
+        let data = try load("""
+        {"version":7,
+         "atlases":{"japan":{
+            "mastery":{"1":5},
+            "cards":{"01-1":10},
+            "rainbow":["01-1"],
+            "streaks":{"1":6},
+            "records":{"findOnMap":{"0":{"stars":3,"score":900}}}}},
+         "mastery":{"1":2,"13":4},
+         "cards":{"01-1":3,"13-2":1},
+         "rainbow":["13-2"],
+         "streaks":{"1":1,"13":2},
+         "records":{"findOnMap":{"0":{"stars":1,"score":100},
+                                 "1":{"stars":2,"score":400}}}}
+        """)
+        let japan = try #require(data.atlases[SaveData.japanAtlas])
+        #expect(japan.mastery == [1: 5, 13: 4])
+        #expect(japan.cards == ["01-1": 10, "13-2": 1])
+        #expect(japan.rainbow == ["01-1", "13-2"],
+                "rainbow is a one-way latch: a union, so both survive")
+        #expect(japan.streaks == [1: 6, 13: 2])
+        #expect(japan.records[QuizMode.findOnMap.rawValue]?[0] == StageRecord(stars: 3, score: 900),
+                "a colliding record keeps the namespaced best")
+        #expect(japan.records[QuizMode.findOnMap.rawValue]?[1] == StageRecord(stars: 2, score: 400),
+                "a record only the flat shape knows is rescued")
+    }
+
     /// The written file carries the namespaced form only. Writing the legacy
     /// top-level fields too would leave every future read two sources of truth
     /// to reconcile — the same reason `stages` is read but never written.
