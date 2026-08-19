@@ -607,4 +607,138 @@ struct SaveMigrationTests {
         #expect(data.settings.musicEnabled)
         #expect(data.settings.soundEnabled == false)
     }
+
+    // MARK: - Version 7: the atlas namespace
+
+    /// 6 → 7 moves the five per-atlas fields under `atlases["japan"]`.
+    /// Everything a version 6 file recorded was earned on the Japan map, so
+    /// that is where all of it lands — values untouched, world not invented.
+    @Test func aVersionSixFileLandsIntactInTheJapanAtlas() throws {
+        let data = try load("""
+        {"version":6,
+         "mastery":{"1":5,"13":2},
+         "cards":{"01-1":10,"13-2":3},
+         "rainbow":["01-1"],
+         "streaks":{"1":4},
+         "records":{"findOnMap":{"0":{"stars":3,"score":730}},
+                    "nameIt":{"3":{"stars":2,"score":400}}},
+         "settings":{"soundEnabled":false}}
+        """)
+        #expect(data.version == SaveData.currentVersion)
+        let japan = try #require(data.atlases[SaveData.japanAtlas])
+        #expect(japan.mastery == [1: 5, 13: 2])
+        #expect(japan.cards == ["01-1": 10, "13-2": 3])
+        #expect(japan.rainbow == ["01-1"])
+        #expect(japan.streaks == [1: 4])
+        #expect(japan.records[QuizMode.findOnMap.rawValue]?[0] == StageRecord(stars: 3, score: 730))
+        #expect(japan.records[QuizMode.nameIt.rawValue]?[3] == StageRecord(stars: 2, score: 400))
+        #expect(japan.askedInChallenge.isEmpty,
+                "a challenge history cannot predate the world atlas")
+        #expect(data.atlases[SaveData.worldAtlas] == nil,
+                "a world nobody has visited is absent, not fabricated")
+        #expect(data.settings.soundEnabled == false)
+    }
+
+    /// Chain integrity: a version 1 file must still walk every lift — キラ to
+    /// gold, flat stages to map-mode records, mastery to the stretched ladder —
+    /// and the result of that walk is what lands in the japan namespace.
+    @Test func aVersionOneFileWalksTheWholeChainIntoTheJapanAtlas() throws {
+        let data = try load("""
+        {"version":1,"mastery":{"1":3},"cards":{"01-1":2},
+         "stages":{"0":{"stars":3,"score":730}}}
+        """)
+        let japan = try #require(data.atlases[SaveData.japanAtlas])
+        #expect(japan.mastery[1] == GameRules.maxMastery)
+        #expect(japan.cards["01-1"] == GameRules.maxCardStars)
+        #expect(japan.records[QuizMode.findOnMap.rawValue]?[0] == StageRecord(stars: 3, score: 730))
+        #expect(data.version == SaveData.currentVersion)
+    }
+
+    /// A version 7 file is already the current shape: encode → decode must be
+    /// the identity, including a world atlas with a challenge history.
+    @Test func aVersionSevenFileRoundTripsIdentically() throws {
+        var data = SaveData()
+        data.mastery = [1: 3]
+        data.cards = ["01-1": 5]
+        var world = AtlasSave()
+        world.mastery = [840: 2]
+        world.cards = ["840-1": 1]
+        world.askedInChallenge = [QuizMode.findOnMap.rawValue: [840, 392]]
+        data.atlases[SaveData.worldAtlas] = world
+
+        let reloaded = try JSONDecoder().decode(
+            SaveData.self, from: JSONEncoder().encode(data))
+        #expect(reloaded == data)
+        #expect(reloaded.atlases[SaveData.worldAtlas]?
+            .askedInChallenge[QuizMode.findOnMap.rawValue] == [840, 392])
+    }
+
+    /// A file from a future build keeps its own number and its own content —
+    /// this build must not relabel it or invent anything into it.
+    @Test func aFutureFileKeepsItsNumberAndItsContent() throws {
+        let data = try load("""
+        {"version":99,
+         "atlases":{"japan":{"mastery":{"1":5}},
+                    "world":{"cards":{"840-1":1}}},
+         "settings":{"soundEnabled":false}}
+        """)
+        #expect(data.version == 99)
+        #expect(data.atlases[SaveData.japanAtlas]?.mastery == [1: 5])
+        #expect(data.atlases[SaveData.worldAtlas]?.cards == ["840-1": 1])
+
+        let reloaded = try JSONDecoder().decode(
+            SaveData.self, from: JSONEncoder().encode(data))
+        #expect(reloaded.version == 99, "writing it back must not lower the number")
+        #expect(reloaded.atlases[SaveData.worldAtlas]?.cards == ["840-1": 1])
+    }
+
+    /// A shipped version 6 build that opened a version 7 file keeps the number
+    /// (that rule shipped with it) but writes its own flat shape under it. What
+    /// it recorded there is real play, so a later read folds it into japan
+    /// rather than ignoring keys the current shape no longer writes.
+    @Test func aLegacyShapeWrittenUnderAFutureNumberStillLandsInJapan() throws {
+        let data = try load(#"{"version":7,"mastery":{"1":5},"cards":{"01-1":10}}"#)
+        #expect(data.atlases[SaveData.japanAtlas]?.mastery == [1: 5])
+        #expect(data.atlases[SaveData.japanAtlas]?.cards == ["01-1": 10])
+    }
+
+    /// The written file carries the namespaced form only. Writing the legacy
+    /// top-level fields too would leave every future read two sources of truth
+    /// to reconcile — the same reason `stages` is read but never written.
+    @Test func versionSevenWritesOnlyTheNamespacedForm() throws {
+        var data = SaveData()
+        data.mastery = [1: 2]
+        data.records[QuizMode.findOnMap.rawValue] = [0: StageRecord(stars: 1, score: 1)]
+        let object = try JSONSerialization.jsonObject(
+            with: JSONEncoder().encode(data))
+        let top = try #require(object as? [String: Any])
+        #expect(Set(top.keys) == ["version", "atlases", "settings"])
+    }
+
+    /// The five legacy properties are thin forwards onto `atlases["japan"]`:
+    /// a write through either side must be visible from the other, and must
+    /// not leak into the world atlas.
+    @Test func theJapanForwardsReadAndWriteTheJapanAtlas() throws {
+        var data = SaveData()
+        #expect(data.atlases[SaveData.japanAtlas] == nil)
+
+        data.mastery[13] = 4
+        #expect(data.atlases[SaveData.japanAtlas]?.mastery == [13: 4])
+
+        data.atlases[SaveData.japanAtlas]?.mastery[13] = 5
+        #expect(data.mastery == [13: 5])
+        #expect(data.masteryLevel(of: 13) == 5)
+
+        data.cards["01-1"] = 3
+        data.rainbow.insert("01-1")
+        data.streaks[13] = 2
+        data.records[QuizMode.findOnMap.rawValue, default: [:]][0] = StageRecord(stars: 3, score: 100)
+        let japan = try #require(data.atlases[SaveData.japanAtlas])
+        #expect(japan.cards == ["01-1": 3])
+        #expect(japan.rainbow == ["01-1"])
+        #expect(japan.streaks == [13: 2])
+        #expect(japan.records[QuizMode.findOnMap.rawValue]?[0] == StageRecord(stars: 3, score: 100))
+        #expect(data.atlases[SaveData.worldAtlas] == nil,
+                "japan writes must not leak into the world atlas")
+    }
 }
