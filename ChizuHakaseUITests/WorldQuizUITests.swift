@@ -99,6 +99,58 @@ final class WorldQuizUITests: XCTestCase {
                        "japan's 12-1 leaked into the world result screen")
     }
 
+    /// 「なまえを あてる」 on the world (P6 Task 5): the four kana choices are
+    /// countries of the asked stage, a wrong tap greys its name out without
+    /// removing it, and the right one advances. The rules are japan's —
+    /// only the stage codes changed books (unit: QuizModeTests 世界のなまえあて).
+    func testWorldNameItOffersStageChoicesAndGreysOutMisses() throws {
+        app.launchArguments = ["-resetSave", "-atlas", "world", "-nameIt",
+                               "-startAt", "quiz:15"]
+        app.launch()
+        XCTAssertTrue(app.staticTexts["12 もんちゅう 1 もんめ"].waitForExistence(timeout: 10),
+                      "the world nameIt quiz never appeared")
+        XCTAssertTrue(app.staticTexts["ひがしアジア"].exists,
+                      "quiz:15 did not resolve against the world's stages")
+        XCTAssertTrue(app.staticTexts["なまえを えらんでね"].exists,
+                      "the nameIt prompt is missing — did -nameIt not take?")
+
+        // The test cannot read which choice is right (the question is the
+        // ringed shape, deliberately unnamed), so it taps through the offered
+        // names: every non-advancing tap must leave its button dimmed and
+        // unpressable, and exactly one tap advances. One question usually
+        // shows both behaviours; a lucky first tap moves the miss assertions
+        // to the next question.
+        var sawAMiss = false
+        for question in 1...3 {
+            // The four offered names, read off the buttons: every one must be
+            // a country of ひがしアジア, in the reading a child is shown.
+            let offered = Self.eastAsiaKanaNames.filter {
+                app.buttons[$0].exists && app.buttons[$0].isEnabled
+            }
+            XCTAssertEqual(offered.count, 4,
+                           "expected four kana choices from the stage's countries")
+
+            var advanced = false
+            for name in offered {
+                let button = app.buttons[name]
+                button.tap()
+                if app.staticTexts["12 もんちゅう \(question + 1) もんめ"]
+                    .waitForExistence(timeout: 3) {
+                    advanced = true
+                    break
+                }
+                XCTAssertTrue(button.exists,
+                              "\(name) disappeared instead of greying out")
+                XCTAssertFalse(button.isEnabled,
+                               "\(name) stayed pressable after being ruled out")
+                sawAMiss = true
+            }
+            XCTAssertTrue(advanced,
+                          "no choice advanced question \(question) — the answer was not offered")
+            if sawAMiss { break }
+        }
+    }
+
     /// The world my-map: the world's own countries, the world's own tally.
     func testWorldMyMapShowsTheWorldBook() {
         app.launchArguments = ["-resetSave", "-atlas", "world", "-startAt", "myMap"]
@@ -179,6 +231,12 @@ final class WorldQuizUITests: XCTestCase {
     /// The six written names of ひがしアジア, as WorldShapes.json carries them.
     private static let eastAsiaNames = [
         "中華人民共和国", "台湾", "日本", "北朝鮮", "大韓民国", "モンゴル国",
+    ]
+
+    /// The same six as their readings — the form the choice buttons show a
+    /// child (こども表記), and so the labels the nameIt test reads.
+    private static let eastAsiaKanaNames = [
+        "ちゅうごく", "たいわん", "にほん", "きたちょうせん", "かんこく", "もんごる",
     ]
 
     /// きたアフリカ's six, same written form as the map's accessibility labels.

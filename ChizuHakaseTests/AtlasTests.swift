@@ -386,6 +386,12 @@ struct AtlasTests {
         #expect(vocabulary.count == 167 * 2)
         #expect(vocabulary.contains("にほん"))
         #expect(vocabulary.contains("日本"))
+        // ゆれ吸収の 2 系(P6 Task 5): 短いよみと正式表記の両方が
+        // contextualStrings に乗る — 「あめりか」「アメリカ合衆国」のどちらで
+        // 認識されても照合器(PrefectureNameMatcher)側に受理形がある。
+        #expect(vocabulary.contains("あめりか"))
+        #expect(vocabulary.contains("アメリカ合衆国"))
+        #expect(vocabulary.allSatisfy { !$0.isEmpty })
     }
 
     // MARK: - 抽選方針(設計 §5: 日本との差分は抽選だけ、データが運ぶ)
