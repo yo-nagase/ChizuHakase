@@ -48,15 +48,24 @@ struct QuizView: View {
         .toolbarBackground(.hidden, for: .navigationBar)
         .task {
             guard quiz == nil else { return }
+            // The atlas's own namespace: japan's cards must not shadow the
+            // world's (codes and ids overlap across the two books).
+            let slice = app.save.data.atlas(atlas.saveKey)
             let model = QuizViewModel(stage: stage,
                                       mode: quizMode,
                                       mapData: atlas.mapData,
                                       catalog: atlas.cards,
-                                      // The atlas's own namespace: japan's cards
-                                      // must not shadow the world's (codes and
-                                      // ids overlap across the two books).
-                                      ownedCards: app.save.data.atlas(atlas.saveKey).cards,
-                                      drawPolicy: atlas.drawPolicy)
+                                      ownedCards: slice.cards,
+                                      drawPolicy: atlas.drawPolicy,
+                                      // The sampling challenge's unasked-first
+                                      // memory, per mode (world design §8).
+                                      // For every non-sampling stage the slice
+                                      // holds nothing here and the VM reads
+                                      // nothing — passing it unconditionally
+                                      // is what keeps this view free of any
+                                      // which-stage branch.
+                                      askedInChallenge:
+                                        slice.askedInChallenge[quizMode.rawValue] ?? [])
             quiz = model
             // The first question was the only one never read aloud: speech
             // fired on advancing to the *next* question, and the first question

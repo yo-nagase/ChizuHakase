@@ -103,33 +103,52 @@ struct AtlasTests {
         }
     }
 
-    @Test func 世界アトラスのステージが18面で全国を尽くす() throws {
+    @Test func 世界アトラスの地方18面が全国を尽くしチャレンジが19面目に立つ() throws {
         let world = try Self.world.get()
         let atlas = Atlas.world(from: world)
-        #expect(atlas.stages.count == 18)
-        #expect(atlas.stages.map(\.index) == Array(0...17))
+        #expect(atlas.stages.count == 19)
+        #expect(atlas.stages.map(\.index) == Array(0...18))
         for (worldStage, stage) in zip(world.stages, atlas.stages) {
             #expect(stage.name == worldStage.name, "stage \(stage.index)")
             #expect(stage.kanjiName == worldStage.kanjiName, "stage \(stage.index)")
             #expect(stage.codes == worldStage.codes, "stage \(stage.index)")
         }
-        let allCodes = atlas.stages.flatMap(\.codes)
-        #expect(allCodes.count == 167)
-        #expect(Set(allCodes).count == allCodes.count, "国が複数ステージに重複")
-        #expect(Set(allCodes) == Set(atlas.mapData.prefectures.map(\.code)))
+        // 地方 18 面が全国を過不足なく尽くす(チャレンジは同じ 167 の再掲)。
+        let regionalCodes = atlas.stages.dropLast().flatMap(\.codes)
+        #expect(regionalCodes.count == 167)
+        #expect(Set(regionalCodes).count == regionalCodes.count, "国が複数ステージに重複")
+        #expect(Set(regionalCodes) == Set(atlas.mapData.prefectures.map(\.code)))
+        // 19 面目は本の全収録国をコード昇順で束ねる。
+        #expect(atlas.stages.last?.codes == atlas.mapData.prefectures.map(\.code))
     }
 
     /// `Stage.isChallenge` は stored で既定 false(P7 Task 4 — 「47 県か」の
-    /// 導出をやめた)。WorldStage → Stage の変換は既定のまま通すので、世界の
-    /// 18 面は設計どおり全ステージが 1 国 2 回出題になる。総合ステージだけが
-    /// 明示的に true を名乗る(ワールドチャレンジは Task 5)。
-    @Test func 世界のステージはすべて2回出題の地方ステージ() throws {
+    /// 導出をやめた)。JSON 由来の 18 面は既定のまま通り、設計どおり全部が
+    /// 1 国 2 回出題の地方ステージになる。
+    @Test func 世界の地方ステージはすべて2回出題() throws {
         let atlas = try worldAtlas()
-        for stage in atlas.stages {
+        for stage in atlas.stages where stage.index != WorldStage.challengeIndex {
             #expect(!stage.isChallenge, "stage \(stage.index)")
             #expect(stage.asksEachTwice, "stage \(stage.index)")
             #expect(stage.questionCount == stage.codes.count * 2, "stage \(stage.index)")
         }
+    }
+
+    /// 総合ステージだけが isChallenge を名乗る — VM/ステージ突き合わせテスト
+    /// (QuizViewModelTests)が捕まえられない逆方向(19 面目が false のまま
+    /// 334 問で自己整合する壊れ方)を、こちら側で塞ぐピン。
+    /// ★名前は仮文言(ユーザーサインオフ待ち — 「ぜんこく チャレンジ」と同型)。
+    @Test func 世界の19面目だけがチャレンジを名乗る() throws {
+        let atlas = try worldAtlas()
+        let challenges = atlas.stages.filter(\.isChallenge)
+        #expect(challenges.map(\.index) == [WorldStage.challengeIndex])
+        let challenge = try #require(challenges.first)
+        #expect(challenge.name == "せかい チャレンジ")
+        #expect(challenge.kanjiName == "世界チャレンジ")
+        #expect(challenge.codes.count == 167)
+        #expect(!challenge.asksEachTwice)
+        #expect(challenge.questionCount == GameRules.challengeQuestionCount,
+                "the sitting is \(challenge.questionCount) questions, not 47")
     }
 
     // MARK: - 地域ズーム(P7 Task 4 — ボタンの地理も Atlas が運ぶ)
@@ -173,17 +192,20 @@ struct AtlasTests {
         #expect(atlas.stageShelves == [Atlas.StageShelf(title: nil, stages: Stage.all)])
     }
 
-    /// 見出しは stage index 区間から機械的に引く
-    /// (0–2 アメリカ / 3–6 ヨーロッパ / 7–11 アフリカ / 12–16 アジア / 17 オセアニア)。
-    @Test func 世界の棚は5大陸の見出しで区切られる() throws {
+    /// 見出しは stage index 区間から機械的に引く(0–2 アメリカ / 3–6 ヨーロッパ /
+    /// 7–11 アフリカ / 12–16 アジア / 17 オセアニア / 18 そうごう)。
+    /// チャレンジは「余り」枝(title: nil)ではなく自分の見出しの下に立つ —
+    /// 余り枝はデータ食い違いの診断用で、正規ステージの置き場ではない。
+    @Test func 世界の棚は5大陸とそうごうの見出しで区切られる() throws {
         let atlas = try worldAtlas()
         #expect(atlas.sections == WorldStage.sections)
         let shelves = atlas.stageShelves
         #expect(shelves.map(\.title)
-                == ["アメリカ", "ヨーロッパ", "アフリカ", "アジア", "オセアニア"])
+                == ["アメリカ", "ヨーロッパ", "アフリカ", "アジア", "オセアニア",
+                    "そうごう"])
         #expect(shelves.map { $0.stages.map(\.index) }
                 == [[0, 1, 2], [3, 4, 5, 6], [7, 8, 9, 10, 11],
-                    [12, 13, 14, 15, 16], [17]])
+                    [12, 13, 14, 15, 16], [17], [18]])
         // 棚に組み替えてもステージは 1 面も消えず、順も変わらない。
         #expect(shelves.flatMap(\.stages) == atlas.stages)
     }
@@ -497,7 +519,8 @@ struct AtlasTests {
         #expect(japanAtlas.stage(at: 3)?.name == "きんき")
         #expect(try worldAtlas().stage(at: 3)?.name == "きたヨーロッパ")
         #expect(try worldAtlas().stage(at: 15)?.name == "ひがしアジア")
-        #expect(try worldAtlas().stage(at: 18) == nil)
+        #expect(try worldAtlas().stage(at: 18)?.name == "せかい チャレンジ")
+        #expect(try worldAtlas().stage(at: 19) == nil)
     }
 
     // MARK: - 読み込み失敗(CLAUDE.md §11: 握って初期状態へ)

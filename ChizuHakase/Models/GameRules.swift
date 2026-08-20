@@ -124,6 +124,36 @@ nonisolated enum GameRules {
         return order
     }
 
+    /// One challenge sitting's worth of regions where the book holds more
+    /// codes than the sitting asks — the world challenge's draw (design §8).
+    ///
+    /// Coverage first, randomness inside it — the same principle as the card
+    /// draw's unowned-first: the codes not yet asked in this mode's challenge
+    /// are shuffled and taken up to `count`, and only the shortfall is filled
+    /// from the already-asked pool. About four sittings therefore visit every
+    /// recorded country; `SaveStore.applyStageResult` empties the history at
+    /// that point so the next lap starts fresh.
+    ///
+    /// The combined pick is shuffled once more, so a fill-in sitting does not
+    /// end on a visible block of countries the child has seen before — the
+    /// seam between the two pools must not survive into the asking order.
+    ///
+    /// `asked` entries that are not in `codes` (a country that left the book,
+    /// or a hand-edited save) are ignored: the walk is over `codes`, so stale
+    /// history can only shrink the unasked pool it actually names. Returns
+    /// exactly `min(count, codes.count)` distinct codes — `codes` lists each
+    /// region once (the same contract `questionOrder` relies on).
+    static func challengeSelection(codes: [Int], asked: Set<Int>, count: Int,
+                                   using rng: inout AnyRandomNumberGenerator) -> [Int] {
+        let unasked = codes.filter { !asked.contains($0) }.shuffled(using: &rng)
+        var picked = Array(unasked.prefix(count))
+        if picked.count < count {
+            let seen = codes.filter { asked.contains($0) }.shuffled(using: &rng)
+            picked.append(contentsOf: seen.prefix(count - picked.count))
+        }
+        return picked.shuffled(using: &rng)
+    }
+
     /// Breathing room added around the fitted map, as a fraction of its own
     /// size on each side, plus a flat inset so coastal prefectures never touch
     /// the bezel.

@@ -9,12 +9,27 @@ struct QuizViewModelTests {
 
     private func makeQuiz(stageIndex: Int = 0,
                           owned: [String: Int] = [:],
+                          asked: Set<Int> = [],
                           seed: UInt64 = 1) -> QuizViewModel {
         QuizViewModel(stage: Stage.all[stageIndex],
                       mapData: MapDataTests.map,
                       catalog: MapDataTests.catalog,
                       ownedCards: owned,
+                      askedInChallenge: asked,
                       generator: AnyRandomNumberGenerator(SeededGenerator(seed: seed)))
+    }
+
+    /// 世界アトラス上の VM(ワールドチャレンジと、その対照用の地方ステージ)。
+    private func makeWorldQuiz(stageIndex: Int,
+                               asked: Set<Int> = [],
+                               seed: UInt64 = 1) throws -> QuizViewModel {
+        let atlas = Atlas.world(from: try QuizModeTests.world.get())
+        return QuizViewModel(stage: try #require(atlas.stage(at: stageIndex)),
+                             mapData: atlas.mapData,
+                             catalog: atlas.cards,
+                             drawPolicy: atlas.drawPolicy,
+                             askedInChallenge: asked,
+                             generator: AnyRandomNumberGenerator(SeededGenerator(seed: seed)))
     }
 
     /// Answer every question correctly on the first try.
@@ -101,6 +116,60 @@ struct QuizViewModelTests {
         #expect(quiz.order.count == Set(quiz.order).count)
     }
 
+    // MARK: - 世界チャレンジ(設計 §8: 毎回 47 問・未出題優先)
+
+    /// 167 カ国の総合ステージは 47 問の 1 回ぶんに切られ、1 国 1 回、
+    /// 全部この本の国。星は訊いた 47 カ国を分母に判定する(毎回 47 問だから
+    /// ベスト比較が成立する — §8)。
+    @Test func 世界チャレンジは47問を重複なく訊く() throws {
+        let quiz = try makeWorldQuiz(stageIndex: WorldStage.challengeIndex)
+        #expect(quiz.questionCount == GameRules.challengeQuestionCount)
+        #expect(Set(quiz.order).count == GameRules.challengeQuestionCount,
+                "a country was drawn twice into one sitting")
+        #expect(Set(quiz.order).isSubset(of: Set(quiz.stage.codes)))
+        #expect(quiz.prefectureCount == GameRules.challengeQuestionCount)
+    }
+
+    /// 抽選は履歴を見る: まだ出していない国が 1 回ぶんに満たなければ、
+    /// その全部が必ずこの回に入る(challengeSelection の配線の確認)。
+    @Test func 世界チャレンジは未出題の国を先に訊く() throws {
+        let all = Atlas.world(from: try QuizModeTests.world.get())
+            .mapData.prefectures.map(\.code)
+        let unasked = Set(all.suffix(30))
+        let quiz = try makeWorldQuiz(stageIndex: WorldStage.challengeIndex,
+                                     asked: Set(all).subtracting(unasked))
+        #expect(unasked.isSubset(of: Set(quiz.order)),
+                "unasked countries were left behind: \(unasked.subtracting(quiz.order).sorted())")
+    }
+
+    /// 日本は抽選経路に乗らない: ぜんこく チャレンジは履歴に何を渡されても
+    /// 全 47 県を 1 回ずつ訊く(47 は challengeQuestionCount を「超えて」
+    /// いないので、min もそのまま・順序も従来の全県シャッフルのまま)。
+    @Test func 日本のぜんこくチャレンジは履歴に関わらず全47県を訊く() {
+        let quiz = makeQuiz(stageIndex: 6, asked: Set(1...40))
+        #expect(Set(quiz.order) == Set(1...47))
+        #expect(quiz.order.count == 47)
+    }
+
+    /// `askedCodes` は抽選で組んだ回だけが運ぶ: 世界チャレンジは訊いた 47 を、
+    /// 日本のぜんこくと世界の地方ステージは空を返す — 空のままなのが、
+    /// 日本の save slice の askedInChallenge が永遠に空である仕組みそのもの。
+    @Test func 抽選で組んだ回だけ結果がaskedCodesを運ぶ() throws {
+        let challenge = try makeWorldQuiz(stageIndex: WorldStage.challengeIndex)
+        playPerfectly(challenge)
+        #expect(challenge.makeResult().askedCodes == Set(challenge.order))
+        #expect(challenge.makeResult().askedCodes.count
+                == GameRules.challengeQuestionCount)
+
+        let japan = makeQuiz(stageIndex: 6)
+        playPerfectly(japan)
+        #expect(japan.makeResult().askedCodes.isEmpty)
+
+        let continent = try makeWorldQuiz(stageIndex: 15)
+        playPerfectly(continent)
+        #expect(continent.makeResult().askedCodes.isEmpty)
+    }
+
     /// An immediate repeat tests what is still under the child's finger.
     @Test func aPrefectureIsNeverAskedTwiceInARow() {
         for seed in UInt64(1)...20 {
@@ -139,6 +208,7 @@ struct QuizViewModelTests {
                     mapData: atlas.mapData,
                     catalog: atlas.cards,
                     drawPolicy: atlas.drawPolicy,
+                    askedInChallenge: [],
                     generator: AnyRandomNumberGenerator(SeededGenerator(seed: 1)))
                 #expect(quiz.questionCount == stage.questionCount,
                         "\(atlas.saveKey) stage \(stage.index)")

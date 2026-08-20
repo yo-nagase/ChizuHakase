@@ -13,6 +13,7 @@ struct QuizModeTests {
                       mode: mode,
                       mapData: MapDataTests.map,
                       catalog: MapDataTests.catalog,
+                      askedInChallenge: [],
                       generator: AnyRandomNumberGenerator(SeededGenerator(seed: seed)))
     }
 
@@ -131,6 +132,7 @@ struct QuizModeTests {
                              mapData: atlas.mapData,
                              catalog: atlas.cards,
                              drawPolicy: atlas.drawPolicy,
+                             askedInChallenge: [],
                              generator: AnyRandomNumberGenerator(SeededGenerator(seed: seed)))
     }
 

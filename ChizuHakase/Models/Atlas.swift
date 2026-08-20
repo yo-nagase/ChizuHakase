@@ -212,12 +212,13 @@ nonisolated struct Atlas: Sendable {
                        rings: country.flatRings,
                        frameBbox: country.europeBbox)
         }
-        // isNationwide(== 47 県)と地域ズームの 2 つの罠は P7 Task 4 で
-        // 解決済み: 総合ステージは stored な `Stage.isChallenge` になり
-        // (ここでは既定 false のまま通す — 18 面は全部 2 回出題の地方
-        // ステージで、ワールドチャレンジだけが Task 5 で明示的に名乗る)、
+        // isNationwide(== 47 県)と地域ズームの 2 つの罠は P7 Task 4/5 で
+        // 解決済み: 総合ステージは stored な `Stage.isChallenge` になり、
+        // JSON 由来の 18 面は既定 false のまま通る(全部 2 回出題の地方
+        // ステージ)。isChallenge: true を名乗るのは下で束ねる 19 面目
+        // 「せかい チャレンジ」だけで、この変換が明示的に渡す。
         // ズームボタンの県コードは `Atlas.regionZooms` が運ぶ(世界は空)。
-        let stages = world.stages.map { stage in
+        let regionalStages = world.stages.map { stage in
             Stage(index: stage.index,
                   name: stage.name,
                   kanjiName: stage.kanjiName,
@@ -231,8 +232,10 @@ nonisolated struct Atlas: Sendable {
             // View の「有無」判定が平面と食い違わないようにする。
             // ローダ経由ではここに届かない(国が 0 件なら makeProjection が
             // degenerateExtent を先に投げる)— `world(from:)` を直接組んだ
-            // WorldMapData のための防衛線。
-            return Atlas(mapData: .empty, globe: nil, stages: stages,
+            // WorldMapData のための防衛線。チャレンジもここには足さない:
+            // 収録国の無い本に 0 問の総合ステージを立てても、棚に「遊べない
+            // 面」が増えるだけだから(globe を落とすのと同じ判断)。
+            return Atlas(mapData: .empty, globe: nil, stages: regionalStages,
                          sections: WorldStage.sections, regionZooms: [],
                          cards: cards, drawPolicy: .flagFirstSilverGate,
                          saveKey: SaveData.worldAtlas,
@@ -249,8 +252,18 @@ nonisolated struct Atlas: Sendable {
                                       bbox: boundingBox(of: shape.flatRings))
                               },
                               prefectures: prefectures)
+        // 19 面目「せかい チャレンジ」(設計 §8、P7 Task 5)。本の全収録国を
+        // 1 面に束ね、isChallenge はこの 1 行だけが明示的に名乗る。codes は
+        // 全 167 だが 1 回の出題は 47 問 — どの国が入るかは questionCount では
+        // なく抽選(GameRules.challengeSelection)の仕事。
+        let challenge = Stage(index: WorldStage.challengeIndex,
+                              name: WorldStage.challengeName,
+                              kanjiName: WorldStage.challengeKanjiName,
+                              codes: prefectures.map(\.code),
+                              isChallenge: true)
         // 国旗カードが銀になるまでオリジナルを配らないゲート(設計 §5)。
-        return Atlas(mapData: mapData, globe: world.globe, stages: stages,
+        return Atlas(mapData: mapData, globe: world.globe,
+                     stages: regionalStages + [challenge],
                      sections: WorldStage.sections, regionZooms: [],
                      cards: cards, drawPolicy: .flagFirstSilverGate,
                      saveKey: SaveData.worldAtlas,

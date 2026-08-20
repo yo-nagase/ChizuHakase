@@ -207,6 +207,72 @@ struct GameRulesTests {
         #expect(small.questionCount == 10)
     }
 
+    // MARK: - Challenge draw (世界チャレンジの未出題優先 — 設計 §8)
+
+    private func seededRNG(_ seed: UInt64 = 1) -> AnyRandomNumberGenerator {
+        AnyRandomNumberGenerator(SeededGenerator(seed: seed))
+    }
+
+    /// 網羅を先に、ランダムはその中で: 未出題が 1 回ぶんに足りるあいだは
+    /// 出題済みが 1 国も混ざらない。
+    @Test func 未出題が足りるなら出題済みは選ばれない() {
+        var rng = seededRNG()
+        let asked = Set(1...100)
+        let picked = GameRules.challengeSelection(
+            codes: Array(1...167), asked: asked, count: 47, using: &rng)
+        #expect(picked.count == 47)
+        #expect(Set(picked).count == 47, "a code was drawn twice")
+        #expect(Set(picked).isDisjoint(with: asked),
+                "an already-asked code slipped into a full unasked pool")
+    }
+
+    /// 残りが 1 回ぶんに満たなくなったら、その残り全部が必ず入る —
+    /// 一巡の最後の国が抽選運に取り残されない。不足分だけ出題済みで埋める。
+    @Test func 未出題が足りないときは全未出題が必ず入る() {
+        var rng = seededRNG()
+        let asked = Set(1...140)
+        let unasked = Set(141...167)
+        let picked = GameRules.challengeSelection(
+            codes: Array(1...167), asked: asked, count: 47, using: &rng)
+        #expect(picked.count == 47)
+        #expect(Set(picked).count == 47)
+        #expect(unasked.isSubset(of: Set(picked)),
+                "an unasked country was left behind: \(unasked.subtracting(picked).sorted())")
+        #expect(Set(picked).subtracting(unasked).isSubset(of: asked))
+    }
+
+    /// 収録数が 1 回ぶんに満たない本では全収録を 1 回ずつ — min の側の釘。
+    @Test func 収録がcountに満たなければ全部を1回ずつ() {
+        var rng = seededRNG()
+        let picked = GameRules.challengeSelection(
+            codes: Array(1...10), asked: [3, 4], count: 47, using: &rng)
+        #expect(Set(picked) == Set(1...10))
+        #expect(picked.count == 10)
+    }
+
+    /// もう本に居ない国の履歴(将来の収録変更・手で触られたセーブ)は
+    /// 静かに無視される — 歩くのは codes の上だけ。
+    @Test func 本に無いコードの履歴は無視される() {
+        var rng = seededRNG()
+        let picked = GameRules.challengeSelection(
+            codes: Array(1...5), asked: [3, 99, 100], count: 5, using: &rng)
+        #expect(Set(picked) == Set(1...5))
+    }
+
+    /// シードが同じなら選抜も並びも同じ — テストと再現の土台。
+    /// 並びもシャッフルされる(未出題→補充の境目が並びに残らない)ことは
+    /// 「昇順のままでない」ことで軽く釘打つ。
+    @Test func 抽選はシードに対して決定的() {
+        var a = seededRNG(42)
+        var b = seededRNG(42)
+        let first = GameRules.challengeSelection(
+            codes: Array(1...167), asked: Set(1...140), count: 47, using: &a)
+        let second = GameRules.challengeSelection(
+            codes: Array(1...167), asked: Set(1...140), count: 47, using: &b)
+        #expect(first == second)
+        #expect(first != first.sorted(), "the sitting is not shuffled")
+    }
+
     // MARK: - Mastery
 
     @Test func masteryRisesOnlyOnFirstTryCorrect() {

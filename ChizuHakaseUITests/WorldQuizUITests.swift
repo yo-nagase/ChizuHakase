@@ -49,6 +49,39 @@ final class WorldQuizUITests: XCTestCase {
                       "a correct first tap on \(target) should score 100")
     }
 
+    /// The world challenge (stage 18, P7 Task 5): one sitting is 47 questions —
+    /// not the 167 recorded countries and not a doubled 334 — drawn from the
+    /// whole book. Smoke: the counter reads /47, a correct tap scores, and
+    /// quitting returns to the shelf.
+    func testWorldChallengeAsksFortySevenAndScores() throws {
+        app.launchArguments = ["-resetSave", "-atlas", "world", "-startAt", "quiz:18"]
+        app.launch()
+        XCTAssertTrue(app.staticTexts["47 もんちゅう 1 もんめ"].waitForExistence(timeout: 10),
+                      "the world challenge is not a 47-question sitting")
+        XCTAssertTrue(app.staticTexts["せかい チャレンジ"].exists,
+                      "quiz:18 did not resolve to the world challenge")
+
+        // The asked country could be any of 167, so the test reads it off the
+        // screen: the question card's secondary line is the one static text
+        // whose label also names a map element (the map's accessibility
+        // labels carry the same written form).
+        let labels = app.staticTexts.allElementsBoundByIndex.compactMap {
+            $0.exists ? $0.label : nil
+        }
+        let target = try XCTUnwrap(
+            labels.first { !$0.isEmpty && app.buttons[$0].exists },
+            "no country question on screen (labels: \(labels))")
+        app.buttons[target]
+            .coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+        XCTAssertTrue(app.staticTexts["100"].waitForExistence(timeout: 3),
+                      "a correct first tap on \(target) should score 100")
+
+        // Quit mid-sitting: back to the shelf, nothing saved, nothing stuck.
+        app.buttons["やめる"].tap()
+        XCTAssertTrue(app.staticTexts["ステージ"].waitForExistence(timeout: 5),
+                      "quitting the challenge did not return to the stage shelf")
+    }
+
     /// A whole world stage played to the result screen (引き継ぎ 6 — the japan
     /// fixation in ResultView stayed green precisely because no test ever got
     /// this far). きたアフリカ (stage 7) is chosen on purpose: it contains

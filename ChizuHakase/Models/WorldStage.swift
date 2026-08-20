@@ -42,16 +42,34 @@ nonisolated struct WorldStage: Identifiable, Sendable, Equatable {
         ("オセアニア", "オセアニア"),                      // 17
     ]
 
+    /// 総合ステージ「せかい チャレンジ」(ワールドチャレンジ、設計 §8)。
+    /// JSON の stage 番号は 0–17 の地方ステージしか知らないので、19 面目は
+    /// `Atlas.world(from:)` が全収録国を束ねて組み立てる — 名前と index の
+    /// 正本だけをここに置く(`names` と同じ「表示の語彙はアプリ側」の判断)。
+    /// index はセーブキー(records[mode][18])なので固定。
+    /// ★文言は仮 — 「ぜんこく チャレンジ」と同型の名乗りだが、ユーザーの
+    /// サインオフ待ち(docs/plans/2026-08-20-world-globe-challenge-plan.md)。
+    static let challengeIndex = 18
+    static let challengeName = "せかい チャレンジ"
+    static let challengeKanjiName = "世界チャレンジ"
+
     /// ステージ選択の棚を区切る大陸見出し(UI 決定 2026-08-20 —
     /// docs/plans/2026-08-18-world-stages.md「ステージ選択 UI」)。
     /// 上の `names` はすでに大陸ごとに連続して並んでいるので、見出しは
     /// index 区間から機械的に引ける。`names` の並びを変えるなら
     /// (index はセーブキーなので変えないが)ここも必ず一緒に動かすこと。
+    ///
+    /// 総合ステージは専用の区間で立てる: `Atlas.stageShelves` の「余り」枝は
+    /// データ食い違いの診断用で、正規のステージを日常的に流すと検出器で
+    /// なくなる(Atlas.swift の規律)。★見出し「そうごう」も仮文言
+    /// (サインオフ待ち。1 語・ひらがな)。
     static let sections: [AtlasSection] = [
         AtlasSection(title: "アメリカ", stageIndexes: 0..<3),
         AtlasSection(title: "ヨーロッパ", stageIndexes: 3..<7),
         AtlasSection(title: "アフリカ", stageIndexes: 7..<12),
         AtlasSection(title: "アジア", stageIndexes: 12..<17),
         AtlasSection(title: "オセアニア", stageIndexes: 17..<18),
+        AtlasSection(title: "そうごう",
+                     stageIndexes: challengeIndex..<(challengeIndex + 1)),
     ]
 }

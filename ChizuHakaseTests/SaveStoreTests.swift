@@ -536,6 +536,116 @@ struct SaveStoreTests {
                       nameKana: "てすと", nameKanji: "試験",
                       category: .food, description: "てすと")
     }
+
+    // MARK: - チャレンジの出題履歴(設計 §8: 未出題優先の記憶)
+
+    /// 抽選チャレンジの結果だけが運ぶ askedCodes(星・スコアは従来どおり)。
+    private func challengeResult(mode: QuizMode = .findOnMap,
+                                 asked: Set<Int>) -> StageResult {
+        StageResult(mode: mode, stageIndex: 18, score: 100, stars: 1,
+                    firstTryByPrefecture: [:], cardDraws: [], askedCodes: asked)
+    }
+
+    /// 一巡判定の分母になる「全収録国」— applyStageResult は目録から引くので、
+    /// テストの世界も国コードごとに 1 枚の札を持つ目録として与える。
+    private func universeCatalog(_ codes: some Sequence<Int>) -> CardCatalog {
+        CardCatalog(cards: codes.map {
+            SpecialtyCard(id: "\($0)-1", prefectureCode: $0, emoji: "🚩",
+                          nameKana: "こっき", nameKanji: "国旗",
+                          category: .flag, description: "てすと")
+        })
+    }
+
+    /// 履歴はプレイをまたいで合流し、モードごとに別々の回転を持つ
+    /// (records と同じ分け方 — 別の回だから)。
+    @Test func チャレンジの出題履歴はモードごとに合流していく() throws {
+        let dir = try makeScratch()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let catalog = universeCatalog(1...200)
+
+        let store = SaveStore(directory: dir)
+        store.applyStageResult(challengeResult(asked: [1, 2, 3]),
+                               catalog: catalog, atlas: SaveData.worldAtlas)
+        store.applyStageResult(challengeResult(asked: [3, 4]),
+                               catalog: catalog, atlas: SaveData.worldAtlas)
+        store.applyStageResult(challengeResult(mode: .nameIt, asked: [9]),
+                               catalog: catalog, atlas: SaveData.worldAtlas)
+
+        let world = store.data.atlas(SaveData.worldAtlas)
+        #expect(world.askedInChallenge[QuizMode.findOnMap.rawValue] == [1, 2, 3, 4])
+        #expect(world.askedInChallenge[QuizMode.nameIt.rawValue] == [9])
+        #expect(SaveStore(directory: dir).data.atlas(SaveData.worldAtlas)
+            .askedInChallenge[QuizMode.findOnMap.rawValue] == [1, 2, 3, 4],
+                "the history must survive a reload")
+    }
+
+    /// 実寸の一巡: 47 問 × 4 プレイで 167 カ国を覆い、覆った瞬間に履歴が
+    /// 空へ戻る(§8 の 2 周目)。星・スコアは従来の records[mode][18] に載る。
+    @Test func 全収録国を覆ったら履歴は空に戻る() throws {
+        let dir = try makeScratch()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let universe = Array(1...167)
+        let catalog = universeCatalog(universe)
+
+        let store = SaveStore(directory: dir)
+        // 未出題優先の抽選が現実に組む形: 3 回で 141、4 回目は残り 26 +
+        // 出題済みからの補充 21。
+        let sittings: [Set<Int>] = [
+            Set(universe[0..<47]),
+            Set(universe[47..<94]),
+            Set(universe[94..<141]),
+            Set(universe[141..<167]).union(universe[0..<21]),
+        ]
+        for (index, sitting) in sittings.enumerated() {
+            store.applyStageResult(challengeResult(asked: sitting),
+                                   catalog: catalog, atlas: SaveData.worldAtlas)
+            let stored = store.data.atlas(SaveData.worldAtlas)
+                .askedInChallenge[QuizMode.findOnMap.rawValue] ?? []
+            if index < sittings.count - 1 {
+                #expect(stored.count == 47 * (index + 1),
+                        "play \(index + 1): history = \(stored.count)")
+            } else {
+                #expect(stored.isEmpty, "full coverage must reset the lap")
+            }
+        }
+        #expect(store.data.atlas(SaveData.worldAtlas)
+            .record(forStage: 18, mode: .findOnMap) == StageRecord(stars: 1, score: 100),
+                "the challenge's record rides the ordinary records path")
+    }
+
+    /// 空の目録は分母を知らないので一巡判定はしない — 履歴は立ったまま。
+    /// (目録が空へ倒れた本ではカード自体が配れず、回転が止まらないことは
+    /// その障害のいちばん無害な症状に留める、というガードの凍結。)
+    @Test func 目録が空なら一巡判定はしない() throws {
+        let dir = try makeScratch()
+        defer { try? FileManager.default.removeItem(at: dir) }
+
+        let store = SaveStore(directory: dir)
+        store.applyStageResult(challengeResult(asked: Set(1...167)),
+                               catalog: .empty, atlas: SaveData.worldAtlas)
+        #expect(store.data.atlas(SaveData.worldAtlas)
+            .askedInChallenge[QuizMode.findOnMap.rawValue] == Set(1...167))
+    }
+
+    /// 日本のチャレンジ結果は askedCodes が空(VM が抽選を使わないため)で、
+    /// 履歴には何も書かない — 計画の不変条件「日本の askedInChallenge が
+    /// 空のまま」の SaveStore 側の釘。記録は従来どおり載る。
+    @Test func 日本のチャレンジ結果は出題履歴を書かない() throws {
+        let dir = try makeScratch()
+        defer { try? FileManager.default.removeItem(at: dir) }
+
+        let store = SaveStore(directory: dir)
+        store.applyStageResult(
+            StageResult(mode: .findOnMap, stageIndex: 6, score: 4700, stars: 3,
+                        firstTryByPrefecture: Dictionary(uniqueKeysWithValues:
+                            (1...47).map { ($0, true) }),
+                        cardDraws: []),
+            catalog: .empty, atlas: SaveData.japanAtlas)
+
+        #expect(store.data.atlas(SaveData.japanAtlas).askedInChallenge.isEmpty)
+        #expect(store.data.record(forStage: 6, mode: .findOnMap)
+                == StageRecord(stars: 3, score: 4700))
+    }
 }
 
 /// Version 1 → 2 split the stage records per quiz mode; 2 → 3 gave cards five

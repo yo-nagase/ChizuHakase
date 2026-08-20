@@ -60,14 +60,28 @@ final class QuizViewModel {
     /// Save-data card counts plus whatever this stage has already awarded, so a
     /// single run cannot hand out the same unowned card twice.
     private var ownedCards: [String: Int]
+    /// Whether this sitting was *drawn* (a sampling challenge) rather than a
+    /// pass over every code — the flag `makeResult` uses to decide whether
+    /// `askedCodes` has anything to say.
+    private let drewBySelection: Bool
     private var effectCounter = 0
 
+    /// `askedInChallenge` is the unasked-first memory of a sampling challenge
+    /// (world design §8): the codes this mode's challenge has already asked,
+    /// off the played book's save slice. It has no default on purpose, the
+    /// same reasoning that is removing `drawPolicy`'s: a call site that forgot
+    /// it would still compile, and the challenge would quietly lose its
+    /// coverage guarantee — every sitting a fresh uniform draw — with every
+    /// test still green. For stages that never sample (all of japan's, the
+    /// world's continents) the value is read by nothing; passing the slice's
+    /// `[]` there is the truth, not a placeholder.
     init(stage: Stage,
          mode: QuizMode = .findOnMap,
          mapData: MapData,
          catalog: CardCatalog,
          ownedCards: [String: Int] = [:],
          drawPolicy: GameRules.DrawPolicy = .random,
+         askedInChallenge: Set<Int>,
          generator: AnyRandomNumberGenerator = AnyRandomNumberGenerator()) {
         self.stage = stage
         self.mode = mode
@@ -79,17 +93,25 @@ final class QuizViewModel {
         // Only prefectures that actually have shapes become questions, so a
         // truncated resource shortens the stage instead of asking the
         // impossible.
-        self.order = GameRules.questionOrder(
-            codes: mapData.prefectures(in: stage.codes).map(\.code),
-            // A challenge stage with more codes than
-            // GameRules.challengeQuestionCount must never reach this line: its
-            // sitting is a *draw* (GameRules.challengeSelection, world design
-            // §8), not a pass over every code, and questionOrder would ask all
-            // of them. Until that draw is wired in (P7 Task 5), no such stage
-            // may exist — the VM/stage cross-check test (QuizViewModelTests)
-            // falls the moment one does.
-            repeats: stage.asksEachTwice ? 2 : 1,
-            using: &self.rng)
+        let codes = mapData.prefectures(in: stage.codes).map(\.code)
+        if stage.isChallenge && codes.count > GameRules.challengeQuestionCount {
+            // A challenge over more codes than one sitting: draw 47, unasked
+            // first (world design §8), each exactly once. Japan's ぜんこく
+            // never takes this branch — its 47 codes are not *more than* 47 —
+            // so its order stays the full-country shuffle it has always been.
+            self.drewBySelection = true
+            self.order = GameRules.challengeSelection(
+                codes: codes,
+                asked: askedInChallenge,
+                count: GameRules.challengeQuestionCount,
+                using: &self.rng)
+        } else {
+            self.drewBySelection = false
+            self.order = GameRules.questionOrder(
+                codes: codes,
+                repeats: stage.asksEachTwice ? 2 : 1,
+                using: &self.rng)
+        }
         if order.isEmpty { phase = .finished }
         dealChoices()
     }
@@ -222,6 +244,11 @@ final class QuizViewModel {
                     stars: stars,
                     firstTryByPrefecture: firstTryByPrefecture,
                     cardDraws: draws,
-                    outcomesByPrefecture: outcomesByPrefecture)
+                    outcomesByPrefecture: outcomesByPrefecture,
+                    // Only a drawn sitting has challenge history to report —
+                    // japan's ぜんこく (and every regional stage) writes
+                    // nothing, which is what keeps its save slice's
+                    // askedInChallenge empty forever.
+                    askedCodes: drewBySelection ? Set(order) : [])
     }
 }

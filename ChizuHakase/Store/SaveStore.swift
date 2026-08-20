@@ -161,6 +161,28 @@ final class SaveStore {
             }
         }
 
+        // The sampling challenge's unasked-first memory (world design §8),
+        // per mode like the records — the two modes are separate rotations.
+        // Only a result that actually drew carries codes; japan's ぜんこく
+        // (all 47 every run) arrives empty and leaves this untouched.
+        if !result.askedCodes.isEmpty {
+            var asked = atlas.askedInChallenge[result.mode.rawValue] ?? []
+            asked.formUnion(result.askedCodes)
+            // Covered the whole book → start the next lap fresh (§8 の 2 周目).
+            // "The whole book" is read off the catalog: it is the one resource
+            // already in hand that lists every recorded region (the world's
+            // catalog carries at least one card per country — pinned in
+            // AtlasTests), and the challenge stage itself is not passed in
+            // here. A catalog that fell back to empty gives no universe, so
+            // the guard leaves the history standing — that state is already a
+            // no-cards-at-all failure, and a rotation that stops resetting is
+            // its mildest symptom (the draw still works, everything simply
+            // counts as asked).
+            let universe = Set(catalog.all.map(\.prefectureCode))
+            if !universe.isEmpty, asked.isSuperset(of: universe) { asked = [] }
+            atlas.askedInChallenge[result.mode.rawValue] = asked
+        }
+
         // Stars and score are kept per mode; mastery and cards above are not,
         // because they measure the prefecture rather than the run.
         let record = StageRecord(stars: result.stars, score: result.score)
@@ -234,6 +256,12 @@ nonisolated struct StageResult: Sendable, Hashable {
     /// a prefecture fumbled first and clean second *ended* on a run of one,
     /// which the collapsed flag has already thrown away.
     var outcomesByPrefecture: [Int: [Bool]] = [:]
+    /// The codes a *sampling* challenge drew this sitting (world design §8) —
+    /// what `askedInChallenge` accumulates so the next sitting can prefer the
+    /// countries not yet asked. Empty everywhere else, japan included: its
+    /// ぜんこく asks all 47 every run and has no rotation to remember, so an
+    /// empty set is the honest record, not a missing one.
+    var askedCodes: Set<Int> = []
 
     var missedPrefectureCount: Int {
         firstTryByPrefecture.values.filter { !$0 }.count
