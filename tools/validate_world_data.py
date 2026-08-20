@@ -33,6 +33,17 @@ INSET_MIN_TOTAL_PTS = 20
 URAL_LON = 60.0
 SIZE_BUDGET = 400 * 1024
 
+# インセット倍率の帯規則 (build の INSET_SCALE_FLOOR まわりのコメントが正本)。
+# 拡大後の最大寸法は 380pt パネルで 10pt 以上。22pt 以下は「床 2.5 で
+# 置いた国」には課さない — 床は上限より優先する (裁定 2026-08-20)。
+INSET_SCALE_FLOOR = 2.5
+INSET_BAND_MIN_PT = 10.0
+INSET_BAND_MAX_PT = 22.0
+INSET_PANEL_PT = 380.0
+MAP_PADDING_PT = 6.0       # GameRules.mapPaddingPoints の写し
+MAP_PADDING_RATIO = 0.045  # GameRules.mapPaddingRatio の写し
+PROJ_COS = 0.8660254037844387  # cos 30° (WorldProjection.referenceLatitudeDegrees)
+
 
 def is_pure_hiragana(s: str) -> bool:
     # build_world_map_data.py の同名関数と同じ規則 (長音「ー」だけ許す)
@@ -137,6 +148,25 @@ def main():
         # 拡大して見せる国が三角形では種明かしになる (build の INSET_MIN_TOTAL_PTS)
         pts = sum(len(r) for r in by_code[code]["rings"])
         assert pts >= INSET_MIN_TOTAL_PTS, (code, pts, "インセット国の輪郭が痩せている")
+
+        # 倍率の帯規則 (冒頭の定数)。ステージ枠と国の寸法を投影座標 (cos 補正、
+        # 幅 = 経度×cos) で測り、380pt パネル基準の pt に換算して確かめる。
+        stage_boxes = [c.get("europeBbox", c["bbox"]) for c in recorded
+                       if c["stage"] == by_code[code]["stage"]]
+        stage_w = (max(b[2] for b in stage_boxes)
+                   - min(b[0] for b in stage_boxes)) * PROJ_COS
+        pt_per_unit = ((INSET_PANEL_PT - 2 * MAP_PADDING_PT)
+                       / (stage_w * (1 + 2 * MAP_PADDING_RATIO)))
+        cb = by_code[code]["bbox"]
+        raw_max_pt = max((cb[2] - cb[0]) * PROJ_COS, cb[3] - cb[1]) * pt_per_unit
+        scaled_pt = raw_max_pt * inset["scale"]
+        assert inset["scale"] >= INSET_SCALE_FLOOR - 1e-9, \
+            (code, inset["scale"], "倍率が床 2.5 を割っている")
+        assert scaled_pt >= INSET_BAND_MIN_PT - 0.05, \
+            (code, scaled_pt, "拡大後も 10pt の帯に届かない")
+        assert scaled_pt <= INSET_BAND_MAX_PT + 0.05 \
+            or abs(inset["scale"] - INSET_SCALE_FLOOR) < 1e-9, \
+            (code, scaled_pt, "床でもないのに帯の上端 22pt を超えている")
 
         # 破線枠。Swift はこの枠の中心へ国を scale 倍して置くので、
         # 拡大後の bbox が枠に収まらないと国が枠からはみ出して描かれる。

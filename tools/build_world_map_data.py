@@ -112,10 +112,24 @@ RESOURCE_RING_AREA_RATIO = 0.015
 RUSSIA = 643
 URAL_LON = 60.0
 
-# インセット拡大の倍率 (裁定 2026-08-19 の 4 カ国)。
-# 倍率は日本版の沖縄 1.6 より強い 2.5 — どの国も単独では 10pt に届かないため。
-# 実機で見て調整する暫定値。コードごとに変えてよい (表がそのまま調整口)。
-INSET_SCALE = {702: 2.5, 470: 2.5, 462: 2.5, 242: 2.5}
+# インセット拡大の倍率 (裁定 2026-08-19 の 4 カ国 = wc.INSET_COUNTRIES)。
+# 手置きの定数ではなく、ステージ表の機械判定の帯 (2026-08-18-world-stages.md:
+# < 10pt は収録外候補、10–22pt = 香川帯でインセット成立) から国ごとに導く —
+# インセットの目的は国を帯に乗せることなので、倍率は帯に従う (裁定 2026-08-20):
+#   拡大後の最大寸法が 380pt ステージパネルで 10pt に届く最小の倍率。
+#   帯の上端 22pt を超えない範囲で。ただし床 2.5 (沖縄 1.6 より強い従来値) が
+#   上限より優先する — モルディブ (素で 22pt 超の細長い列) を床未満に縮めると
+#   幅がタップ不能に戻る。押せることは見た目の行儀より重い (§12 の趣旨)。
+INSET_SCALE_FLOOR = 2.5
+INSET_BAND_MIN_PT = 10.0
+INSET_BAND_MAX_PT = 22.0
+# 380pt パネルの換算 (モルドバ検証と同じ基準): pt/平面単位 =
+# (380 − 2×6pt) / (ステージ枠幅 × (1 + 2×0.045))。6pt と 4.5% は
+# GameRules.mapPaddingPoints / mapPaddingRatio の写し。ずらすと
+# 「帯に乗せたはずの国」が画面では帯の外になる。
+INSET_PANEL_PT = 380.0
+MAP_PADDING_PT = 6.0
+MAP_PADDING_RATIO = 0.045
 
 # --- インセット枠の配置 (沖縄方式の一般化) -----------------------------------
 # 拡大した国を入れる破線枠を「いまのステージ枠の中の空き海域」から機械的に
@@ -301,8 +315,18 @@ def rect_hits_ring(rect, pts, pts_bbox):
     return any(seg_hits_rect(pts[i], pts[i + 1], rect) for i in range(len(pts) - 1))
 
 
+def inset_scale(raw_max_pt):
+    """素の最大寸法 (pt) → 倍率。規則は INSET_SCALE_FLOOR のコメント。"""
+    bar = INSET_BAND_MIN_PT / raw_max_pt    # 帯の下端に届く最小の倍率
+    cap = INSET_BAND_MAX_PT / raw_max_pt    # 帯の上端を超えない倍率
+    scale = max(INSET_SCALE_FLOOR, min(cap, max(INSET_SCALE_FLOOR, bar)))
+    # 端数は切り上げて丸める — 切り捨てると「10pt ちょうど」が 9.99pt になり、
+    # 検証 (validate_world_data.py) が自分の丸めで落ちる。
+    return math.ceil(scale * 100) / 100
+
+
 def place_inset_frames(countries, background):
-    """インセット国ごとに破線枠 (lon/lat の [lon0, lat0, lon1, lat1]) を選ぶ。
+    """インセット国ごとに倍率と破線枠 (lon/lat) を選ぶ。code -> (scale, frame)。
 
     Swift 側 (WorldDataLoader) はこの枠の中心へ国を scale 倍して置き、枠を
     破線で描き、拡大後の形でタップを判定する。リング座標そのものは実位置の
@@ -324,11 +348,10 @@ def place_inset_frames(countries, background):
             pts = [project_pt(p) for p in ring]
             obstacles.append((None, bbox_of(pts), pts))
 
-    frames = {}        # code -> lon/lat frame
+    insets = {}        # code -> (scale, lon/lat frame)
     placed_rects = []  # 投影座標。後続のインセットが避ける
-    for code in sorted(INSET_SCALE):
+    for code in sorted(wc.INSET_COUNTRIES):
         country = by_code[code]
-        scale = INSET_SCALE[code]
 
         # ステージ枠 = メンバーの枠 bbox の連結 (ロシアは europeBbox、
         # 置く国自身は実位置)。これが「今日の枠」で、枠の外には置かない。
@@ -345,13 +368,20 @@ def place_inset_frames(countries, background):
 
         (bx0, by0), (bx1, by1) = project_pt(country["bbox"][:2]), project_pt(country["bbox"][2:])
         by0, by1 = min(by0, by1), max(by0, by1)
+        # 倍率は帯から導く (INSET_SCALE_FLOOR のコメント)。基準はモルドバ検証と
+        # 同じ 380pt パネル: パネルは幅で決まる (aspect fit で高さは付いてくる)。
+        pt_per_unit = ((INSET_PANEL_PT - 2 * MAP_PADDING_PT)
+                       / (stage_w * (1 + 2 * MAP_PADDING_RATIO)))
+        raw_max_pt = max(bx1 - bx0, by1 - by0) * pt_per_unit
+        scale = inset_scale(raw_max_pt)
         w, h = (bx1 - bx0) * scale, (by1 - by0) * scale
         pad = INSET_PAD_RATIO * max(stage_w, stage_h)
         fw, fh = w + 2 * pad, h + 2 * pad
         if fw > stage_w or fh > stage_h:
             sys.exit(f"inset frame for {code} ({fw:.1f}x{fh:.1f}) does not fit "
                      f"its stage frame ({stage_w:.1f}x{stage_h:.1f}) - "
-                     "lower INSET_SCALE or revisit the stage split")
+                     "the derived scale outgrew the stage; revisit the band rule "
+                     "or the stage split")
 
         # 実位置の中心に近い順で空き候補を試す (条件 2)。
         true_cx, true_cy = (bx0 + bx1) / 2, (by0 + by1) / 2
@@ -382,8 +412,9 @@ def place_inset_frames(countries, background):
                      "upstream data changed, or the scale is too big")
 
         placed_rects.append(chosen)
-        frames[code] = [round(v, COORD_DECIMALS) for v in unproject_rect(chosen)]
-    return frames
+        insets[code] = (scale,
+                        [round(v, COORD_DECIMALS) for v in unproject_rect(chosen)])
+    return insets
 
 
 def prune_rings(code, rings, min_area=MIN_RING_AREA_DEG2):
@@ -758,20 +789,18 @@ def main():
     if len(countries) != len(wc.STAGE_OF_COUNTRY):
         sys.exit(f"recorded count drifted: {len(countries)} != "
                  f"{len(wc.STAGE_OF_COUNTRY)}")
-    if set(INSET_SCALE) != wc.INSET_COUNTRIES:
-        sys.exit("INSET_SCALE and world_countries.INSET_COUNTRIES disagree")
     recorded_codes = {c["code"] for c in countries}
     if not wc.INSET_COUNTRIES <= recorded_codes:
         sys.exit("inset country missing from recorded output")
 
-    frames = place_inset_frames(countries, background)
+    insets = place_inset_frames(countries, background)
 
     out = {
         "countries": countries,
         "background": background,
-        "insets": [{"code": code, "scale": INSET_SCALE[code],
-                    "frame": frames[code]}
-                   for code in sorted(INSET_SCALE)],
+        "insets": [{"code": code, "scale": insets[code][0],
+                    "frame": insets[code][1]}
+                   for code in sorted(insets)],
     }
 
     dst = os.path.join(here, DST)
@@ -795,8 +824,9 @@ def main():
     print(f"  background : {len(background)} features, {bg_pts} pts")
     print(f"  rings      : min {ring_counts[min_rings]} (code {min_rings}), "
           f"max {ring_counts[max_rings]} (code {max_rings})")
-    for code in sorted(INSET_SCALE):
-        print(f"  inset frame: {code} x{INSET_SCALE[code]} -> {frames[code]}")
+    for code in sorted(insets):
+        scale, frame = insets[code]
+        print(f"  inset frame: {code} x{scale} -> {frame}")
     print(f"  size       : {size / 1024:.1f} KB")
     if size > 400 * 1024:
         # 超過は報告して人が判断する。黙って簡略化率を上げない。

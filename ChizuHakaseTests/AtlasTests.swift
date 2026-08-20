@@ -339,6 +339,29 @@ struct AtlasTests {
         }
     }
 
+    /// インセットの存在理由をそのまま数字で固定する: 拡大後の国はステージ表の
+    /// 機械判定の帯(10pt 未満は収録外候補)を、自分のステージの 380pt
+    /// パネル基準で超えている。倍率はパイプラインが帯から導く
+    /// (tools/build_world_map_data.py の INSET_SCALE_FLOOR 周辺)ので、
+    /// ここが割れたら生成規則と画面の換算がずれている。
+    @Test func インセット国は拡大後に10ptの帯へ届く() throws {
+        let atlas = try worldAtlas()
+        for inset in atlas.mapData.insets {
+            let country = try #require(atlas.mapData[inset.code])
+            let stage = try #require(atlas.stages.first {
+                $0.codes.contains(inset.code)
+            })
+            let frame = PrefectureGeometry.boundingBox(
+                of: atlas.mapData.prefectures(in: stage.codes))
+            // パイプラインと同じ幅基準の換算(パネルは幅で決まり、高さは
+            // aspect fit で付いてくる)。定数は GameRules の実物から引く。
+            let ptPerUnit = (380 - 2 * GameRules.mapPaddingPoints)
+                / (frame.width * (1 + 2 * GameRules.mapPaddingRatio))
+            let size = max(country.bbox.width, country.bbox.height) * ptPerUnit
+            #expect(size >= 10, "code \(inset.code) is \(size)pt — 帯に届かない")
+        }
+    }
+
     /// モルドバ 13pt 問題(2026-08-18-world-stages.md)の解消を数字で固定する:
     /// ひがしヨーロッパのステージ枠はロシアの europeBbox までで、その枠を
     /// 380pt に収めたときモルドバが日本版の香川帯(10–22pt)を超えて描かれる。
