@@ -260,8 +260,10 @@ struct GameRulesTests {
     }
 
     /// シードが同じなら選抜も並びも同じ — テストと再現の土台。
-    /// 並びもシャッフルされる(未出題→補充の境目が並びに残らない)ことは
-    /// 「昇順のままでない」ことで軽く釘打つ。
+    /// 継ぎ目消しの最終シャッフルもここで釘打つ: 未出題 27 + 補充 20 の回で、
+    /// 先頭 27 が未出題そのものなら「未出題→補充」の境目が並びに残っている
+    /// (両プールが個別にシャッフル済みでも起きる壊れ方なので、
+    /// 「昇順のままでない」程度の釘では捕まらない)。
     @Test func 抽選はシードに対して決定的() {
         var a = seededRNG(42)
         var b = seededRNG(42)
@@ -271,6 +273,8 @@ struct GameRulesTests {
             codes: Array(1...167), asked: Set(1...140), count: 47, using: &b)
         #expect(first == second)
         #expect(first != first.sorted(), "the sitting is not shuffled")
+        #expect(Set(first.prefix(27)) != Set(141...167),
+                "the pool seam survived into the asking order")
     }
 
     // MARK: - Mastery

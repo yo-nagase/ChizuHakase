@@ -245,9 +245,17 @@ struct AtlasTests {
             #expect(card.category == .flag, "\(card.id) is not a flag card")
             #expect(card.art == nil, "\(card.id): 絵文字が国旗そのもの、絵は持たない")
         }
-        // 収録国とカードの持ち主が過不足なく一致する。
-        let countryCodes = Set(atlas.mapData.prefectures.map(\.code))
-        #expect(Set(atlas.cards.all.map(\.prefectureCode)) == countryCodes)
+    }
+
+    /// 収録国とカードの持ち主が過不足なく一致する — `SaveStore.applyStageResult`
+    /// の一巡判定(チャレンジ履歴の lap リセット)が「全収録国」の分母を
+    /// 目録から引くための土台で、これが割れると 2 周目が来ない/早く来る。
+    /// P8 でオリジナル札が並んでも(1 国複数枚になっても)この対応は
+    /// 崩れない — 崩すならリセットの分母ごと設計し直すこと。
+    @Test func 目録の持ち主は収録国と過不足なく一致する() throws {
+        let atlas = try worldAtlas()
+        #expect(Set(atlas.cards.all.map(\.prefectureCode))
+                == Set(atlas.mapData.prefectures.map(\.code)))
     }
 
     /// 各国の先頭札は国旗 — `GameRules.DrawPolicy.flagFirstSilverGate` が
