@@ -98,6 +98,32 @@ struct GlobeMapViewLogicTests {
                                           from: GlobeCenter()) == nil)
     }
 
+    @Test func 快適域の内側は回さない() {
+        // 40° は cos40° ≈ 0.77 — まだ形が形に見える距離。
+        let comfortable = shape(code: 5, centroid: CGPoint(x: 40, y: 0))
+        #expect(GlobeMapView.hintRotation(code: 5, shapes: [comfortable],
+                                          from: GlobeCenter()) == nil)
+    }
+
+    @Test func 前面半球でも快適域の外なら回す() {
+        // 80° は前面半球(可視)だが、前縮み cos80° ≈ 0.17 で輪郭は潰れて
+        // いる。境界が「重心が見えるか」だった頃はここで据え置かれ、
+        // 3 ミスの点滅が地平線際で空振りしていた(Task 3 レビューの指摘)。
+        let edge = shape(code: 5, centroid: CGPoint(x: 80, y: 0))
+        let rotation = GlobeMapView.hintRotation(code: 5, shapes: [edge],
+                                                 from: GlobeCenter())
+        #expect(rotation == GlobeCenter(longitude: 80, latitude: 0))
+    }
+
+    @Test func ちょうど90度の重心も回す() {
+        // エッジオン(見かけの幅ゼロ)。浮動小数で cos(π/2) が正に化けても
+        // 快適閾値 cos65° を上回ることはなく、境界の点が据え置かれない。
+        let edgeOn = shape(code: 5, centroid: CGPoint(x: 90, y: 0))
+        let rotation = GlobeMapView.hintRotation(code: 5, shapes: [edgeOn],
+                                                 from: GlobeCenter())
+        #expect(rotation == GlobeCenter(longitude: 90, latitude: 0))
+    }
+
     @Test func 知らないコードは回さない() {
         #expect(GlobeMapView.hintRotation(code: 99, shapes: [],
                                           from: GlobeCenter()) == nil)

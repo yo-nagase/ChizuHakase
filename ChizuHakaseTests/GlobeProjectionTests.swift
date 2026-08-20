@@ -71,6 +71,31 @@ struct GlobeProjectionTests {
         #expect(!projection.isVisible(lon: 180, lat: 0))
     }
 
+    // MARK: - 角距離の余弦
+
+    @Test func 角距離の余弦は中心で1になる() {
+        let projection = makeProjection(lon0: 30, lat0: 40)
+        #expect(abs(projection.cosineOfAngularDistance(lon: 30, lat: 40) - 1) < 1e-12)
+    }
+
+    @Test func 赤道上の角距離は経度差そのもの() {
+        // lat = lat0 = 0 なら cosC = cos(Δλ)。ヒントの快適閾値(65°)が
+        // 比較する相手の値がこの式から来る。
+        let value = makeProjection().cosineOfAngularDistance(lon: 80, lat: 0)
+        #expect(abs(value - cos(80 * Double.pi / 180)) < 1e-12)
+    }
+
+    @Test func 角距離の余弦は可視判定と同じ式を見る() {
+        // 傾いた中心の緯度項(上の可視テストと同じ殺し)。式が別実装に
+        // 割れたら、快適閾値と描画の「見えている」が食い違う。
+        let projection = makeProjection(lat0: 60)
+        let value = projection.cosineOfAngularDistance(lon: 0, lat: -45)
+        let expected = sin(60 * Double.pi / 180) * sin(-45 * Double.pi / 180)
+            + cos(60 * Double.pi / 180) * cos(-45 * Double.pi / 180)
+        #expect(abs(value - expected) < 1e-12)
+        #expect(projection.isVisible(lon: 0, lat: -45) == (value > 0))
+    }
+
     @Test func 傾いた中心では緯度項が可視を決める() {
         // cosC = sin(lat0)·sin(lat) + cos(lat0)·cos(lat)·cosΔλ の第 1 項は
         // lat0 = 0 だと消えて、どの符号でもテストが通ってしまう。北へ 60°

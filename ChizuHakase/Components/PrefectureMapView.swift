@@ -238,8 +238,8 @@ struct PrefectureMapView: View {
                 // A shoreline hairline, or the grey mass reads as a stain on
                 // the sea rather than as land.
                 path.stroke(Palette.backgroundShore,
-                            lineWidth: hairlineWidth(canvasWidth: canvasSize.width,
-                                                     zoom: zoom))
+                            lineWidth: MapStroke.hairlineWidth(
+                                canvasWidth: canvasSize.width, zoom: zoom))
             }
             .allowsHitTesting(false)
             .accessibilityHidden(true)
@@ -341,17 +341,26 @@ struct PrefectureMapView: View {
     }
 }
 
-/// The map's one hairline weight, shared by the printed prefecture boundary
-/// and the background shoreline. Deliberately hair-thin: at 47 shapes it is a
-/// grid of borders, and anything heavier reads as the lines being the subject
-/// rather than the country. One formula so no line ever outweighs a real
-/// border — the two call sites used to duplicate it and merely promise to
-/// match. Divided by the zoom because the stroke is drawn inside the magnified
-/// content (see `PrefectureMapView.zoom`).
-/// Internal, not private: `GlobeMapView` draws the same hairline (at zoom 1 —
-/// its magnification is in the radius, not in a scaleEffect).
-func hairlineWidth(canvasWidth: CGFloat, zoom: CGFloat) -> CGFloat {
-    min(max(canvasWidth * 0.0019, 0.3), 0.7) / max(zoom, 1)
+/// The stroke weights the flat map and the globe share. A free function and a
+/// constant duplicated across the two files used to promise, in comments, to
+/// stay equal — gathering them under one name makes the compiler keep the
+/// promise. Internal, not private: `GlobeMapView` draws the same lines (at
+/// zoom 1 — its magnification is in the radius, not in a scaleEffect).
+nonisolated enum MapStroke {
+    /// The map's one hairline weight, shared by the printed prefecture boundary
+    /// and the background shoreline. Deliberately hair-thin: at 47 shapes it is
+    /// a grid of borders, and anything heavier reads as the lines being the
+    /// subject rather than the country. Divided by the zoom because the stroke
+    /// is drawn inside the magnified content (see `PrefectureMapView.zoom`).
+    static func hairlineWidth(canvasWidth: CGFloat, zoom: CGFloat) -> CGFloat {
+        min(max(canvasWidth * 0.0019, 0.3), 0.7) / max(zoom, 1)
+    }
+
+    /// One weight for every red ring — the asked-about shape and the blinking
+    /// hint — so "a red line" always weighs the same thing, on either map.
+    /// The flat map divides it by the zoom (drawn inside the magnification);
+    /// the globe uses it as is (its magnification lives in the radius).
+    static let ringWidth: CGFloat = 3.5
 }
 
 // MARK: - One prefecture
@@ -387,14 +396,13 @@ private struct PrefectureLayer: View {
         min(max(canvasSize.width * 0.009, 0.5), 3) / max(zoom, 1)
     }
 
-    /// The prefecture boundary itself (see `hairlineWidth`).
+    /// The prefecture boundary itself (see `MapStroke.hairlineWidth`).
     private var boundaryWidth: CGFloat {
-        hairlineWidth(canvasWidth: canvasSize.width, zoom: zoom)
+        MapStroke.hairlineWidth(canvasWidth: canvasSize.width, zoom: zoom)
     }
 
-    /// One width for every red ring — the asked-about prefecture and the
-    /// blinking hint — so "a red line" always weighs the same thing.
-    private var ringWidth: CGFloat { 3.5 / max(zoom, 1) }
+    /// The red rings, drawn inside the magnification (see `MapStroke.ringWidth`).
+    private var ringWidth: CGFloat { MapStroke.ringWidth / max(zoom, 1) }
 
     private var anchor: UnitPoint {
         guard canvasSize.width > 0, canvasSize.height > 0 else { return .center }

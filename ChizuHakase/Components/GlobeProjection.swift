@@ -84,7 +84,7 @@ nonisolated struct GlobeProjection: Sendable, Equatable {
         let lambda = (lon - centerLongitude) * Self.radiansPerDegree
         let phi = lat * Self.radiansPerDegree
         let phi0 = centerLatitude * Self.radiansPerDegree
-        let cosC = sin(phi0) * sin(phi) + cos(phi0) * cos(phi) * cos(lambda)
+        let cosC = Self.angularCosine(lambda: lambda, phi: phi, phi0: phi0)
         let visible = cosC > Self.horizonCosine
 
         let r = Double(radius)
@@ -112,6 +112,23 @@ nonisolated struct GlobeProjection: Sendable, Equatable {
     /// 正面半球(cosC > 0)にあるか。地平線ちょうどはエッジオンなので不可視。
     func isVisible(lon: Double, lat: Double) -> Bool {
         project(lon: lon, lat: lat).isVisible
+    }
+
+    /// 中心からの角距離の余弦(前方投影の cosC そのもの)。しきい値比較の口:
+    /// 可視の境界(> 0)よりも内側で切りたい呼び手 — ヒント・出題前回転の
+    /// 「快適に見える角距離」(`GameRules.globeHintComfortDegrees`)— が使う。
+    /// 縁での前縮み率も同じ値なので、「どれだけ潰れて見えるか」も直接語る。
+    func cosineOfAngularDistance(lon: Double, lat: Double) -> Double {
+        Self.angularCosine(lambda: (lon - centerLongitude) * Self.radiansPerDegree,
+                           phi: lat * Self.radiansPerDegree,
+                           phi0: centerLatitude * Self.radiansPerDegree)
+    }
+
+    /// cosC = sin(φ0)·sin(φ) + cos(φ0)·cos(φ)·cos(λ)。`project` の可視判定と
+    /// `cosineOfAngularDistance` が同じ式を見るための 1 カ所。
+    private static func angularCosine(lambda: Double, phi: Double,
+                                      phi0: Double) -> Double {
+        sin(phi0) * sin(phi) + cos(phi0) * cos(phi) * cos(lambda)
     }
 
     // MARK: - ドラッグ回転

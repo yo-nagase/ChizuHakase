@@ -132,9 +132,13 @@ struct GlobeMapView: View {
         return base * ZoomPan.clamp(scale: zoom)
     }
 
-    /// ヒントの回転先。正解国の重心がすでに正面半球なら nil(見えている
-    /// 答えを回すと、点滅を見つけかけた子から地図が逃げる)。可視判定は
-    /// 角度だけで決まるので、投影の半径・スクリーンは仮値でよい。
+    /// 回転救済の到達値 — 3 ミスのヒント点滅と、なまえを あてる の出題前
+    /// 回転(Task 6)が同じ述語を使う。対象の重心が「快適に見える角距離」
+    /// (`GameRules.globeHintComfortDegrees`)の内側なら nil: 見えている答えを
+    /// 回すと、点滅を見つけかけた子から地図が逃げる。境界を正面半球(90°)に
+    /// しないのは、80° 台の地平線際では前縮みで輪郭が数 pt に潰れ、「見えて
+    /// いる」が嘘になるから。判定は角度だけで決まるので、投影の半径・
+    /// スクリーンは仮値でよい。
     nonisolated static func hintRotation(code: Int,
                                          shapes: [GlobeShape],
                                          from current: GlobeCenter) -> GlobeCenter? {
@@ -142,8 +146,10 @@ struct GlobeMapView: View {
         let probe = GlobeProjection(centerLongitude: current.longitude,
                                     centerLatitude: current.latitude,
                                     radius: 1, screenCenter: .zero)
-        guard !probe.isVisible(lon: Double(shape.centroid.x),
-                               lat: Double(shape.centroid.y)) else { return nil }
+        let comfort = cos(GameRules.globeHintComfortDegrees * .pi / 180)
+        guard probe.cosineOfAngularDistance(lon: Double(shape.centroid.x),
+                                            lat: Double(shape.centroid.y)) < comfort
+        else { return nil }
         return current.facing(GlobeGeometry.centering(on: shape))
     }
 
@@ -182,10 +188,17 @@ private struct GlobeSurface: View, Animatable {
     let onRotate: ((GlobeCenter) -> Void)?
     let onTap: ((Int?, CGPoint) -> Void)?
 
-    /// ドラッグの前回 translation。差分だけを `dragged(by:)` に食わせる —
-    /// 累積を毎回適用し直す形だと、緯度クランプで捨てた分が指を返した
-    /// 瞬間にまとめて戻ってくる。
-    @State private var lastDrag: CGSize = .zero
+    /// ドラッグの基準: このドラッグの startLocation と前回 translation。
+    /// 差分だけを `dragged(by:)` に食わせる — 累積を毎回適用し直す形だと、
+    /// 緯度クランプで捨てた分が指を返した瞬間にまとめて戻ってくる。
+    /// startLocation をキーにするのは、システムに取り上げられたドラッグ
+    /// (通知シェード・システムジェスチャ)が onEnded を呼ばずに消えるから:
+    /// 残った translation を次のドラッグが引き継ぐと初回デルタが跳ぶ。
+    /// 見知らぬ startLocation の最初のイベントは基準の取り直しに使い、
+    /// デルタを適用しない — minimumDistance 10pt のスロップが初回に
+    /// まとめて届くジャンプも、これで一緒に消える。(@GestureState は
+    /// updating と onChanged の実行順が未定義なので使わない)
+    @State private var dragBaseline: (start: CGPoint, translation: CGSize)?
 
     nonisolated var animatableData: AnimatablePair<AnimatablePair<Double, Double>, CGFloat> {
         get { AnimatablePair(AnimatablePair(longitude, latitude), radius) }
@@ -271,21 +284,30 @@ private struct GlobeSurface: View, Animatable {
     private func rotation(projection: GlobeProjection) -> some Gesture {
         DragGesture()
             .onChanged { value in
-                let delta = CGSize(width: value.translation.width - lastDrag.width,
-                                   height: value.translation.height - lastDrag.height)
-                lastDrag = value.translation
+                guard let baseline = dragBaseline,
+                      baseline.start == value.startLocation else {
+                    // 新しいドラッグの最初のイベント: 基準を取り直すだけで
+                    // 回さない(dragBaseline の註)。
+                    dragBaseline = (value.startLocation, value.translation)
+                    return
+                }
+                let delta = CGSize(
+                    width: value.translation.width - baseline.translation.width,
+                    height: value.translation.height - baseline.translation.height)
+                dragBaseline = (value.startLocation, value.translation)
                 let next = projection.dragged(by: delta)
                 onRotate?(GlobeCenter(longitude: next.centerLongitude,
                                       latitude: next.centerLatitude))
             }
-            .onEnded { _ in lastDrag = .zero }
+            .onEnded { _ in dragBaseline = nil }
     }
 
     // MARK: - 海と背景
 
     /// 海 = 円盤。光を上左に寄せたラジアルグラデーションが球に見せる —
     /// 平面の海と同じ 2 色(§9 に無い色を持ち込まない)。リムは惑星の
-    /// 輪郭線で、インセット枠と同じインクの薄め。
+    /// 輪郭線 — インセット枠と同じ薄めたインクの系だが、あちら(0.35/1.6 の
+    /// 破線)より軽い 0.22/1.5 の実線: 枠は目印、こちらはただの縁。
     private var seaDisk: some View {
         ZStack {
             Circle()
@@ -314,8 +336,8 @@ private struct GlobeSurface: View, Animatable {
                 ZStack(alignment: .topLeading) {
                     path.fill(Palette.backgroundLand, style: FillStyle(eoFill: true))
                     path.stroke(Palette.backgroundShore,
-                                lineWidth: hairlineWidth(canvasWidth: canvasSize.width,
-                                                         zoom: 1))
+                                lineWidth: MapStroke.hairlineWidth(
+                                    canvasWidth: canvasSize.width, zoom: 1))
                 }
             }
         }
@@ -397,11 +419,12 @@ private struct GlobeCountryLayer: View {
     }
 
     private var boundaryWidth: CGFloat {
-        hairlineWidth(canvasWidth: canvasSize.width, zoom: 1)
+        MapStroke.hairlineWidth(canvasWidth: canvasSize.width, zoom: 1)
     }
 
-    /// 赤い輪(出題・ヒント)の共通幅 — 平面版と同じ重さ。
-    private let ringWidth: CGFloat = 3.5
+    /// 赤い輪(出題・ヒント)— 平面版と同じ重さ(`MapStroke.ringWidth`)。
+    /// 拡大は半径に入っているので zoom では割らない。
+    private let ringWidth: CGFloat = MapStroke.ringWidth
 
     var body: some View {
         // 1 回の body 評価につき投影は 1 回。塗り・縁・輪が同じ Path を見る。

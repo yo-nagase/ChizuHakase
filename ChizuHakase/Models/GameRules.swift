@@ -38,6 +38,14 @@ nonisolated enum GameRules {
     /// なまえを あてる の出題前回転)。ジャンプではなく回って見せるのは
     /// 「地球の裏にあった」という事実そのものが教材だから。
     static let globeCenteringDuration: TimeInterval = 0.6
+    /// 地球儀の回転救済(3 ミスのヒント点滅・なまえを あてる の出題前回転)が
+    /// 「回さなくてよい」と判断できる、中心からの角距離の上限(度)。
+    /// 可視の境界は 90° だが、正射図法は縁で cos 倍に前縮みする — 80° 台では
+    /// 輪郭が数 pt に潰れ、3 回ミスして点滅を待つ子には見つけられない。
+    /// 65° なら前縮みは cos65° ≈ 0.42 で止まり、形がまだ形に見える。内側に
+    /// いる答えを回さないのは従来どおり — 見えている答えを回すと、点滅を
+    /// 見つけかけた子から地図が逃げる。
+    static let globeHintComfortDegrees: Double = 65
     /// Wrong attempts on the current question before the answer starts blinking.
     ///
     /// Three, not two: two came up often enough that a child who was thinking
