@@ -106,10 +106,12 @@ final class SaveStore {
     /// `atlas` names the save namespace the whole result lands in
     /// (`Atlas.saveKey`). One key for everything: region codes and stage
     /// indexes collide across atlases, so letting a world result touch any
-    /// japan field would file バハマ's mastery under 大分県.
+    /// japan field would file バハマ's mastery under 大分県. No default —
+    /// a "silently japan" write is the twin of the read-side hazard Task 3
+    /// deleted, so every caller has to say which book it means.
     @discardableResult
     func applyStageResult(_ result: StageResult, catalog: CardCatalog,
-                          atlas key: String = SaveData.japanAtlas) -> StageGains {
+                          atlas key: String) -> StageGains {
         // The one slice this stage may move, mutated whole and written back
         // once — no per-field write can end up in the other book.
         var atlas = data.atlases[key] ?? AtlasSave()

@@ -38,7 +38,7 @@ struct SaveStoreTests {
         let store = SaveStore(directory: dir)
         store.applyStageResult(StageResult(mode: .findOnMap, stageIndex: 0, score: 730, stars: 3,
             firstTryByPrefecture: [1: true, 2: true, 3: false],
-            cardDraws: []), catalog: .empty)
+            cardDraws: []), catalog: .empty, atlas: SaveData.japanAtlas)
 
         let reloaded = SaveStore(directory: dir)
         #expect(reloaded.data.masteryLevel(of: 1) == 1)
@@ -52,9 +52,9 @@ struct SaveStoreTests {
 
         let store = SaveStore(directory: dir)
         store.applyStageResult(StageResult(mode: .findOnMap, stageIndex: 1, score: 800, stars: 3,
-                                           firstTryByPrefecture: [:], cardDraws: []), catalog: .empty)
+                                           firstTryByPrefecture: [:], cardDraws: []), catalog: .empty, atlas: SaveData.japanAtlas)
         store.applyStageResult(StageResult(mode: .findOnMap, stageIndex: 1, score: 100, stars: 1,
-                                           firstTryByPrefecture: [:], cardDraws: []), catalog: .empty)
+                                           firstTryByPrefecture: [:], cardDraws: []), catalog: .empty, atlas: SaveData.japanAtlas)
 
         #expect(store.data.record(forStage: 1, mode: .findOnMap) == StageRecord(stars: 3, score: 800))
     }
@@ -67,7 +67,7 @@ struct SaveStoreTests {
         for _ in 0..<(GameRules.maxMastery + 2) {
             store.applyStageResult(StageResult(mode: .findOnMap, stageIndex: 0, score: 100, stars: 3,
                                                firstTryByPrefecture: [1: true],
-                                               cardDraws: []), catalog: .empty)
+                                               cardDraws: []), catalog: .empty, atlas: SaveData.japanAtlas)
         }
         #expect(store.data.masteryLevel(of: 1) == GameRules.maxMastery)
     }
@@ -82,7 +82,7 @@ struct SaveStoreTests {
             announcements.append(store.applyStageResult(
                 StageResult(mode: .findOnMap, stageIndex: 0, score: 100, stars: 3,
                             firstTryByPrefecture: [5: true], cardDraws: []),
-                catalog: .empty).sparklingPrefectures)
+                catalog: .empty, atlas: SaveData.japanAtlas).sparklingPrefectures)
         }
         // Climbs quietly, announced once on reaching the top, then nothing.
         #expect(announcements == [[], [], [], [], [5], []])
@@ -94,9 +94,9 @@ struct SaveStoreTests {
 
         let store = SaveStore(directory: dir)
         store.applyStageResult(StageResult(mode: .findOnMap, stageIndex: 0, score: 100, stars: 3,
-                                           firstTryByPrefecture: [7: true], cardDraws: []), catalog: .empty)
+                                           firstTryByPrefecture: [7: true], cardDraws: []), catalog: .empty, atlas: SaveData.japanAtlas)
         store.applyStageResult(StageResult(mode: .findOnMap, stageIndex: 0, score: 50, stars: 1,
-                                           firstTryByPrefecture: [7: false], cardDraws: []), catalog: .empty)
+                                           firstTryByPrefecture: [7: false], cardDraws: []), catalog: .empty, atlas: SaveData.japanAtlas)
         #expect(store.data.masteryLevel(of: 7) == 1)
     }
 
@@ -110,7 +110,7 @@ struct SaveStoreTests {
         let store = SaveStore(directory: dir)
         store.applyStageResult(StageResult(mode: .findOnMap, stageIndex: 0, score: 0, stars: 3,
                                            firstTryByPrefecture: [:],
-                                           cardDraws: [.new(card)]), catalog: .empty)
+                                           cardDraws: [.new(card)]), catalog: .empty, atlas: SaveData.japanAtlas)
         #expect(store.data.stars(of: "01-1") == 1)
         #expect(store.data.owns("01-1"))
         #expect(store.data.tier(of: "01-1") == .plain)
@@ -118,14 +118,14 @@ struct SaveStoreTests {
         store.applyStageResult(StageResult(mode: .findOnMap, stageIndex: 0, score: 0, stars: 3,
                                            firstTryByPrefecture: [:],
                                            cardDraws: [.star(card, stars: GameRules.silverStars)]),
-                               catalog: .empty)
+                               catalog: .empty, atlas: SaveData.japanAtlas)
         #expect(store.data.tier(of: "01-1") == .silver)
 
         store.applyStageResult(StageResult(mode: .findOnMap, stageIndex: 0, score: 0, stars: 3,
                                            firstTryByPrefecture: [:],
                                            cardDraws: [.star(card, stars: GameRules.maxCardStars),
                                                        .duplicate(card)]),
-                               catalog: .empty)
+                               catalog: .empty, atlas: SaveData.japanAtlas)
         #expect(store.data.stars(of: "01-1") == GameRules.maxCardStars)
         #expect(store.data.tier(of: "01-1") == .gold)
     }
@@ -222,7 +222,7 @@ struct SaveStoreTests {
         let store = SaveStore(directory: dir)
         store.applyStageResult(StageResult(mode: .findOnMap, stageIndex: 0, score: 500, stars: 3,
                                            firstTryByPrefecture: [1: true, 2: true],
-                                           cardDraws: []), catalog: .empty)
+                                           cardDraws: []), catalog: .empty, atlas: SaveData.japanAtlas)
         store.eraseAll()
 
         #expect(store.data.mastery.isEmpty)
@@ -240,7 +240,7 @@ struct SaveStoreTests {
             cardDraws: [
                 .new(card("01-1")), .new(card("01-2")),
                 .star(card("02-1"), stars: GameRules.silverStars),
-            ]), catalog: .empty)
+            ]), catalog: .empty, atlas: SaveData.japanAtlas)
 
         #expect(store.data.totalOwnedCards == 3)
         #expect(store.data.specialCardCount == 1)
@@ -302,10 +302,10 @@ struct SaveStoreTests {
         defer { try? FileManager.default.removeItem(at: dir) }
 
         let store = SaveStore(directory: dir)
-        store.applyStageResult(result(outcomes: [1: [true, true]]), catalog: .empty)
+        store.applyStageResult(result(outcomes: [1: [true, true]]), catalog: .empty, atlas: SaveData.japanAtlas)
         #expect(store.data.streak(of: 1) == 2)
 
-        store.applyStageResult(result(outcomes: [1: [true]]), catalog: .empty)
+        store.applyStageResult(result(outcomes: [1: [true]]), catalog: .empty, atlas: SaveData.japanAtlas)
         #expect(store.data.streak(of: 1) == 3)
         #expect(SaveStore(directory: dir).data.streak(of: 1) == 3,
                 "the streak must survive a reload")
@@ -319,8 +319,8 @@ struct SaveStoreTests {
 
         let store = SaveStore(directory: dir)
         store.applyStageResult(result(outcomes: [1: [true, true]],
-                                      draws: [.new(card("01-1"))]), catalog: .empty)
-        store.applyStageResult(result(outcomes: [1: [false, true]]), catalog: .empty)
+                                      draws: [.new(card("01-1"))]), catalog: .empty, atlas: SaveData.japanAtlas)
+        store.applyStageResult(result(outcomes: [1: [false, true]]), catalog: .empty, atlas: SaveData.japanAtlas)
 
         #expect(store.data.streak(of: 1) == 1)
         #expect(store.data.stars(of: "01-1") == 1, "stars stand through a broken streak")
@@ -336,7 +336,7 @@ struct SaveStoreTests {
         store.applyStageResult(
             result(outcomes: [1: [true]],
                    draws: [.star(card("01-1"), stars: GameRules.maxCardStars)]),
-            catalog: catalog)
+            catalog: catalog, atlas: SaveData.japanAtlas)
         #expect(store.data.tier(of: "01-1") == .gold)
         #expect(store.data.streak(of: 1) == 0,
                 "the promoting answer must not start the run")
@@ -345,11 +345,11 @@ struct SaveStoreTests {
         store.applyStageResult(
             result(outcomes: [1: Array(repeating: true,
                                        count: GameRules.rainbowStreak - 1)]),
-            catalog: catalog)
+            catalog: catalog, atlas: SaveData.japanAtlas)
         #expect(store.data.rainbow.isEmpty)
 
         // …the seventh latches it.
-        store.applyStageResult(result(outcomes: [1: [true]]), catalog: catalog)
+        store.applyStageResult(result(outcomes: [1: [true]]), catalog: catalog, atlas: SaveData.japanAtlas)
         #expect(store.data.tier(of: "01-1") == .rainbow)
         #expect(store.data.tier(of: "01-2") == .none,
                 "a card that is not gold has nothing to latch")
@@ -365,11 +365,11 @@ struct SaveStoreTests {
 
         let store = SaveStore(directory: dir)
         store.applyStageResult(
-            result(outcomes: [1: Array(repeating: true, count: 16)]), catalog: catalog)
+            result(outcomes: [1: Array(repeating: true, count: 16)]), catalog: catalog, atlas: SaveData.japanAtlas)
         store.applyStageResult(
             result(outcomes: [1: [true]],
                    draws: [.star(card("01-1"), stars: GameRules.maxCardStars)]),
-            catalog: catalog)
+            catalog: catalog, atlas: SaveData.japanAtlas)
         #expect(store.data.tier(of: "01-1") == .gold)
         #expect(store.data.rainbow.isEmpty)
         #expect(store.data.streak(of: 1) == 0, "the promotion spends the run")
@@ -392,13 +392,13 @@ struct SaveStoreTests {
             result(outcomes: [1: [true, true]],
                    draws: [.star(card("01-1"), stars: GameRules.maxCardStars),
                            .star(card("01-2"), stars: GameRules.maxCardStars)]),
-            catalog: catalog)
+            catalog: catalog, atlas: SaveData.japanAtlas)
         store.applyStageResult(
             result(outcomes: [1: Array(repeating: true,
                                        count: GameRules.rainbowStreak - 1)]),
-            catalog: catalog)
+            catalog: catalog, atlas: SaveData.japanAtlas)
 
-        let gains = store.applyStageResult(result(outcomes: [1: [true]]), catalog: catalog)
+        let gains = store.applyStageResult(result(outcomes: [1: [true]]), catalog: catalog, atlas: SaveData.japanAtlas)
         #expect(gains.rainbowCards == ["01-1", "01-2"],
                 "the latch caught cards the stage never drew and did not name them")
         #expect(store.data.tier(of: "01-3") == .none)
@@ -417,10 +417,10 @@ struct SaveStoreTests {
             result(outcomes: [1: Array(repeating: true,
                                        count: GameRules.rainbowStreak + 1)],
                    draws: [.star(card("01-1"), stars: GameRules.maxCardStars)]),
-            catalog: catalog)
+            catalog: catalog, atlas: SaveData.japanAtlas)
         #expect(earning.rainbowCards == ["01-1"])
 
-        let after = store.applyStageResult(result(outcomes: [1: [true]]), catalog: catalog)
+        let after = store.applyStageResult(result(outcomes: [1: [true]]), catalog: catalog, atlas: SaveData.japanAtlas)
         #expect(after.rainbowCards.isEmpty, "the same rainbow was announced twice")
         #expect(store.data.tier(of: "01-1") == .rainbow)
     }
@@ -437,10 +437,10 @@ struct SaveStoreTests {
             result(outcomes: [1: Array(repeating: true,
                                        count: GameRules.rainbowStreak + 1)],
                    draws: [.star(card("01-1"), stars: GameRules.maxCardStars)]),
-            catalog: catalog)
+            catalog: catalog, atlas: SaveData.japanAtlas)
         #expect(store.data.tier(of: "01-1") == .rainbow)
 
-        store.applyStageResult(result(outcomes: [1: [false]]), catalog: catalog)
+        store.applyStageResult(result(outcomes: [1: [false]]), catalog: catalog, atlas: SaveData.japanAtlas)
         #expect(store.data.streak(of: 1) == 0)
         #expect(store.data.tier(of: "01-1") == .rainbow)
     }
@@ -489,7 +489,7 @@ struct SaveStoreTests {
         // 44 is 大分県 in one book and バハマ in the other.
         store.applyStageResult(StageResult(mode: .findOnMap, stageIndex: 5, score: 100, stars: 1,
                                            firstTryByPrefecture: [44: true],
-                                           cardDraws: []), catalog: .empty)
+                                           cardDraws: []), catalog: .empty, atlas: SaveData.japanAtlas)
         store.applyStageResult(StageResult(mode: .findOnMap, stageIndex: 5, score: 900, stars: 3,
                                            firstTryByPrefecture: [44: true],
                                            cardDraws: []), catalog: .empty,
@@ -519,7 +519,7 @@ struct SaveStoreTests {
         let store = SaveStore(directory: dir)
         store.applyStageResult(StageResult(mode: .findOnMap, stageIndex: 0, score: 0, stars: 3,
                                            firstTryByPrefecture: [:],
-                                           cardDraws: [.new(card("44-1"))]), catalog: .empty)
+                                           cardDraws: [.new(card("44-1"))]), catalog: .empty, atlas: SaveData.japanAtlas)
         store.applyStageResult(StageResult(mode: .findOnMap, stageIndex: 1, score: 0, stars: 3,
                                            firstTryByPrefecture: [:],
                                            cardDraws: [.star(flag, stars: GameRules.silverStars)]),

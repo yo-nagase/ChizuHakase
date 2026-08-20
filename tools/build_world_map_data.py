@@ -22,6 +22,7 @@ Run from tools/:
 from __future__ import annotations
 
 import json
+import math
 import os
 import sys
 
@@ -111,10 +112,32 @@ RESOURCE_RING_AREA_RATIO = 0.015
 RUSSIA = 643
 URAL_LON = 60.0
 
-# インセット拡大の倍率 (裁定 2026-08-19 の 4 カ国)。配置は Swift 側が決める。
+# インセット拡大の倍率 (裁定 2026-08-19 の 4 カ国)。
 # 倍率は日本版の沖縄 1.6 より強い 2.5 — どの国も単独では 10pt に届かないため。
-# 実機で見て調整する暫定値。
+# 実機で見て調整する暫定値。コードごとに変えてよい (表がそのまま調整口)。
 INSET_SCALE = {702: 2.5, 470: 2.5, 462: 2.5, 242: 2.5}
+
+# --- インセット枠の配置 (沖縄方式の一般化) -----------------------------------
+# 拡大した国を入れる破線枠を「いまのステージ枠の中の空き海域」から機械的に
+# 選ぶ。手置きしない — 上流の簡略化が変われば走査が置き直す (日本版
+# build_map_data.py の沖縄と同じ理由)。満たす条件も沖縄の 2 条件の一般化:
+#   1. ステージ枠 (メンバー国 bbox の連結。ロシアは europeBbox、インセット国は
+#      実位置) の内側に収める — 枠を 1 度も広げない
+#   2. 空き候補のうち実位置に最も近いものを選ぶ — 本当の場所の記憶を保つ
+# 空きの判定は bbox ではなくリング実形状で行う: 東南アジアの海はインドネシアの
+# bbox にほぼ覆われていて、bbox 判定では置き場所が 1 つも残らない。
+# 走査は Swift と同じ cos 補正の投影座標で行う — 枠の縦横比は画面での
+# 見た目そのものだから。基準緯度は WorldProjection.referenceLatitudeDegrees
+# の写し。ずらすと「置いた枠」と「描かれる枠」の比が食い違う。
+PROJ_REF_LAT_DEG = 30.0
+PROJ_COS = math.cos(math.radians(PROJ_REF_LAT_DEG))
+# 破線枠と国の間の余白 = ステージ長辺 × これ。国ではなくステージ基準なのは
+# 沖縄 (main_h × 0.012) と同じ — 国の縦横比に余白が引きずられると、
+# モルディブのような細長い国で枠の横幅が国の 3 倍になる。
+INSET_PAD_RATIO = 0.012
+# 走査グリッドの分割数 (ステージ長辺基準)。モルディブの枠はアラビア海の
+# 空き縦帯にほぼぴったりで、粗いグリッドだと入口を跨いで見落とす。
+INSET_SCAN_STEPS = 200
 
 # インセット国は 2.5 倍に拡大して見せる国そのものなので、形だけは 1:10m から
 # 取る (1:50m のマルタは 8 点、シンガポールは 9 点しかなく、拡大すると
@@ -197,6 +220,170 @@ def normalize_dateline(rings):
     if max(slons) - min(slons) >= span:
         return rings
     return shifted
+
+
+def clip_rings_to_west(rings, lon_max):
+    """リング群を経度 lon_max 以西へ切り取る (Sutherland-Hodgman の半平面版)。
+
+    ロシアの錨 (centroid) 探し専用。出荷する形には使わない — 描画は全土のまま
+    で、ここで切るのはヨーロッパ側に錨を落とすための一時的な形だけ。
+    """
+    out = []
+    for ring in rings:
+        pts = ring[:-1] if ring[0] == ring[-1] else list(ring)
+        clipped = []
+        for i in range(len(pts)):
+            x1, y1 = pts[i]
+            x2, y2 = pts[(i + 1) % len(pts)]
+            if x1 <= lon_max:
+                clipped.append((x1, y1))
+            if (x1 <= lon_max) != (x2 <= lon_max):
+                t = (lon_max - x1) / (x2 - x1)
+                clipped.append((lon_max, y1 + t * (y2 - y1)))
+        if len(clipped) >= 3:
+            clipped.append(clipped[0])
+            if ring_area(clipped) > 0.0:
+                out.append(clipped)
+    return out
+
+
+# --- インセット枠の走査 (定数と方針は INSET_SCAN_STEPS 周辺のコメント) -------
+
+def project_pt(pt):
+    """lon/lat (y 上向き) -> 走査用の投影座標 (y 下向き、cos 補正)。"""
+    return (pt[0] * PROJ_COS, -pt[1])
+
+
+def unproject_rect(rect):
+    """投影座標の矩形 -> lon/lat の [lon0, lat0, lon1, lat1] (y 反転を戻す)。"""
+    x0, y0, x1, y1 = rect
+    return [x0 / PROJ_COS, -y1, x1 / PROJ_COS, -y0]
+
+
+def rects_overlap(a, b):
+    return a[0] < b[2] and a[2] > b[0] and a[1] < b[3] and a[3] > b[1]
+
+
+def segs_cross(p1, p2, p3, p4):
+    def orient(a, b, c):
+        return (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0])
+    d1, d2 = orient(p3, p4, p1), orient(p3, p4, p2)
+    d3, d4 = orient(p1, p2, p3), orient(p1, p2, p4)
+    # 共線で触れるだけの縮退は無視する — 余白と走査の粗さより細かい。
+    return (d1 > 0) != (d2 > 0) and (d3 > 0) != (d4 > 0)
+
+
+def seg_hits_rect(p1, p2, rect):
+    x0, y0, x1, y1 = rect
+    if max(p1[0], p2[0]) < x0 or min(p1[0], p2[0]) > x1 \
+            or max(p1[1], p2[1]) < y0 or min(p1[1], p2[1]) > y1:
+        return False
+    corners = [(x0, y0), (x1, y0), (x1, y1), (x0, y1), (x0, y0)]
+    return any(segs_cross(p1, p2, corners[i], corners[i + 1]) for i in range(4))
+
+
+def rect_hits_ring(rect, pts, pts_bbox):
+    """矩形とリング (投影座標の閉じた点列) が触れるか。
+
+    3 段で漏れなく見る: リングの頂点が矩形内 / 矩形の角がリング内 /
+    辺どうしの交差 (頂点も角も入らない斜め横断)。リングは 1 枚の面として
+    扱う — 穴の中に枠を置ける判定はしない (保守側)。
+    """
+    if not rects_overlap(rect, pts_bbox):
+        return False
+    x0, y0, x1, y1 = rect
+    for px, py in pts:
+        if x0 <= px <= x1 and y0 <= py <= y1:
+            return True
+    for cx, cy in ((x0, y0), (x1, y0), (x1, y1), (x0, y1)):
+        if point_in_rings(cx, cy, [pts]):
+            return True
+    return any(seg_hits_rect(pts[i], pts[i + 1], rect) for i in range(len(pts) - 1))
+
+
+def place_inset_frames(countries, background):
+    """インセット国ごとに破線枠 (lon/lat の [lon0, lat0, lon1, lat1]) を選ぶ。
+
+    Swift 側 (WorldDataLoader) はこの枠の中心へ国を scale 倍して置き、枠を
+    破線で描き、拡大後の形でタップを判定する。リング座標そのものは実位置の
+    まま出す — 地球儀モード (設計 §7) が焼き込みを許さないため、移動は
+    ロード時に行う。日本版が沖縄を焼き込むのとの唯一の意図的な違い。
+    """
+    by_code = {c["code"]: c for c in countries}
+
+    # 障害物: 全収録国 (置く国自身は実位置が空くので除く) + 背景 + 置いた枠。
+    # 他ステージの国も避ける — ステージ画面には描かれないが、マイマップは
+    # 全収録国を 1 枚に描くので、そこで枠が大陸に重なる。
+    obstacles = []  # (owner_code or None, ring_bbox, pts) すべて投影座標
+    for c in countries:
+        for ring in c["rings"]:
+            pts = [project_pt(p) for p in ring]
+            obstacles.append((c["code"], bbox_of(pts), pts))
+    for entry in background:
+        for ring in entry["rings"]:
+            pts = [project_pt(p) for p in ring]
+            obstacles.append((None, bbox_of(pts), pts))
+
+    frames = {}        # code -> lon/lat frame
+    placed_rects = []  # 投影座標。後続のインセットが避ける
+    for code in sorted(INSET_SCALE):
+        country = by_code[code]
+        scale = INSET_SCALE[code]
+
+        # ステージ枠 = メンバーの枠 bbox の連結 (ロシアは europeBbox、
+        # 置く国自身は実位置)。これが「今日の枠」で、枠の外には置かない。
+        sx0 = sy0 = float("inf")
+        sx1 = sy1 = -float("inf")
+        for member in countries:
+            if member["stage"] != country["stage"]:
+                continue
+            b = member.get("europeBbox", member["bbox"])
+            (mx0, my0), (mx1, my1) = project_pt(b[:2]), project_pt(b[2:])
+            sx0, sy0 = min(sx0, mx0), min(sy0, my1)  # y 反転で上下が入れ替わる
+            sx1, sy1 = max(sx1, mx1), max(sy1, my0)
+        stage_w, stage_h = sx1 - sx0, sy1 - sy0
+
+        (bx0, by0), (bx1, by1) = project_pt(country["bbox"][:2]), project_pt(country["bbox"][2:])
+        by0, by1 = min(by0, by1), max(by0, by1)
+        w, h = (bx1 - bx0) * scale, (by1 - by0) * scale
+        pad = INSET_PAD_RATIO * max(stage_w, stage_h)
+        fw, fh = w + 2 * pad, h + 2 * pad
+        if fw > stage_w or fh > stage_h:
+            sys.exit(f"inset frame for {code} ({fw:.1f}x{fh:.1f}) does not fit "
+                     f"its stage frame ({stage_w:.1f}x{stage_h:.1f}) - "
+                     "lower INSET_SCALE or revisit the stage split")
+
+        # 実位置の中心に近い順で空き候補を試す (条件 2)。
+        true_cx, true_cy = (bx0 + bx1) / 2, (by0 + by1) / 2
+        step = max(stage_w, stage_h) / INSET_SCAN_STEPS
+        near = [ob for ob in obstacles
+                if ob[0] != code and rects_overlap((sx0, sy0, sx1, sy1), ob[1])]
+        candidates = []
+        cy = sy0 + fh / 2
+        while cy <= sy1 - fh / 2:
+            cx = sx0 + fw / 2
+            while cx <= sx1 - fw / 2:
+                candidates.append((math.hypot(cx - true_cx, cy - true_cy), cx, cy))
+                cx += step
+            cy += step
+        candidates.sort()
+
+        chosen = None
+        for _, cx, cy in candidates:
+            rect = (cx - fw / 2, cy - fh / 2, cx + fw / 2, cy + fh / 2)
+            if any(rects_overlap(rect, r) for r in placed_rects):
+                continue
+            if any(rect_hits_ring(rect, pts, rb) for _, rb, pts in near):
+                continue
+            chosen = rect
+            break
+        if chosen is None:
+            sys.exit(f"no free water inside the stage frame for inset {code} - "
+                     "upstream data changed, or the scale is too big")
+
+        placed_rects.append(chosen)
+        frames[code] = [round(v, COORD_DECIMALS) for v in unproject_rect(chosen)]
+    return frames
 
 
 def prune_rings(code, rings, min_area=MIN_RING_AREA_DEG2):
@@ -497,7 +684,17 @@ def main():
         # 面積重心はここでは使えない: 群島国 (フィリピン等) や凹形状の国
         # (クロアチア等) で海に落ちる。ラベル・エフェクトの錨は必ず自国の
         # 中に要るので、平均ではなく保証つきの内部点を探す。
-        cx, cy = pole_of_inaccessibility(kept)
+        # ロシアだけはウラル線以西で探す: ひがしヨーロッパのステージ枠は
+        # europeBbox (下記) までなので、全土の錨 (中央シベリア) だと正解の
+        # ポップも特産絵文字も VoiceOver の位置も枠の外に出てしまう。
+        # 切るのは錨探しの一時的な形だけで、出荷するリングは全土のまま。
+        anchor_rings = kept
+        if code == RUSSIA:
+            anchor_rings = clip_rings_to_west(kept, URAL_LON)
+            if not anchor_rings:
+                sys.exit("russia has no area west of the ural line - "
+                         "upstream data changed?")
+        cx, cy = pole_of_inaccessibility(anchor_rings)
         if not point_in_rings(cx, cy, kept):
             sys.exit(f"centroid outside shape for code {code} ({name_ja})")
 
@@ -567,10 +764,13 @@ def main():
     if not wc.INSET_COUNTRIES <= recorded_codes:
         sys.exit("inset country missing from recorded output")
 
+    frames = place_inset_frames(countries, background)
+
     out = {
         "countries": countries,
         "background": background,
-        "insets": [{"code": code, "scale": INSET_SCALE[code]}
+        "insets": [{"code": code, "scale": INSET_SCALE[code],
+                    "frame": frames[code]}
                    for code in sorted(INSET_SCALE)],
     }
 
@@ -595,7 +795,8 @@ def main():
     print(f"  background : {len(background)} features, {bg_pts} pts")
     print(f"  rings      : min {ring_counts[min_rings]} (code {min_rings}), "
           f"max {ring_counts[max_rings]} (code {max_rings})")
-    print(f"  insets     : {sorted(INSET_SCALE)}")
+    for code in sorted(INSET_SCALE):
+        print(f"  inset frame: {code} x{INSET_SCALE[code]} -> {frames[code]}")
     print(f"  size       : {size / 1024:.1f} KB")
     if size > 400 * 1024:
         # 超過は報告して人が判断する。黙って簡略化率を上げない。

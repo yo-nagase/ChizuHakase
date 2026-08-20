@@ -40,6 +40,25 @@ struct PrefectureGeometryTests {
         }
     }
 
+    /// A shape carrying a `frameBbox` (Russia's European part) lends only that
+    /// part to the stage frame; the true `bbox` still decides hit testing.
+    @Test func frameBboxTrumpsBboxForTheStageFrame() {
+        let declared = CGRect(x: 0, y: 0, width: 40, height: 30)
+        let russia = Prefecture(code: 1, name: "露", kana: "ろ",
+                                bbox: CGRect(x: 0, y: 0, width: 500, height: 30),
+                                centroid: CGPoint(x: 20, y: 15),
+                                rings: [[.zero]], frameBbox: declared)
+        let neighbour = Prefecture(code: 2, name: "隣", kana: "となり",
+                                   bbox: CGRect(x: 10, y: 30, width: 20, height: 20),
+                                   centroid: CGPoint(x: 20, y: 40),
+                                   rings: [[.zero]])
+        #expect(PrefectureGeometry.boundingBox(of: [russia, neighbour])
+                == CGRect(x: 0, y: 0, width: 40, height: 50))
+        // Without a declaration the full bbox keeps ruling the frame.
+        #expect(PrefectureGeometry.boundingBox(of: [neighbour])
+                == neighbour.bbox)
+    }
+
     /// A stage covering fewer prefectures must zoom in, otherwise small
     /// prefectures stay unhittable on the regional stages.
     @Test func regionalStagesZoomInMoreThanTheAllJapanStage() {

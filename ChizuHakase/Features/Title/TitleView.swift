@@ -365,10 +365,11 @@ struct TitleView: View {
                     codes: atlas.mapData.prefectures.map(\.code),
                     appearance: {
                         MasteryStyle.appearance(for: $0.code, save: slice)
-                    },
-                    // Data-driven, not a japan/world switch: the dashed inset
-                    // frame is drawn wherever the map declares one.
-                    showsOkinawaInset: atlas.mapData.okinawaInset != .zero
+                    }
+                    // Inset frames and background coastlines are data-driven:
+                    // the map draws whatever `mapData` declares. The world
+                    // page gains its grey unrecorded coastlines for free —
+                    // the silhouette a child recognises as "the world".
                 )
                 .aspectRatio(
                     PrefectureGeometry.aspectRatio(of: atlas.mapData.prefectures),

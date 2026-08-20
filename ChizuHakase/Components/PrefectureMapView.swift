@@ -131,7 +131,14 @@ struct PrefectureMapView: View {
     /// Blinks a red outline once the child has missed twice.
     var hintCode: Int?
     var effect: MapEffect?
-    var showsOkinawaInset = true
+    /// The dashed boxes around relocated shapes (Okinawa, the world's inset
+    /// countries). Data-driven — a frame is drawn wherever `mapData.insets`
+    /// declares one for a shape on screen; this flag only lets the stage-select
+    /// thumbnails drop the furniture at sticker size.
+    var showsInsetFrames = true
+    /// Unrecorded coastlines (`mapData.background`), grey and untappable.
+    /// Off for the same thumbnails: at 84pt the scenery would drown the stage.
+    var showsBackground = true
     /// How much the caller has magnified this view.
     ///
     /// Outlines are drawn before `scaleEffect` is applied, so at 4x a 1.5pt
@@ -155,8 +162,18 @@ struct PrefectureMapView: View {
                 into: geo.size)
 
             ZStack(alignment: .topLeading) {
-                if showsOkinawaInset, codes.contains(47) {
-                    OkinawaInsetFrame(rect: mapData.okinawaInset.applying(transform))
+                // Scenery first, under everything: it must never cover a
+                // question, a sticker or a celebration.
+                if showsBackground {
+                    backgroundLayer(transform: transform, canvasSize: geo.size)
+                }
+
+                if showsInsetFrames {
+                    ForEach(mapData.insets, id: \.code) { inset in
+                        if codes.contains(inset.code) {
+                            InsetFrame(rect: inset.frame.applying(transform))
+                        }
+                    }
                 }
 
                 // One shadow for the whole sheet of stuck stickers rather than
@@ -183,6 +200,13 @@ struct PrefectureMapView: View {
                 }
             }
             .frame(width: geo.size.width, height: geo.size.height)
+            // Siberia and the background coastlines deliberately overflow the
+            // stage frame (frame calculation and drawn extent are separate
+            // things — Prefecture.frameBbox). Cut the overflow at the map's
+            // own edge; nothing on the japan map reaches it, so nothing there
+            // changes. Overlays below (the combo stamp) attach after the clip
+            // and keep their own inside-the-canvas clamping.
+            .clipped()
             .contentShape(Rectangle())
             .onTapGesture { location in
                 guard let onTap else { return }
@@ -191,6 +215,35 @@ struct PrefectureMapView: View {
             .overlay(alignment: .topLeading) {
                 comboLabel(transform: transform, canvasSize: geo.size)
             }
+        }
+    }
+
+    /// The unrecorded coastlines that fall inside the visible canvas, as one
+    /// quiet grey landmass (CLAUDE.md §3 — leaving them out draws false sea).
+    /// One combined path, filled once: it is scenery, so adjacent shapes may
+    /// fuse — separate them and they start to look like more questions.
+    /// Not tappable and hidden from VoiceOver for the same reason.
+    @ViewBuilder private func backgroundLayer(transform: CGAffineTransform,
+                                              canvasSize: CGSize) -> some View {
+        let canvasRect = CGRect(origin: .zero, size: canvasSize)
+        let path = mapData.background.reduce(into: Path()) { path, shape in
+            // The world's background covers the globe; a stage sees a corner.
+            guard shape.bbox.applying(transform).intersects(canvasRect) else { return }
+            path.addPath(PrefectureGeometry.path(rings: shape.rings,
+                                                 transform: transform))
+        }
+        if !path.isEmpty {
+            ZStack(alignment: .topLeading) {
+                path.fill(Palette.backgroundLand, style: FillStyle(eoFill: true))
+                // A shoreline hairline, or the grey mass reads as a stain on
+                // the sea rather than as land. Same weight as the printed
+                // prefecture boundary so no line here outweighs a real border.
+                path.stroke(Palette.backgroundShore,
+                            lineWidth: min(max(canvasSize.width * 0.0019, 0.3), 0.7)
+                                / max(zoom, 1))
+            }
+            .allowsHitTesting(false)
+            .accessibilityHidden(true)
         }
     }
 
@@ -719,11 +772,12 @@ private struct CorrectFoilTrace: View {
     }
 }
 
-// MARK: - Okinawa inset
+// MARK: - Inset frame
 
-/// Dashed box around the relocated Okinawa so it reads as a separate frame
-/// rather than Okinawa's real position (CLAUDE.md §3).
-private struct OkinawaInsetFrame: View {
+/// Dashed box around a relocated, enlarged shape — Okinawa on the japan map,
+/// the Singapore-class countries on the world map — so it reads as a separate
+/// frame rather than the shape's real position (CLAUDE.md §3).
+private struct InsetFrame: View {
     let rect: CGRect
 
     var body: some View {

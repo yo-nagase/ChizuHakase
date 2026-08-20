@@ -182,7 +182,8 @@ struct RootView: View {
                         stars: stars,
                         firstTryByPrefecture: Dictionary(uniqueKeysWithValues:
                             stage.codes.map { ($0, true) }),
-                        cardDraws: []), catalog: app.cards)
+                        cardDraws: []),
+                        catalog: app.cards, atlas: SaveData.japanAtlas)
                 }
             }
             // Learning radiates out from 関東: gold there, deep green next
@@ -216,11 +217,12 @@ struct RootView: View {
                 },
                 outcomesByPrefecture: [13: Array(repeating: true,
                                                  count: GameRules.rainbowStreak + 1)]),
-                catalog: app.cards)
+                catalog: app.cards, atlas: SaveData.japanAtlas)
             // One nameIt record so the stage list shows the per-mode split.
             app.save.applyStageResult(StageResult(
                 mode: .nameIt, stageIndex: 1, score: 1180, stars: 2,
-                firstTryByPrefecture: [:], cardDraws: []), catalog: app.cards)
+                firstTryByPrefecture: [:], cardDraws: []),
+                catalog: app.cards, atlas: SaveData.japanAtlas)
         }
         // Parsed before the grant flags and -startAt, so both the granted book
         // and `-atlas world -startAt quiz:15` resolve against the world's
@@ -275,12 +277,17 @@ struct RootView: View {
         // state the stage list's 「おぼえた ◯ / ◯」 has to show as full. Its own
         // flag rather than a rider on -grantCards: that one is about the book,
         // and a test asking about progress should say so.
+        // Japan-only by design, even though it sits after the `-atlas` parse:
+        // its one UI test (StageSelectUITests) launches without `-atlas` and
+        // reads japan's shelf. Make it atlas-aware like `-grantCards` the day
+        // a world test needs the same fixture.
         if arguments.contains("-learnFirstStage"), let stage = Stage.all.first {
             app.save.applyStageResult(StageResult(
                 mode: .findOnMap, stageIndex: stage.index, score: 0, stars: 3,
                 firstTryByPrefecture: Dictionary(uniqueKeysWithValues:
                     stage.codes.map { ($0, true) }),
-                cardDraws: []), catalog: app.cards)
+                cardDraws: []),
+                catalog: app.cards, atlas: SaveData.japanAtlas)
         }
         guard let index = arguments.firstIndex(of: "-startAt"),
               index + 1 < arguments.count else { return }

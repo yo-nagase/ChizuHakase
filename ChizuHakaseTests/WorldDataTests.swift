@@ -108,6 +108,24 @@ struct WorldDataTests {
         #expect(flagged == Set(world.insets.map(\.code)))
     }
 
+    /// インセット国はロード時に scale 倍され、破線枠の中心へ移されている
+    /// (`WorldInset` の註 — 沖縄の別枠と同じ見た目・同じタップの仕組み)。
+    @Test func インセット国は枠の中へ拡大されて置かれる() throws {
+        let world = try loadedWorld()
+        for inset in world.insets {
+            let country = try #require(world[inset.code])
+            #expect(inset.frame.width > 0 && inset.frame.height > 0,
+                    "code \(inset.code) の枠が潰れている")
+            #expect(inset.frame.contains(country.flatBbox),
+                    "code \(inset.code): \(country.flatBbox) が枠 \(inset.frame) の外")
+            // 中心合わせ: 拡大後の形の中心 = 枠の中心(ローダの relocation)。
+            #expect(abs(country.flatBbox.midX - inset.frame.midX) < 0.01, "code \(inset.code)")
+            #expect(abs(country.flatBbox.midY - inset.frame.midY) < 0.01, "code \(inset.code)")
+            // 錨も形と一緒に動く — ラベルやポップが枠の外に出ない。
+            #expect(inset.frame.contains(country.flatCentroid), "code \(inset.code)")
+        }
+    }
+
     @Test func 背景の海岸線が同じ平面に載る() throws {
         let world = try loadedWorld()
         #expect(!world.background.isEmpty)
@@ -231,9 +249,10 @@ struct WorldDataLoaderErrorTests {
         """
     }
 
-    private func writeFixture(countries: [String]) throws -> URL {
+    private func writeFixture(countries: [String], insets: String = "[]") throws -> URL {
         let json = """
-        {"countries": [\(countries.joined(separator: ","))], "background": [], "insets": []}
+        {"countries": [\(countries.joined(separator: ","))], "background": [], \
+        "insets": \(insets)}
         """
         let url = FileManager.default.temporaryDirectory
             .appendingPathComponent("WorldDataTests-\(UUID().uuidString)")
@@ -275,6 +294,47 @@ struct WorldDataLoaderErrorTests {
         defer { try? FileManager.default.removeItem(at: url) }
         #expect(throws: WorldDataLoader.WorldDataError.malformedCountry(code: 10)) {
             _ = try WorldDataLoader.load(contentsOf: url)
+        }
+    }
+
+    /// ローダのインセット移動そのものの検算(実データ非依存の固定値)。
+    /// 国 bbox [0,0,2,2]・scale 2 に対し、枠は lon 3–7 / lat -3–1(ちょうど
+    /// 拡大後の寸法)。投影して p' = 枠中心 + (p − 元中心) × 2 になること。
+    @Test func インセットは枠の中心へ拡大して写される() throws {
+        let url = try writeFixture(
+            countries: [countryJSON(code: 10)],
+            insets: #"[{"code": 10, "scale": 2, "frame": [3, -3, 7, 1]}]"#)
+        defer { try? FileManager.default.removeItem(at: url) }
+        let world = try WorldDataLoader.load(contentsOf: url)
+        let country = try #require(world[10])
+        let frame = try #require(world.insets.first).frame
+        // 拡大後の bbox が枠と一致する(この固定値では寸法まで等しい)。
+        #expect(abs(country.flatBbox.minX - frame.minX) < 0.01)
+        #expect(abs(country.flatBbox.maxY - frame.maxY) < 0.01)
+        #expect(abs(country.flatBbox.width - frame.width) < 0.01)
+        // 元 (lon 0, lat 0) は枠の左下へ写る(投影は y 下向き)。
+        let corner = try #require(country.flatRings.first?.first)
+        #expect(abs(corner.x - frame.minX) < 0.01)
+        #expect(abs(corner.y - frame.maxY) < 0.01)
+        #expect(country.isInset)
+    }
+
+    @Test func 壊れたインセット宣言は投げる() throws {
+        // 潰れた枠(経度スパン 0)。
+        let flat = try writeFixture(
+            countries: [countryJSON(code: 10)],
+            insets: #"[{"code": 10, "scale": 2, "frame": [5, -3, 5, 1]}]"#)
+        defer { try? FileManager.default.removeItem(at: flat) }
+        #expect(throws: WorldDataLoader.WorldDataError.malformedInset(code: 10)) {
+            _ = try WorldDataLoader.load(contentsOf: flat)
+        }
+        // 縮小(scale 1 以下)のインセットは無意味 — 生成器の契約違反。
+        let shrink = try writeFixture(
+            countries: [countryJSON(code: 10)],
+            insets: #"[{"code": 10, "scale": 1, "frame": [3, -3, 7, 1]}]"#)
+        defer { try? FileManager.default.removeItem(at: shrink) }
+        #expect(throws: WorldDataLoader.WorldDataError.malformedInset(code: 10)) {
+            _ = try WorldDataLoader.load(contentsOf: shrink)
         }
     }
 }

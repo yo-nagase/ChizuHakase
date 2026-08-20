@@ -146,6 +146,8 @@ final class WorldQuizUITests: XCTestCase {
         // Open the first owned flag — アルジェリア's, the colliding "12-1".
         // Its description proves which catalog answered: japan's 12-1 talks
         // about peanuts, the world's about アルジェリア's flag.
+        // Assumes catalog order puts "12-1" first among the three granted
+        // flags (ISO 12 < 36 < 392) — the book lists cards in catalog order.
         let card = chip(named: "こっき")
         XCTAssertTrue(card.waitForExistence(timeout: 5), "no owned flag card in the book")
         card.tap()

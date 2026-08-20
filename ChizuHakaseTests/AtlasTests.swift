@@ -40,7 +40,8 @@ struct AtlasTests {
         #expect(atlas.mapData.prefectures == Self.japanMap.prefectures)
         #expect(atlas.mapData.width == Self.japanMap.width)
         #expect(atlas.mapData.height == Self.japanMap.height)
-        #expect(atlas.mapData.okinawaInset == Self.japanMap.okinawaInset)
+        #expect(atlas.mapData.insets == Self.japanMap.insets)
+        #expect(atlas.mapData.background.isEmpty)
         #expect(atlas.mapData[13]?.name == "東京都")
         #expect(atlas.mapData[1]?.kana == "ほっかいどう")
     }
@@ -274,8 +275,87 @@ struct AtlasTests {
         // 幅 1000 正規化は収録国基準(WorldDataTests と同じ根拠)。
         #expect(abs(atlas.mapData.width - 1000) < 0.5, "width = \(atlas.mapData.width)")
         #expect(atlas.mapData.height > 0)
-        // 沖縄インセットは日本の地図だけの持ち物。zero = 枠なし(MapData.empty と同じ)。
-        #expect(atlas.mapData.okinawaInset == .zero)
+    }
+
+    /// インセット枠・背景海岸線・ロシアの枠 bbox が MapData まで届くこと。
+    /// 描画側(PrefectureMapView)はこの値を見るだけで、japan/world を知らない。
+    @Test func 世界アトラスは枠と背景を地図ごと運ぶ() throws {
+        let world = try Self.world.get()
+        let atlas = Atlas.world(from: world)
+
+        // 破線枠は裁定の 4 カ国ぶん。対象国の形(ロード時に拡大・移動済み)は
+        // 自分の枠の中に収まる — 沖縄と同じ「別枠」の見た目が成立する条件。
+        #expect(atlas.mapData.insets.map(\.code).sorted() == [242, 462, 470, 702])
+        for inset in atlas.mapData.insets {
+            let country = try #require(atlas.mapData[inset.code])
+            #expect(inset.frame.contains(country.bbox),
+                    "code \(inset.code): \(country.bbox) escapes \(inset.frame)")
+            #expect(inset.frame.contains(country.centroid), "code \(inset.code)")
+        }
+
+        // 背景は「コード無しの海岸線」のまま、間引き用の bbox が付いて渡る。
+        #expect(!atlas.mapData.background.isEmpty)
+        for (shape, source) in zip(atlas.mapData.background, world.background) {
+            #expect(shape.rings == source.flatRings)
+            for point in shape.rings.flatMap({ $0 }) {
+                #expect(shape.bbox.insetBy(dx: -0.01, dy: -0.01).contains(point))
+            }
+        }
+
+        // ロシアだけがステージ枠用の frameBbox(= europeBbox)を運ぶ。
+        let russia = try #require(atlas.mapData[643])
+        #expect(russia.frameBbox == world[643]?.europeBbox)
+        for pref in atlas.mapData.prefectures where pref.code != 643 {
+            #expect(pref.frameBbox == nil, "code \(pref.code)")
+        }
+    }
+
+    /// インセット国のタップは沖縄と同じ仕組みで成立する: 形が拡大されて
+    /// 枠内に実在するので、既存の resolveTap がそのまま当てる。枠のそばの
+    /// 近いはずれも許容(§3 の 22pt)に拾われる — 別枠は空き海域に置かれる
+    /// ので、競合する隣国がいない。
+    @Test func インセット国は枠内のタップで当たる() throws {
+        let atlas = try worldAtlas()
+        for inset in atlas.mapData.insets {
+            let country = try #require(atlas.mapData[inset.code])
+            let stage = try #require(atlas.stages.first {
+                $0.codes.contains(inset.code)
+            })
+            let members = atlas.mapData.prefectures(in: stage.codes)
+            let transform = PrefectureGeometry.fitTransform(
+                bounds: PrefectureGeometry.boundingBox(of: members),
+                into: CGSize(width: 380, height: 380))
+            // ど真ん中(重心)への直撃。
+            let centroid = PrefectureGeometry.screenCentroid(
+                of: country, transform: transform)
+            #expect(PrefectureGeometry.resolveTap(
+                at: centroid, target: country, among: members,
+                transform: transform)?.code == inset.code, "code \(inset.code)")
+            // 少し外した指(10pt 右)も、訊かれている国なら拾われる。
+            let near = CGPoint(x: centroid.x + 10, y: centroid.y)
+            #expect(PrefectureGeometry.resolveTap(
+                at: near, target: country, among: members,
+                transform: transform)?.code == inset.code, "code \(inset.code)")
+        }
+    }
+
+    /// モルドバ 13pt 問題(2026-08-18-world-stages.md)の解消を数字で固定する:
+    /// ひがしヨーロッパのステージ枠はロシアの europeBbox までで、その枠を
+    /// 380pt に収めたときモルドバが日本版の香川帯(10–22pt)を超えて描かれる。
+    @Test func ひがしヨーロッパの枠でモルドバがタップ寸法に届く() throws {
+        let atlas = try worldAtlas()
+        let stage = try #require(atlas.stage(at: 5))
+        let members = atlas.mapData.prefectures(in: stage.codes)
+        let frame = PrefectureGeometry.boundingBox(of: members)
+        let russia = try #require(atlas.mapData[643])
+        // 枠はウラル線まで — 全土 bbox ならこの 2.5 倍を超えて広がる。
+        #expect(frame.width < russia.bbox.width * 0.5,
+                "frame \(frame) still spans Siberia")
+        let transform = PrefectureGeometry.fitTransform(
+            bounds: frame, into: CGSize(width: 380, height: 380))
+        let moldova = try #require(atlas.mapData[498]).bbox.applying(transform)
+        #expect(max(moldova.width, moldova.height) > 22,
+                "Moldova is \(moldova.size) on a 380pt panel")
     }
 
     @Test func 世界アトラスの語彙はよみと表記の両方を含む() throws {

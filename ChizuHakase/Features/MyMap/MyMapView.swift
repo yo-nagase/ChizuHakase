@@ -58,9 +58,8 @@ struct MyMapView: View {
             codes: atlas.mapData.prefectures.map(\.code),
             appearance: appearance,
             interactiveCodes: Set(atlas.mapData.prefectures.map(\.code)),
-            // Data-driven, the same expression as the title's mini map: the
-            // dashed inset frame is drawn wherever the map declares one.
-            showsOkinawaInset: atlas.mapData.okinawaInset != .zero,
+            // Inset frames and background coastlines are data-driven — the map
+            // draws whatever `mapData` declares, so nothing is passed here.
             zoom: zoom,
             onTap: { prefecture, point in
                 // The touch region outgrows the clipped panel while zoomed

@@ -21,6 +21,7 @@ import sys
 from collections import Counter
 
 import world_countries as wc
+from map_geometry import point_in_rings
 
 DEFAULT_DST = os.path.join("..", "ChizuHakase", "Resources", "WorldShapes.json")
 
@@ -129,13 +130,57 @@ def main():
     assert len(inset_codes) == len(set(inset_codes)) \
         and set(inset_codes) == wc.INSET_COUNTRIES, \
         ("insets がマスタと食い違う", inset_codes)
-    for inset in data["insets"]:
-        assert inset["scale"] > 1, (inset["code"], "縮小するインセットは無意味")
     by_code = {c["code"]: c for c in countries}
-    for code in sorted(wc.INSET_COUNTRIES):
+    for inset in data["insets"]:
+        code = inset["code"]
+        assert inset["scale"] > 1, (code, "縮小するインセットは無意味")
         # 拡大して見せる国が三角形では種明かしになる (build の INSET_MIN_TOTAL_PTS)
         pts = sum(len(r) for r in by_code[code]["rings"])
         assert pts >= INSET_MIN_TOTAL_PTS, (code, pts, "インセット国の輪郭が痩せている")
+
+        # 破線枠。Swift はこの枠の中心へ国を scale 倍して置くので、
+        # 拡大後の bbox が枠に収まらないと国が枠からはみ出して描かれる。
+        fx0, fy0, fx1, fy1 = inset["frame"]
+        assert fx0 < fx1 and fy0 < fy1, (code, "frame が潰れている")
+        check_decimals(inset["frame"], code)
+        bx0, by0, bx1, by1 = by_code[code]["bbox"]
+        # 経度は投影の cos 補正が両辺に等しく掛かるので、度のまま比べてよい
+        assert (bx1 - bx0) * inset["scale"] <= fx1 - fx0 + 1e-6, \
+            (code, "拡大後の幅が frame を超える")
+        assert (by1 - by0) * inset["scale"] <= fy1 - fy0 + 1e-6, \
+            (code, "拡大後の高さが frame を超える")
+
+        # 枠はステージ枠 (メンバー国 bbox の連結。ロシアは europeBbox) の内側
+        # — 枠のためにステージが広がる置き方はしない (build の条件 1)
+        members = [c for c in recorded if c["stage"] == by_code[code]["stage"]]
+        boxes = [c.get("europeBbox", c["bbox"]) for c in members]
+        sx0 = min(b[0] for b in boxes)
+        sy0 = min(b[1] for b in boxes)
+        sx1 = max(b[2] for b in boxes)
+        sy1 = max(b[3] for b in boxes)
+        assert sx0 <= fx0 and fy0 >= sy0 and fx1 <= sx1 and fy1 <= sy1, \
+            (code, "frame がステージ枠の外", inset["frame"], [sx0, sy0, sx1, sy1])
+
+        # 空き海域であること: どの地物の頂点も枠に入らず、枠の四隅と中心も
+        # どの地物の中に落ちない (斜め横断は build の走査が辺交差まで見ている)
+        probes = [(fx0, fy0), (fx1, fy0), (fx1, fy1), (fx0, fy1),
+                  ((fx0 + fx1) / 2, (fy0 + fy1) / 2)]
+        shapes = [(c["code"], c["rings"]) for c in countries if c["code"] != code]
+        shapes += [(f"background[{i}]", e["rings"])
+                   for i, e in enumerate(data["background"])]
+        for owner, rings in shapes:
+            for ring in rings:
+                for x, y in ring:
+                    assert not (fx0 <= x <= fx1 and fy0 <= y <= fy1), \
+                        (code, "frame が地物に重なる", owner)
+            for px, py in probes:
+                assert not point_in_rings(px, py, rings), \
+                    (code, "frame が地物の中にある", owner)
+
+    # ロシアの錨はヨーロッパ側 (build の clip_rings_to_west)。シベリアに
+    # 落ちると、ひがしヨーロッパの枠の外でポップやふりがなが出る
+    assert by_code[643]["centroid"][0] < URAL_LON, \
+        ("ロシアの centroid がウラル線の東", by_code[643]["centroid"])
 
     size = os.path.getsize(path)
     if size > SIZE_BUDGET:

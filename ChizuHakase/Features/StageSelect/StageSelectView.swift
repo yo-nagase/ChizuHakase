@@ -249,7 +249,10 @@ private struct StageSignboard: View {
             mapData: mapData,
             codes: stage.codes,
             appearance: { MasteryStyle.appearance(for: $0.code, save: save) },
-            showsOkinawaInset: false)
+            // Sticker-sized: at 84pt the dashed frame is noise and the grey
+            // scenery would drown the stage's own shapes.
+            showsInsetFrames: false,
+            showsBackground: false)
         .allowsHitTesting(false)
         .shadow(color: Palette.ink.opacity(0.12), radius: 0, y: 1)
     }

@@ -28,7 +28,8 @@ nonisolated struct WorldCountry: Identifiable, Sendable, Equatable {
     let flatCentroid: CGPoint
     /// リングの正確な範囲(パイプラインが保証)。ステージ枠の計算に使う。
     let flatBbox: CGRect
-    /// 小さすぎてタップできない国(シンガポール等)。拡大表示は後続タスク。
+    /// 小さすぎてタップできない国(シンガポール等)。true なら flatRings は
+    /// すでに拡大されて破線枠の中へ移されている(`WorldInset` の註)。
     let isInset: Bool
     /// ロシアのみ: ウラルまでの欧州部分の枠。ひがしヨーロッパのステージ枠が
     /// シベリアまで広がらないようにするための切り取り線。他の用途に使わない。
@@ -47,10 +48,16 @@ nonisolated struct WorldBackgroundShape: Sendable, Equatable {
 }
 
 /// インセット拡大の宣言(裁定 2026-08-19: シンガポール・マルタ・モルディブ・
-/// フィジー)。描画側がまだ無いので、ここでは宣言をそのまま運ぶだけ。
+/// フィジー)。対象国の `flatRings` はロード時に `scale` 倍されて `frame` の
+/// 中心へ移されている — 沖縄と同じ「別枠」の仕組みで、違いは焼き込む場所
+/// だけ(日本はパイプライン、世界はロード時。地球儀モードが lon/lat の
+/// 実位置を要るため、JSON には本当の座標を残す)。
 nonisolated struct WorldInset: Sendable, Equatable {
     let code: Int
     let scale: CGFloat
+    /// 破線枠(投影済みの平面座標)。位置はパイプラインがステージ枠内の
+    /// 空き海域を走査して決める(tools/build_world_map_data.py。手置きしない)。
+    let frame: CGRect
 }
 
 /// WorldShapes.json をデコード・投影し終えた全体。
@@ -150,6 +157,7 @@ nonisolated enum WorldDataLoader {
         case countriesNotSortedUniquely
         case unknownStage(countryCode: Int, stage: Int)
         case degenerateExtent
+        case malformedInset(code: Int)
     }
 
     // MARK: 生の JSON 形
@@ -171,6 +179,8 @@ nonisolated enum WorldDataLoader {
         struct Inset: Decodable {
             let code: Int
             let scale: Double
+            /// `[lon0, lat0, lon1, lat1]`(生成器が配置済みの破線枠)。
+            let frame: [Double]
         }
         let countries: [Country]
         let background: [Background]
@@ -197,9 +207,19 @@ nonisolated enum WorldDataLoader {
         }
 
         let projection = try makeProjection(for: file.countries)
-        let insetCodes = Set(file.insets.map(\.code))
+        let insets = try file.insets.map { inset -> WorldInset in
+            // 拡大が 1 倍以下・枠が退化、はどちらも生成器の契約違反。
+            guard inset.scale > 1,
+                  let frame = rect(fromWire: inset.frame, with: projection),
+                  frame.width > 0, frame.height > 0 else {
+                throw WorldDataError.malformedInset(code: inset.code)
+            }
+            return WorldInset(code: inset.code, scale: inset.scale, frame: frame)
+        }
+        let insetByCode = Dictionary(insets.map { ($0.code, $0) },
+                                     uniquingKeysWith: { first, _ in first })
         let countries = try file.countries.map {
-            try makeCountry($0, projection: projection, insetCodes: insetCodes)
+            try makeCountry($0, projection: projection, inset: insetByCode[$0.code])
         }
         return WorldMapData(
             recordedCountries: countries,
@@ -207,7 +227,7 @@ nonisolated enum WorldDataLoader {
             background: file.background.map {
                 WorldBackgroundShape(flatRings: projectRings($0.rings, with: projection))
             },
-            insets: file.insets.map { WorldInset(code: $0.code, scale: $0.scale) })
+            insets: insets)
     }
 
     // MARK: 変換
@@ -238,7 +258,7 @@ nonisolated enum WorldDataLoader {
 
     private static func makeCountry(_ country: WorldFile.Country,
                                     projection: WorldProjection,
-                                    insetCodes: Set<Int>) throws -> WorldCountry {
+                                    inset: WorldInset?) throws -> WorldCountry {
         // 国のリングは投影の前に生データのまま厳格に検証する。日本版は
         // 1 県落として続行するが、世界版は生成データの破損として全体を
         // 失敗させる方針(ファイル冒頭)。点が欠けた形を黙って繕うと、
@@ -255,18 +275,34 @@ nonisolated enum WorldDataLoader {
         guard (0..<WorldStage.names.count).contains(country.stage) else {
             throw WorldDataError.unknownStage(countryCode: country.code, stage: country.stage)
         }
+        // インセット国はここで拡大して破線枠の中心へ移す(WorldInset の註)。
+        // JSON は実位置のままなので、移動は投影と同じ「ロード時の座標変換」の
+        // 一部になる。投影はアフィンだから、拡大後の形・重心・bbox の整合は
+        // そのまま保たれ、タップ判定も枠の中で普通に成立する(沖縄と同じ)。
+        let place = inset.map { relocation(for: $0, originalBbox: flatBbox) } ?? .identity
         return WorldCountry(
             code: country.code,
             nameJa: country.nameJa,
             kana: country.kana,
             stage: country.stage,
             flatRings: country.rings.map { ring in
-                ring.map { projection.point(lon: $0[0], lat: $0[1]) }
+                ring.map { projection.point(lon: $0[0], lat: $0[1]).applying(place) }
             },
-            flatCentroid: projection.point(lon: country.centroid[0], lat: country.centroid[1]),
-            flatBbox: flatBbox,
-            isInset: insetCodes.contains(country.code),
+            flatCentroid: projection.point(lon: country.centroid[0],
+                                           lat: country.centroid[1]).applying(place),
+            flatBbox: flatBbox.applying(place),
+            isInset: inset != nil,
             europeBbox: country.europeBbox.flatMap { rect(fromWire: $0, with: projection) })
+    }
+
+    /// 実位置の形を `scale` 倍し、拡大後の中心が破線枠の中心に重なるよう
+    /// 移す変換: p' = frame中心 + (p − 元bbox中心) × scale。
+    private static func relocation(for inset: WorldInset,
+                                   originalBbox: CGRect) -> CGAffineTransform {
+        CGAffineTransform(
+            translationX: inset.frame.midX - originalBbox.midX * inset.scale,
+            y: inset.frame.midY - originalBbox.midY * inset.scale)
+            .scaledBy(x: inset.scale, y: inset.scale)
     }
 
     /// 名前は `WorldStage.names`(写し)、所属は JSON、という組み立て。

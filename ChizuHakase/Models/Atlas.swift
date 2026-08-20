@@ -151,12 +151,9 @@ nonisolated struct Atlas: Sendable {
 
     /// `WorldMapData` → 既存の値型への純変換。フィールドは 1:1 に写る
     /// (code = ISO numeric, name = nameJa, kana = kana, rings = flatRings,
-    /// centroid = flatCentroid, bbox = flatBbox)。
-    ///
-    /// まだ運ばないもの: `background`(装飾の海岸線)・`insets`(拡大宣言)・
-    /// `europeBbox`(ステージ枠の切り取り線)は既存の型に置き場所が無く、
-    /// 世界地図の描画タスクが持ち方を決める。インセット国も収録国として
-    /// 普通に変換される — 拡大は見せ方の問題で、データからは消えない。
+    /// centroid = flatCentroid, bbox = flatBbox, frameBbox = europeBbox)。
+    /// `insets`(破線枠)と `background`(収録外の海岸線)も MapData が
+    /// そのまま運び、描画側は日本と同じ道具で描く — 分岐はここにも無い。
     static func world(from world: WorldMapData, cards: CardCatalog = .empty) -> Atlas {
         let prefectures = world.recordedCountries.map { country in
             Prefecture(code: country.code,
@@ -164,7 +161,8 @@ nonisolated struct Atlas: Sendable {
                        kana: country.kana,
                        bbox: country.flatBbox,
                        centroid: country.flatCentroid,
-                       rings: country.flatRings)
+                       rings: country.flatRings,
+                       frameBbox: country.europeBbox)
         }
         // `Stage.isNationwide`(== 47 県)は世界の 18 ステージ(最大 16 カ国)
         // には該当しないので、全ステージが設計どおり 1 国 2 回出題になる。
@@ -186,13 +184,26 @@ nonisolated struct Atlas: Sendable {
         }
         let mapData = MapData(width: bounds.maxX,
                               height: bounds.maxY,
-                              // 沖縄インセットは日本の地図だけの持ち物。
-                              // zero = 枠なし(MapData.empty と同じ流儀)。
-                              okinawaInset: .zero,
+                              insets: world.insets.map {
+                                  MapInset(code: $0.code, frame: $0.frame)
+                              },
+                              background: world.background.map { shape in
+                                  MapBackgroundShape(
+                                      rings: shape.flatRings,
+                                      bbox: boundingBox(of: shape.flatRings))
+                              },
                               prefectures: prefectures)
         // 国旗カードが銀になるまでオリジナルを配らないゲート(設計 §5)。
         return Atlas(mapData: mapData, stages: stages, sections: WorldStage.sections,
                      cards: cards, drawPolicy: .flagFirstSilverGate,
                      saveKey: SaveData.worldAtlas)
+    }
+
+    /// 背景の海岸線には bbox が付いて来ない(WorldShapes.json は名も範囲も
+    /// 持たない裸のリング)ので、描画の間引きに使う範囲をここで測る。
+    private static func boundingBox(of rings: [[CGPoint]]) -> CGRect {
+        rings.flatMap { $0 }.reduce(CGRect.null) { box, point in
+            box.union(CGRect(origin: point, size: .zero))
+        }
     }
 }
