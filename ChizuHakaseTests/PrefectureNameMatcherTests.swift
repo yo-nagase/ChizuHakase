@@ -39,6 +39,12 @@ struct PrefectureNameMatcherTests {
         #expect(PrefectureNameMatcher.matches("きょうと", prefecture: try #require(map[26])))
         #expect(PrefectureNameMatcher.matches("おおさかふ", prefecture: try #require(map[27])))
         #expect(PrefectureNameMatcher.matches("あおもりけん", prefecture: try #require(map[2])))
+        // The state suffixes (P6 Task 5) reach japan too: an invented
+        // 「あおもりきょうわこく」 still lands on Aomori. Intentional lenience —
+        // the strip only ever widens what a prefecture accepts, and a child
+        // being silly should not lose an answer that names the right place.
+        #expect(PrefectureNameMatcher.matches("あおもりきょうわこく",
+                                              prefecture: try #require(map[2])))
     }
 
     @Test func rejectsADifferentPrefecture() throws {
@@ -154,19 +160,42 @@ struct PrefectureNameMatcherTests {
         #expect(PrefectureNameMatcher.match("ぱり", among: candidates) == nil)
     }
 
-    /// 日本版と同じ大域条件: 167 カ国のどの 2 国も受理形を共有しない。
-    /// これと「自分のよみ・表記を受理する」の 2 つで、`match` が候補の中で
-    /// 一意に解決することが従う(全対全の match は回さない — 高くつくだけ)。
+    /// 日本版の大域条件に、話し手側の層を足したもの。受理形が交わらない
+    /// だけでは足りない — `matches` はトランスクリプト側もストリップする
+    /// ので、ある発話が B には直接・A にはストリップ経由であたる余地が
+    /// 残る(例: ドミニカ国を将来収録すると「どみにかきょうわこく」が
+    /// 2 国にあたり、正しい正式名を言った子が沈黙をもらう)。そこで
+    /// ここで立てるのは 2 つ:
+    /// 1. 167 カ国のどの 2 国も受理形を共有しない。
+    /// 2. どの国のよみ・表記も、`matches` が試す 3 つの綴り(そのまま・
+    ///    行政接尾辞なし・州体接尾辞なし)のどれを通っても、自国以外の
+    ///    受理形に触れない。
+    /// この 2 つで、正典の発話(kana / nameJa の正書法)が候補の中で
+    /// 一意に自国へ解決することが実際の照合経路の上で従う。
     @Test func noTwoCountriesShareAnAcceptedForm() throws {
-        var seen: [String: String] = [:]
-        for country in try countries() {
+        let all = try countries()
+        var owner: [String: String] = [:]
+        for country in all {
             let forms = PrefectureNameMatcher.acceptedForms(for: country)
             #expect(!forms.isEmpty)
             for form in forms {
-                if let other = seen[form] {
+                if let other = owner[form] {
                     Issue.record("\(form) is accepted by both \(other) and \(country.name)")
                 }
-                seen[form] = country.name
+                owner[form] = country.name
+            }
+        }
+        for country in all {
+            for base in [country.kana, country.name] {
+                let spoken = PrefectureNameMatcher.normalize(base)
+                let spellings = [spoken,
+                                 PrefectureNameMatcher.strippingSuffix(spoken),
+                                 PrefectureNameMatcher.strippingStateSuffix(spoken)]
+                for spelling in spellings.compactMap({ $0 }) {
+                    if let hit = owner[spelling], hit != country.name {
+                        Issue.record("\(base) reaches \(hit) through \(spelling)")
+                    }
+                }
             }
             #expect(PrefectureNameMatcher.matches(country.kana, prefecture: country))
             #expect(PrefectureNameMatcher.matches(country.name, prefecture: country))

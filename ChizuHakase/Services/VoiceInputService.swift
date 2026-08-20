@@ -212,6 +212,11 @@ extension VoiceInputService.Availability {
 /// its countries are `Prefecture` values like everything else — with one more
 /// suffix family: the state forms (共和国, 連邦, …) that separate 「あめりか」
 /// from 「アメリカ合衆国」.
+///
+/// Only whole-family mechanical rules live here. A per-country alias
+/// (「中国」 for ちゅうごく, 「韓国」 for かんこく) is data, and belongs in the
+/// pipeline's tables with the same discipline as KANA_OVERRIDES
+/// (tools/world_countries.py) — never hand-written into this file.
 nonisolated enum PrefectureNameMatcher {
 
     /// Administrative suffixes that carry no information for the quiz.
@@ -289,6 +294,8 @@ nonisolated enum PrefectureNameMatcher {
 
     /// Whether a character is a CJK ideograph — what survives `normalize`'s
     /// katakana fold and so marks a form as unreachable through the kana field.
+    /// The base block alone is deliberate: it fails closed — an ideograph from
+    /// an extension block would merely forgo a short form, never accept one.
     private static func isIdeograph(_ character: Character) -> Bool {
         character.unicodeScalars.contains { (0x4E00...0x9FFF).contains($0.value) }
     }

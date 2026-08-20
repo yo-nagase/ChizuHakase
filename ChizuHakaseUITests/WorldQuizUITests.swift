@@ -134,16 +134,23 @@ final class WorldQuizUITests: XCTestCase {
             for name in offered {
                 let button = app.buttons[name]
                 button.tap()
-                if app.staticTexts["12 もんちゅう \(question + 1) もんめ"]
-                    .waitForExistence(timeout: 3) {
-                    advanced = true
-                    break
+                // A miss dims its button straight away; the hit keeps it
+                // enabled and advances after the 1.15s celebration. Reading
+                // the flip first spares every miss a full advancement wait —
+                // and a choice that vanished instead of dimming falls through
+                // to the advancement assertion, which then names it.
+                // (A direct poll, not XCTNSPredicateExpectation: that one
+                // samples on a ~1s timer and misses an instant flip inside a
+                // short timeout.)
+                if waitUntilDimmed(button) {
+                    sawAMiss = true
+                    continue
                 }
-                XCTAssertTrue(button.exists,
-                              "\(name) disappeared instead of greying out")
-                XCTAssertFalse(button.isEnabled,
-                               "\(name) stayed pressable after being ruled out")
-                sawAMiss = true
+                XCTAssertTrue(app.staticTexts["12 もんちゅう \(question + 1) もんめ"]
+                                .waitForExistence(timeout: 3),
+                              "\(name) neither greyed out nor advanced question \(question)")
+                advanced = true
+                break
             }
             XCTAssertTrue(advanced,
                           "no choice advanced question \(question) — the answer was not offered")
@@ -212,6 +219,20 @@ final class WorldQuizUITests: XCTestCase {
     }
 
     // MARK: - Helpers
+
+    /// Whether `button` goes dim (still on screen, no longer pressable)
+    /// within `timeout`. Checks immediately first: a ruled-out choice is
+    /// dimmed by the time the tap's quiescence wait returns, so misses
+    /// normally cost no wait at all.
+    private func waitUntilDimmed(_ button: XCUIElement,
+                                 timeout: TimeInterval = 1) -> Bool {
+        let deadline = Date().addingTimeInterval(timeout)
+        repeat {
+            if button.exists && !button.isEnabled { return true }
+            RunLoop.current.run(until: Date().addingTimeInterval(0.1))
+        } while Date() < deadline
+        return false
+    }
 
     /// A card chip, matched on the leading name the way ResultUITests does —
     /// the label goes on to carry stars and tier.
