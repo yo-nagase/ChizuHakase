@@ -176,6 +176,10 @@ nonisolated struct Atlas: Sendable {
         // には該当しないので、全ステージが設計どおり 1 国 2 回出題になる。
         // ワールドチャレンジ(167 カ国)を足すタスクは isNationwide の定義を
         // 見直すこと — 47 と比べたままだと 334 問の総合ステージができてしまう。
+        // 罠は問題数だけではない: QuizView の地域ズームボタン(QuizView.swift:359
+        // 付近の にしにほん/なかにほん/ひがしにほん — `Stage.eastJapanCodes` が
+        // 日本の県コードを直に持つ)も同じ旗で出る。世界では 1–47 が別の国の
+        // ISO コードなので、P7 で再定義する際は両方の罠を同時に外すこと。
         let stages = world.stages.map { stage in
             Stage(index: stage.index,
                   name: stage.name,

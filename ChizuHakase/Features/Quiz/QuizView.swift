@@ -130,7 +130,7 @@ struct QuizView: View {
                         .foregroundStyle(Palette.orange)
                 }
             }
-            .animation(.snappy, value: quiz.score)
+            .animation(reduceMotion ? nil : .snappy, value: quiz.score)
         }
     }
 

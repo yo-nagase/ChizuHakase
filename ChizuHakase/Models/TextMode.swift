@@ -32,8 +32,10 @@ nonisolated enum TextMode: String, Codable, Sendable, CaseIterable {
 ///
 /// The screens are the same for both books, so the sentences are built once in
 /// `TextMode` and the one word that differs — けん ⇄ くに, the card panel's
-/// title — rides the `Atlas` value the way its draw policy and save key do.
-/// The view asks the atlas for the word and never asks which book it is in.
+/// title — rides the `Atlas` value the way its draw policy and save key do
+/// (the card noun is not always slotted into a sentence: it also stands alone
+/// as the panel's title). The view asks the atlas for the word and never asks
+/// which book it is in.
 nonisolated struct AtlasNoun: Sendable, Equatable {
     let kids: String
     let adult: String
@@ -52,7 +54,9 @@ nonisolated extension AtlasNoun {
                                           adult: "特産品カード")
     /// 世界のカード欄の見出し。「こっきカード」ではなく「せかいの カード」:
     /// P8 でオリジナル札が国旗の隣に並んでも(設計 §5)この見出しは嘘に
-    /// ならない。札の種別名(国旗カード)は個々の札が言う。
+    /// ならない。札の種別名(国旗カード)は個々の札が言う。呼び名は設計文書が
+    /// 先に選んだもの — 動機の表がずかんの空きマスを「せかいのカード」と
+    /// 呼んでいる(docs/plans/2026-08-16-world-atlas-design.md:22)。
     static let worldCards = AtlasNoun(kids: "せかいの カード", adult: "世界のカード")
 }
 

@@ -148,6 +148,7 @@ struct TextModeTests {
     }
 
     /// The mode switch's one-line blurb also names the thing in the red ring.
+    /// Here rather than in QuizModeTests so the noun wording tests sit together.
     @Test func theNameItBlurbTakesTheAtlasNoun() {
         #expect(QuizMode.nameIt.blurb(.kids, region: .country)
                 == "あかい わくの くにを こたえる")

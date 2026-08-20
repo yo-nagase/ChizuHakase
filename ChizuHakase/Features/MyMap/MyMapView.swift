@@ -217,7 +217,7 @@ struct MyMapView: View {
             }
         }
         .padding(.top, 8)
-        .animation(.snappy, value: eraseStep)
+        .animation(reduceMotion ? nil : .snappy, value: eraseStep)
     }
 }
 
