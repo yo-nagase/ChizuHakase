@@ -11,14 +11,24 @@ struct RootView: View {
     /// the session, so a child does not have to re-pick it every stage.
     @State private var quizMode: QuizMode = .findOnMap
     /// Which map book (ちずちょう) the session is playing out of — session
-    /// state shaped like `quizMode`. The one place the japan/world branch will
-    /// live is the title's two pages (design doc §2, P6); until that page
-    /// exists, only the debug launch argument `-atlas world` moves this, so
-    /// there is deliberately no user-visible way into the world yet.
-    @State private var atlasKey = SaveData.japanAtlas
+    /// state shaped like `quizMode`. The whole app's one japan/world branch is
+    /// the title's two pages (design doc §2): TitleView binds its pager to
+    /// this key, so the page in front of the child and the book every screen
+    /// below reads are the same fact. Starts on whichever page was open last
+    /// time (`Settings.lastAtlas`, handed in by ChizuHakaseApp); the debug
+    /// launch argument `-atlas` overrides that in `applyDebugRoute`.
+    @State private var atlasKey: String
 
     private var atlas: Atlas {
         atlasKey == SaveData.worldAtlas ? app.world : app.japan
+    }
+
+    /// - Parameter initialAtlasKey: the page to open on — the caller passes
+    ///   the remembered `Settings.lastAtlas` (design doc §2: 前回開いていた
+    ///   ページから始める). Set at init rather than in `.task` so the first
+    ///   frame already shows the right page instead of flashing japan first.
+    init(initialAtlasKey: String = SaveData.japanAtlas) {
+        _atlasKey = State(initialValue: initialAtlasKey)
     }
 
     enum Route: Hashable {
@@ -36,7 +46,11 @@ struct RootView: View {
 
     var body: some View {
         NavigationStack(path: $path) {
-            TitleView(onStart: { path.append(.stageSelect) },
+            // The doors do not carry an atlas: whichever page they are pressed
+            // on has already set `atlasKey` through the pager binding, and the
+            // destinations below read the session atlas from it.
+            TitleView(atlasKey: $atlasKey,
+                      onStart: { path.append(.stageSelect) },
                       onMyMap: { path.append(.myMap) },
                       onCardBook: { path.append(.cardBook(filter: $0)) },
                       onSettings: { showsSettings = true })
@@ -76,10 +90,31 @@ struct RootView: View {
             // but not a click.
             if enabled { playThemeIfWanted() } else { app.music.stop(fadeOut: 0.2) }
         }
+        // The page turn's side effects, in one place so they run once per
+        // change rather than once per body evaluation (P6 引き継ぎ 4・5):
+        // - The voice-input vocabulary follows the open book (引き継ぎ 4) —
+        //   left alone, 「あめりか」 would be matched against 47 prefecture
+        //   names. Reading `atlas` here is also the world's first access on a
+        //   turn to that page, so the synchronous WorldShapes load (引き継ぎ 5)
+        //   is spent inside the page flip, not inside the first あそぶ tap.
+        // - `lastAtlas` is written so the next launch opens on this page
+        //   (design doc §2) — a settings write, like the mute button's.
+        .onChange(of: atlasKey) { _, key in
+            app.voice.configure(vocabulary: atlas.voiceVocabulary)
+            app.save.updateSettings { $0.lastAtlas = key }
+        }
         // After the debug route, not before: a session launched straight into
         // another screen has no title to sing over.
         .task {
             applyDebugRoute()
+            // A launch that starts off japan's page — lastAtlas restored, or
+            // `-atlas` above — arrives with AppState's japan vocabulary still
+            // in the voice service, and onChange only fires on *changes*. Say
+            // it once here so the open book and the vocabulary agree from the
+            // first question (引き継ぎ 4).
+            if atlasKey != SaveData.japanAtlas {
+                app.voice.configure(vocabulary: atlas.voiceVocabulary)
+            }
             playThemeIfWanted()
             // After the first frame, before the first tap: the engine spin-up
             // this hides would otherwise run inside that tap's button action
@@ -101,13 +136,22 @@ struct RootView: View {
     private func applyDebugRoute() {
         #if DEBUG
         let arguments = ProcessInfo.processInfo.arguments
-        if arguments.contains("-resetSave") { app.save.eraseAll() }
+        if arguments.contains("-resetSave") {
+            app.save.eraseAll()
+            // The page restore read lastAtlas *before* this erase (at init).
+            // A reset run must not inherit whichever page the previous run
+            // left open — the japan suite launches with -resetSave and no
+            // -atlas, and its stage indexes must resolve against japan.
+            atlasKey = app.save.data.settings.lastAtlas
+        }
         // A mid-journey collection for store screenshots: every mastery colour
         // on the map at once, all four card tiers in the book, records on some
         // stages and none on others. Built through the real rules — like
         // -grantCards below — so it keeps looking right after a rule changes.
         if arguments.contains("-demoSave") {
             app.save.eraseAll()
+            // Same page reset as -resetSave: the demo stages japan's book.
+            atlasKey = app.save.data.settings.lastAtlas
             func visit(stage index: Int, times: Int, score: Int, stars: Int) {
                 guard let stage = Stage.stage(at: index) else { return }
                 for _ in 0..<times {
@@ -194,10 +238,16 @@ struct RootView: View {
                 cardDraws: []), catalog: app.cards)
         }
         // Before -startAt, so `-atlas world -startAt quiz:15` resolves the
-        // stage index against the world's stages.
-        if let i = arguments.firstIndex(of: "-atlas"), i + 1 < arguments.count,
-           arguments[i + 1] == "world" {
-            atlasKey = SaveData.worldAtlas
+        // stage index against the world's stages. Explicit in both directions,
+        // and it wins over the remembered lastAtlas the launch started from:
+        // tests and screenshots need runs that do not inherit whichever page
+        // the previous run happened to leave open.
+        if let i = arguments.firstIndex(of: "-atlas"), i + 1 < arguments.count {
+            switch arguments[i + 1] {
+            case "world": atlasKey = SaveData.worldAtlas
+            case "japan": atlasKey = SaveData.japanAtlas
+            default: break
+            }
         }
         guard let index = arguments.firstIndex(of: "-startAt"),
               index + 1 < arguments.count else { return }
@@ -278,9 +328,15 @@ struct RootView: View {
             }
 
         case .myMap:
+            // TODO(P6 Task 3): thread the atlas through — MyMapView still
+            // reads japan's book, so the world page's learned tally opens
+            // japan's map for now. Deliberately not half-rewired here: the
+            // view's own reads (map, mastery, legend) move together in Task 3.
             MyMapView()
 
         case .cardBook(let filter):
+            // TODO(P6 Task 3): same as .myMap — CardBookView still reads
+            // japan's catalog and cards until Task 3 threads the atlas.
             CardBookView(initialFilter: filter)
         }
     }

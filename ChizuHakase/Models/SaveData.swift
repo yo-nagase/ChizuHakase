@@ -15,6 +15,11 @@ nonisolated struct Settings: Codable, Sendable, Equatable {
     var voiceInputEnabled = false
     /// Child mode is the product; adult mode is the accommodation.
     var textMode: TextMode = .kids
+    /// The title page (ちずちょう) that was open when the app was last used,
+    /// so the next launch starts on the same page (design doc §2). One of
+    /// `SaveData.japanAtlas` / `SaveData.worldAtlas` — settings territory, not
+    /// progress, because it remembers a *view*, not anything earned.
+    var lastAtlas: String = SaveData.japanAtlas
 
     // Explicit decoding so a save file written by an older build (missing a
     // key) keeps the default instead of failing the whole decode and wiping
@@ -31,6 +36,12 @@ nonisolated struct Settings: Codable, Sendable, Equatable {
         voiceInputEnabled = try c.decodeIfPresent(Bool.self, forKey: .voiceInputEnabled) ?? false
         // A save written before this setting existed is a child's save.
         textMode = try c.decodeIfPresent(TextMode.self, forKey: .textMode) ?? .kids
+        // Only a page that exists can be reopened: a value this build does not
+        // know (a future book, or a hand-edited file) folds to japan rather
+        // than leaving the title's page selection pointing at nothing.
+        let storedAtlas = try c.decodeIfPresent(String.self, forKey: .lastAtlas)
+        lastAtlas = storedAtlas == SaveData.worldAtlas ? SaveData.worldAtlas
+                                                       : SaveData.japanAtlas
     }
 }
 
@@ -116,6 +127,27 @@ nonisolated struct AtlasSave: Codable, Sendable, Equatable {
 
     func record(forStage index: Int, mode: QuizMode) -> StageRecord? {
         records[mode.rawValue]?[index]
+    }
+
+    // The tallies both title pages draw. They live on the slice — not on
+    // SaveData — because the title now has one page per book and each page's
+    // numbers must come off that book alone.
+
+    var totalOwnedCards: Int { cards.values.filter { $0 > 0 }.count }
+
+    /// Cards currently sitting on one exact rung of the visible card ladder.
+    ///
+    /// Exact matters for a breakdown: a rainbow card grew out of a gold card,
+    /// but showing it in both columns would make the three displayed counts
+    /// add up to more cards than the child actually owns.
+    func cardCount(ofTier tier: CardTier) -> Int {
+        cards.keys.filter { self.tier(of: $0) == tier }.count
+    }
+
+    /// Regions at the top of the mastery ladder — 「おぼえた」, whichever book
+    /// they are in (prefectures in japan's slice, countries in the world's).
+    var sparklingRegionCount: Int {
+        mastery.values.filter { $0 >= GameRules.maxMastery }.count
     }
 }
 
@@ -366,15 +398,11 @@ nonisolated struct SaveData: Codable, Sendable, Equatable {
             .max { $0.score < $1.score }
     }
 
-    var totalOwnedCards: Int { cards.values.filter { $0 > 0 }.count }
+    var totalOwnedCards: Int { atlas(Self.japanAtlas).totalOwnedCards }
 
-    /// Cards currently sitting on one exact rung of the visible card ladder.
-    ///
-    /// Exact matters for a breakdown: a rainbow card grew out of a gold card,
-    /// but showing it in both columns would make the three displayed counts
-    /// add up to more cards than the child actually owns.
+    /// See `AtlasSave.cardCount(ofTier:)` — this is japan's column of it.
     func cardCount(ofTier tier: CardTier) -> Int {
-        cards.keys.filter { self.tier(of: $0) == tier }.count
+        atlas(Self.japanAtlas).cardCount(ofTier: tier)
     }
 
     /// Silver and up — see `CardTier.isSpecial`.
@@ -385,6 +413,6 @@ nonisolated struct SaveData: Codable, Sendable, Equatable {
 
     /// Prefectures at level 3 — the ones drawn with a gold border on the my-map.
     var sparklingPrefectureCount: Int {
-        mastery.values.filter { $0 >= GameRules.maxMastery }.count
+        atlas(Self.japanAtlas).sparklingRegionCount
     }
 }

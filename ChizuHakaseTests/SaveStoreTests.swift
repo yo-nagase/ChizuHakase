@@ -149,6 +149,43 @@ struct SaveStoreTests {
         #expect(SaveStore(directory: dir).data.settings.musicEnabled == false)
     }
 
+    /// A fresh save opens the japan page: the world is something the child
+    /// turns to, never something they wake up lost in.
+    @Test func lastAtlasDefaultsToJapan() {
+        #expect(Settings().lastAtlas == SaveData.japanAtlas)
+    }
+
+    /// The title writes this on every page turn; the next launch reads it back
+    /// (design doc §2: 前回開いていたページを記憶).
+    @Test func lastAtlasSurvivesARelaunch() throws {
+        let dir = try makeScratch()
+        defer { try? FileManager.default.removeItem(at: dir) }
+
+        SaveStore(directory: dir).updateSettings { $0.lastAtlas = SaveData.worldAtlas }
+        #expect(SaveStore(directory: dir).data.settings.lastAtlas == SaveData.worldAtlas)
+    }
+
+    /// A page this build does not know (a future book, a hand-edited file)
+    /// folds to japan — the selection must always name a page that exists.
+    @Test func unknownLastAtlasFallsBackToJapan() throws {
+        let dir = try makeScratch()
+        defer { try? FileManager.default.removeItem(at: dir) }
+
+        try Data(#"{"version":7,"settings":{"lastAtlas":"mars"}}"#.utf8)
+            .write(to: dir.appendingPathComponent("savedata.json"))
+        #expect(SaveStore(directory: dir).data.settings.lastAtlas == SaveData.japanAtlas)
+    }
+
+    /// Saves from before the world existed have no opinion; they open on japan.
+    @Test func missingLastAtlasDefaultsToJapan() throws {
+        let dir = try makeScratch()
+        defer { try? FileManager.default.removeItem(at: dir) }
+
+        try Data(#"{"version":7,"settings":{"soundEnabled":false}}"#.utf8)
+            .write(to: dir.appendingPathComponent("savedata.json"))
+        #expect(SaveStore(directory: dir).data.settings.lastAtlas == SaveData.japanAtlas)
+    }
+
     /// A truncated or hand-edited file must not take the app down on launch.
     @Test func corruptFileFallsBackToAFreshSave() throws {
         let dir = try makeScratch()
@@ -226,6 +263,29 @@ struct SaveStoreTests {
         #expect(data.cardCount(ofTier: .rainbow) == 1)
         #expect(data.specialCardCount == 3)
         #expect(data.goldCardCount == 2)
+    }
+
+    /// The tallies the title's two pages draw come off each page's own slice —
+    /// a world card must never inflate japan's numbers, nor the reverse.
+    @Test func perAtlasTalliesReadOnlyTheirOwnBook() {
+        var data = SaveData()
+        var world = AtlasSave()
+        world.cards = ["840-1": 1, "392-1": GameRules.silverStars]
+        world.mastery = [840: GameRules.maxMastery, 392: 1]
+        data.atlases[SaveData.worldAtlas] = world
+        data.cards = ["01-1": GameRules.maxCardStars]
+        data.mastery = [13: GameRules.maxMastery]
+
+        let worldSlice = data.atlas(SaveData.worldAtlas)
+        #expect(worldSlice.totalOwnedCards == 2)
+        #expect(worldSlice.cardCount(ofTier: .silver) == 1)
+        #expect(worldSlice.cardCount(ofTier: .gold) == 0)
+        #expect(worldSlice.sparklingRegionCount == 1)
+
+        // The japan-facing reads delegate to japan's slice and see none of it.
+        #expect(data.totalOwnedCards == 1)
+        #expect(data.cardCount(ofTier: .gold) == 1)
+        #expect(data.sparklingPrefectureCount == 1)
     }
 
     // MARK: - Streaks and rainbow

@@ -146,7 +146,18 @@ nonisolated extension TextMode {
     // rather than what the number says about them, and the title screen is
     // where a child has the least context to guess from.
     var learnedPrefectures: String { isKids ? "おぼえた けん" : "覚えた県" }
+    /// The world page's copy of the learned tally: the thing counted there is
+    /// a country. Everything else about the tally reads identically — same
+    /// artwork, same bar — so this one noun is the whole difference the child
+    /// sees between the two pages' numbers.
+    var learnedCountries: String { isKids ? "おぼえた くに" : "覚えた国" }
     var ownedCards: String { isKids ? "もっている カード" : "持っているカード" }
+
+    // Title pages. Each page-edge tab names where it leads, not where the
+    // child is — a door is labelled by its far side (design doc §2: swipe
+    // alone is undiscoverable at five, so these tabs are the visible way).
+    var toWorldAtlas: String { isKids ? "せかいの ちずへ" : "世界の地図へ" }
+    var toJapanAtlas: String { isKids ? "にほんの ちずへ" : "日本の地図へ" }
     var learnedCount: String { isKids ? "おぼえた" : "覚えた" }
     var resetZoom: String { isKids ? "もとの おおきさ" : "元の大きさ" }
     /// How the one-finger zoom is discovered: press and hold, then slide up

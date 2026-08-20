@@ -75,6 +75,11 @@ nonisolated struct Atlas: Sendable {
     /// 区間に入らないステージは落とさず見出しなしで末尾へ、中身のない見出しは
     /// 並べない: データが食い違ったとき、棚からステージが消える・空の見出しが
     /// 立つ、のどちらの壊れ方もしない。
+    ///
+    /// P7 のワールドチャレンジ段をこの「余り」枝に乗せないこと — 総合ステージは
+    /// `sections` に自分の区間として明示的に足す。余り枝はデータ食い違いの
+    /// 診断用で、正規のステージが日常的に流れ着く場所にした瞬間、
+    /// 壊れ方の検出器ではなくなる。
     var stageShelves: [StageShelf] {
         guard !sections.isEmpty else {
             return stages.isEmpty ? [] : [StageShelf(title: nil, stages: stages)]

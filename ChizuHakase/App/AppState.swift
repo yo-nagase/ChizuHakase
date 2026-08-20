@@ -7,9 +7,12 @@ import Observation
 final class AppState {
     /// 日本アトラス。従来どおり起動時に読む — タイトルの直後に必ず使う。
     let japan: Atlas
-    /// 世界アトラス。初アクセスまで読まない: まだどの画面からも到達できず
-    /// (Route の分岐は後続タスク)、WorldShapes.json は日本の 2 倍強を
-    /// デコード + 投影するので、日本だけ遊ぶ子の起動に載せる理由がない。
+    /// 世界アトラス。初アクセスまで読まない: 入口はタイトルの「せかい」ページ
+    /// だけで(設計 §2)、WorldShapes.json は日本の 2 倍強をデコード + 投影
+    /// するので、日本のページしか開かない子の起動に載せる理由がない。
+    /// 初アクセスはページがめくられた瞬間(TitleView の世界ページ構築と
+    /// RootView の onChange — P6 引き継ぎ 5)で、最初の あそぶ タップには
+    /// 同期ロードのつっかえが残らない。
     /// 読み込み失敗は `Atlas.loadWorld` が空アトラスへ倒す(クラッシュしない)。
     /// 不変データなので観測は不要(@ObservationIgnored は lazy の要件でもある)。
     @ObservationIgnored private(set) lazy var world: Atlas = .loadWorld()
@@ -27,6 +30,10 @@ final class AppState {
                             cards: cards ?? MapDataLoader.loadCards())
         self.save = save ?? SaveStore()
         self.voice = voice ?? VoiceInputService()
+        // 日本語彙が起動時の既定。開いている本が変わるたび RootView が
+        // `configure` を呼び直す(P6 引き継ぎ 4)— 世界で起動した回も含めて、
+        // 語彙の正はあちらの 1 カ所。ここで世界語彙を選ばないのは、その判断が
+        // `world` の lazy ロードを起動経路へ引きずり込むから。
         self.voice.configure(vocabulary: japan.voiceVocabulary)
     }
 
