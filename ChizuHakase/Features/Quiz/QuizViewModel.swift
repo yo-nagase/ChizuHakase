@@ -81,6 +81,13 @@ final class QuizViewModel {
         // impossible.
         self.order = GameRules.questionOrder(
             codes: mapData.prefectures(in: stage.codes).map(\.code),
+            // A challenge stage with more codes than
+            // GameRules.challengeQuestionCount must never reach this line: its
+            // sitting is a *draw* (GameRules.challengeSelection, world design
+            // §8), not a pass over every code, and questionOrder would ask all
+            // of them. Until that draw is wired in (P7 Task 5), no such stage
+            // may exist — the VM/stage cross-check test (QuizViewModelTests)
+            // falls the moment one does.
             repeats: stage.asksEachTwice ? 2 : 1,
             using: &self.rng)
         if order.isEmpty { phase = .finished }

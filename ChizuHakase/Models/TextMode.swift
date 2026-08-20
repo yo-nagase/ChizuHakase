@@ -28,14 +28,16 @@ nonisolated enum TextMode: String, Codable, Sendable, CaseIterable {
 
 // MARK: - Atlas-carried nouns
 
-/// A noun the open ちずちょう puts into otherwise shared sentences.
+/// A kids/adult word pair carried by an atlas (ちずちょう).
 ///
-/// The screens are the same for both books, so the sentences are built once in
-/// `TextMode` and the one word that differs — けん ⇄ くに, the card panel's
-/// title — rides the `Atlas` value the way its draw policy and save key do
-/// (the card noun is not always slotted into a sentence: it also stands alone
-/// as the panel's title). The view asks the atlas for the word and never asks
-/// which book it is in.
+/// Born as "the noun the open book puts into otherwise shared sentences"
+/// (けん ⇄ くに), the role has since widened to any word pair that rides the
+/// `Atlas` value the way its draw policy and save key do: the card panel's
+/// standalone title, and the region-zoom button labels — which are neither
+/// slotted into a shared sentence nor a difference between the books (japan's
+/// zooms simply *are* japanese geography). What stays constant is the
+/// discipline: the view asks the value for the word and never asks which book
+/// it is in.
 nonisolated struct AtlasNoun: Sendable, Equatable {
     let kids: String
     let adult: String

@@ -46,6 +46,11 @@ nonisolated struct Stage: Identifiable, Sendable, Equatable {
     /// exactly as long as it has always been — and the world's 167 become one
     /// 47-question sitting (which countries fill it is the draw's job, not
     /// this count's).
+    ///
+    /// The regional arm's `* 2` is `asksEachTwice` in number form — the two
+    /// express one rule, so change them together. `QuizViewModel` builds the
+    /// actual order from `asksEachTwice`, and the VM/stage cross-check test
+    /// (QuizViewModelTests) falls if the two drift apart.
     var questionCount: Int {
         isChallenge ? min(codes.count, GameRules.challengeQuestionCount)
                     : codes.count * 2

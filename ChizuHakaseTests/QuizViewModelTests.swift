@@ -119,6 +119,33 @@ struct QuizViewModelTests {
         #expect(quiz.questionCount == 14)
     }
 
+    /// 両アトラスの出荷ステージ全部で、VM が組んだ出題数と `Stage.questionCount`
+    /// が一致する。`challengeQuestionCount` を超える codes の challenge が抽選
+    /// (`GameRules.challengeSelection`)へ配線されないまま VM に届くと、その
+    /// 瞬間ここが落ちる: `questionCount` は min で 47 に切るが、`questionOrder`
+    /// は全コードを訊いてしまうから。
+    ///
+    /// 逆方向は捕まえられない: 19 面目が isChallenge: false のまま増えても、
+    /// 両辺とも codes.count × 2(334/334)で自己整合してしまう。その口は
+    /// 世界アトラス側のピン(AtlasTests — 総合ステージだけが isChallenge を
+    /// 名乗る)で塞ぐ。
+    @Test func everyShippingStageAsksExactlyItsDeclaredQuestionCount() throws {
+        let japan = Atlas.japan(mapData: MapDataTests.map, cards: MapDataTests.catalog)
+        let world = Atlas.world(from: try QuizModeTests.world.get())
+        for atlas in [japan, world] {
+            for stage in atlas.stages {
+                let quiz = QuizViewModel(
+                    stage: stage,
+                    mapData: atlas.mapData,
+                    catalog: atlas.cards,
+                    drawPolicy: atlas.drawPolicy,
+                    generator: AnyRandomNumberGenerator(SeededGenerator(seed: 1)))
+                #expect(quiz.questionCount == stage.questionCount,
+                        "\(atlas.saveKey) stage \(stage.index)")
+            }
+        }
+    }
+
     @Test func questionOrderIsShuffled() {
         // Different seeds should not agree on the 47-question stage; if they do
         // the shuffle is not being applied.

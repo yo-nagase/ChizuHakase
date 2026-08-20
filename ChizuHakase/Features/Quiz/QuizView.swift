@@ -242,13 +242,14 @@ struct QuizView: View {
     /// magnifying never turns into a wider net.
     private func map(_ quiz: QuizViewModel) -> some View {
         Group {
-            // Regional stages hug the country's own proportions. 全国チャレンジ
+            // Regional stages hug their region's own proportions. A challenge
+            // stage — 全国チャレンジ, and the world challenge's flat map alike —
             // takes every point of height the column has spare instead: the
-            // country cannot be drawn any bigger — the screen's width already
-            // caps it — so all the spare height becomes sea, and a zoomed-in
-            // child gets that much more viewport to move around in. A frame
-            // rather than a taller fixed ratio, so a short screen simply
-            // yields a shorter panel instead of shrinking the country to
+            // whole book cannot be drawn any bigger — the screen's width
+            // already caps it — so all the spare height becomes sea, and a
+            // zoomed-in child gets that much more viewport to move around in.
+            // A frame rather than a taller fixed ratio, so a short screen
+            // simply yields a shorter panel instead of shrinking the map to
             // honour a ratio it has no room for.
             if stage.isChallenge {
                 mapView(quiz).frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -273,9 +274,13 @@ struct QuizView: View {
         // In the same corner as the region buttons it swaps in for, so the way
         // back out appears exactly where the finger that zoomed just pressed.
         .overlay(alignment: .bottomTrailing) { resetZoomButton }
-        // The same pill as my map, but only on 全国チャレンジ: that is the map
-        // where Kagawa is a few points across and zooming is how the question
-        // becomes answerable. On regional stages the prefectures are already
+        // The same pill as my map, but only on challenge stages: those are the
+        // maps that hold a whole book in one frame — Kagawa a few points
+        // across on 全国チャレンジ, entire countries on the world challenge's
+        // flat map — and zooming is how the question becomes answerable. Its
+        // appearing on that flat world map is intended, not a 全国チャレンジ-era
+        // leftover: the flat view stands in behind the globe and needs the
+        // nudge even more. On regional stages the shapes are already
         // finger-sized, and a pill repeated on every question would be
         // furniture in front of the thing being aimed at. It sits on the
         // northern sea here — the southern edge belongs to the region buttons,

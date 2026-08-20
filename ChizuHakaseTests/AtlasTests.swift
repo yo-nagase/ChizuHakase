@@ -146,6 +146,14 @@ struct AtlasTests {
                 == ["東日本", "中日本", "西日本"])
     }
 
+    /// `RegionZoom.id` はボタンの語(label.kids)そのもの。QuizView の
+    /// ForEach がこの id に乗るので、同じ語が 2 つのズームに付くと描画が
+    /// 未定義になる — 一意性をここで釘打つ。
+    @Test func 地域ズームのidは一意() {
+        let ids = RegionZoom.japanThirds.map(\.id)
+        #expect(Set(ids).count == ids.count, "ids = \(ids)")
+    }
+
     /// 世界は空 — 1–47 は世界では別の国の ISO コードで、日本の分割は世界地図を
     /// でたらめに囲む(Atlas.swift の旧道標が言っていた罠)。ワールドチャレンジの
     /// 平面は地球儀の控えなので、世界用の分割も足さない(YAGNI)。
