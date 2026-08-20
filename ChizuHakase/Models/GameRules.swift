@@ -34,6 +34,10 @@ nonisolated enum GameRules {
     static let popDuration: TimeInterval = 0.55
     static let shakeDuration: TimeInterval = 0.45
     static let hintBlinkPeriod: TimeInterval = 0.9
+    /// 地球儀が相手の国を正面へ回すアニメーション時間(ヒント、および
+    /// なまえを あてる の出題前回転)。ジャンプではなく回って見せるのは
+    /// 「地球の裏にあった」という事実そのものが教材だから。
+    static let globeCenteringDuration: TimeInterval = 0.6
     /// Wrong attempts on the current question before the answer starts blinking.
     ///
     /// Three, not two: two came up often enough that a child who was thinking

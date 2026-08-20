@@ -385,13 +385,19 @@ struct WorldDataLoaderErrorTests {
         }
     }
 
-    /// ローダのインセット移動そのものの検算(実データ非依存の固定値)。
-    /// 国 bbox [0,0,2,2]・scale 2 に対し、枠は lon 3–7 / lat -3–1(ちょうど
-    /// 拡大後の寸法)。投影して p' = 枠中心 + (p − 元中心) × 2 になること。
-    @Test func インセットは枠の中心へ拡大して写される() throws {
-        let url = try writeFixture(
+    /// インセット検算 2 本(平面の移設・地球儀の素通し)が同じ宣言を見る
+    /// ための共通フィクスチャ: 国 bbox [0,0,2,2]・scale 2・枠 lon 3–7 /
+    /// lat -3–1(ちょうど拡大後の寸法)。
+    private func insetFixture() throws -> URL {
+        try writeFixture(
             countries: [countryJSON(code: 10)],
             insets: #"[{"code": 10, "scale": 2, "frame": [3, -3, 7, 1]}]"#)
+    }
+
+    /// ローダのインセット移動そのものの検算(実データ非依存の固定値)。
+    /// 投影して p' = 枠中心 + (p − 元中心) × 2 になること。
+    @Test func インセットは枠の中心へ拡大して写される() throws {
+        let url = try insetFixture()
         defer { try? FileManager.default.removeItem(at: url) }
         let world = try WorldDataLoader.load(contentsOf: url)
         let country = try #require(world[10])
@@ -410,9 +416,7 @@ struct WorldDataLoaderErrorTests {
     /// インセットの拡大・移設が地球儀側へ漏れないことの検算(実データ非依存)。
     /// 上と同じ宣言で平面は枠へ動くが、地球儀は JSON の度数そのまま。
     @Test func インセットでも地球儀は実位置のまま() throws {
-        let url = try writeFixture(
-            countries: [countryJSON(code: 10)],
-            insets: #"[{"code": 10, "scale": 2, "frame": [3, -3, 7, 1]}]"#)
+        let url = try insetFixture()
         defer { try? FileManager.default.removeItem(at: url) }
         let world = try WorldDataLoader.load(contentsOf: url)
         let globe = try #require(world.globe.shapes.first)

@@ -197,6 +197,9 @@ nonisolated struct Atlas: Sendable {
         guard !bounds.isNull else {
             // 収録国が無いなら球に描く物も無い — globe も一緒に落として、
             // View の「有無」判定が平面と食い違わないようにする。
+            // ローダ経由ではここに届かない(国が 0 件なら makeProjection が
+            // degenerateExtent を先に投げる)— `world(from:)` を直接組んだ
+            // WorldMapData のための防衛線。
             return Atlas(mapData: .empty, globe: nil, stages: stages,
                          sections: WorldStage.sections,
                          cards: cards, drawPolicy: .flagFirstSilverGate,

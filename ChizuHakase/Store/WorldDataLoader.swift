@@ -246,9 +246,10 @@ nonisolated enum WorldDataLoader {
         let converted = try file.countries.map {
             try makeCountry($0, projection: projection, inset: insetByCode[$0.code])
         }
+        let flats = converted.map(\.flat)
         return WorldMapData(
-            recordedCountries: converted.map(\.flat),
-            stages: makeStages(from: converted.map(\.flat)),
+            recordedCountries: flats,
+            stages: makeStages(from: flats),
             background: file.background.map {
                 WorldBackgroundShape(flatRings: projectRings($0.rings, with: projection))
             },
@@ -372,20 +373,22 @@ nonisolated enum WorldDataLoader {
     /// 出題対象になる国のリングは `makeCountry` が投影前に厳格検証して投げる。
     private static func projectRings(_ rings: [[[Double]]],
                                      with projection: WorldProjection) -> [[CGPoint]] {
-        rings.compactMap { ring -> [CGPoint]? in
-            let points = ring.compactMap { pair -> CGPoint? in
-                pair.count >= 2 ? projection.point(lon: pair[0], lat: pair[1]) : nil
-            }
-            return points.count >= 3 ? points : nil
-        }
+        lenientRings(rings) { projection.point(lon: $0, lat: $1) }
     }
 
-    /// 背景の度数版。`projectRings` と同じ寛容な規律で **同じ点を落とす** —
-    /// 規律が割れると、平面と地球儀で背景の形が食い違う。
+    /// 背景の度数版(地球儀用)。座標変換だけが違い、規律は同じ。
     private static func degreeRings(_ rings: [[[Double]]]) -> [[CGPoint]] {
+        lenientRings(rings) { CGPoint(x: $0, y: $1) }
+    }
+
+    /// 寛容な検証の本体。平面(`projectRings`)と度数(`degreeRings`)の
+    /// 2 つの出口が **同じ点を落とす** ことを、規律を 1 カ所に置くことで
+    /// 保証する — 双子の実装が別々に育つと、平面と地球儀で背景の形が食い違う。
+    private static func lenientRings(_ rings: [[[Double]]],
+                                     point: (Double, Double) -> CGPoint) -> [[CGPoint]] {
         rings.compactMap { ring -> [CGPoint]? in
             let points = ring.compactMap { pair -> CGPoint? in
-                pair.count >= 2 ? CGPoint(x: pair[0], y: pair[1]) : nil
+                pair.count >= 2 ? point(pair[0], pair[1]) : nil
             }
             return points.count >= 3 ? points : nil
         }

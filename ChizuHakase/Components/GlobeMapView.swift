@@ -1,0 +1,543 @@
+import SwiftUI
+
+/// 地球儀の回転状態: 正面に来る経度・緯度(度)。
+///
+/// `GlobeMapView` はこれを `@Binding` で受ける。内部 `@State` に隠すと、
+/// この部品自身のヒント回転と、親が命じたい回転 — nameIt の出題前回転
+/// (Task 6)、マイマップの初期位置(Task 7)— が同じ状態を触れない。
+/// 回転は「親が命令でき、部品(ドラッグ)も動かせる」共有状態なので、
+/// 小さな値型 + Binding だけが両方を満たす。
+nonisolated struct GlobeCenter: Sendable, Equatable {
+    var longitude: Double
+    var latitude: Double
+
+    init(longitude: Double = 0, latitude: Double = 0) {
+        self.longitude = longitude
+        self.latitude = latitude
+    }
+
+    /// `GlobeGeometry.centering` の到達値へ「最短の弧」で向かうための代入値。
+    ///
+    /// SwiftUI のアニメーションは数値を直線補間するので、170° → −170° を
+    /// そのまま代入すると 340° 逆回りに一周近く回る。経度は目的地と等価な
+    /// 値のうち現在地から ±180° 以内のものへ写す — 結果は ±180 を超えて
+    /// よい(投影は wrap 無しでも等価で、次のドラッグが畳む)。緯度に
+    /// wrap は無いのでクランプだけ(極の特異点回避を到達値でも守る)。
+    func facing(_ target: (longitude: Double, latitude: Double)) -> GlobeCenter {
+        GlobeCenter(
+            longitude: longitude
+                + GlobeProjection.wrappedLongitude(target.longitude - longitude),
+            latitude: GlobeProjection.clampedLatitude(target.latitude))
+    }
+}
+
+/// 地球儀を描き、回転・ズーム・タップを解決する(`PrefectureMapView` の球面版)。
+///
+/// 入力は平面版の部分集合と同型だが、identity は `Prefecture` ではなくコード:
+/// この部品はデータ盲目で、`GlobeShape` が運ぶのは形とコードだけ。名前
+/// (VoiceOver のかな)は `accessibilityName` で親が渡す。
+///
+/// 平面版との構造差はひとつ — 拡大が `scaleEffect` ではなく **半径**に入る。
+/// 線の太さ・タップ許容・スタンプはガラス座標のまま描かれるので、平面版に
+/// 散っている `/ max(zoom, 1)` の補正はここには存在しない。
+struct GlobeMapView: View {
+    let globe: GlobeData
+    /// コード → 塗り。`MasteryStyle.appearance` も `PrefectureAppearance` の
+    /// ファクトリもコードだけで足りる(平面版が Prefecture を渡すのは
+    /// 呼び手がすでに持っているからで、地球儀は持っていない)。
+    var appearance: (Int) -> PrefectureAppearance
+    /// タップが解決してよい国。可視性の選別は不要 — 裏側の国は
+    /// `GlobeGeometry.resolveTap` が描かれないのと同じ理由で当たらない。
+    var interactiveCodes: Set<Int> = []
+    /// 出題中の国(タップ許容の下駄の相手)。
+    var targetCode: Int?
+    /// 3 ミス後に赤い輪郭を点滅させる国。裏側にいたら先に正面へ回す。
+    var hintCode: Int?
+    var effect: MapEffect?
+    var comboBurst: ComboBurst?
+    /// 正面に来る経度・緯度。ドラッグがこれを動かし、ヒントはこれを回す。
+    /// 親から回すときの型(nameIt の出題前回転・マイマップの初期位置):
+    /// `center = center.facing(GlobeGeometry.centering(on: shape))` を
+    /// `withAnimation` で包む(Reduce Motion では素の代入でジャンプ)。
+    @Binding var center: GlobeCenter
+    /// 半径の倍率。`ZoomPan.clamp(scale:)` と同じ 1...4。Binding なのは
+    /// リセットボタンを親が置くため(平面版の zoom と同じ役割分担)。
+    /// パンは無い — 見たい場所へは回して寄る。
+    @Binding var zoom: CGFloat
+    /// 可視国の VoiceOver ラベル(かな名)。nil ならラベルを付けない。
+    var accessibilityName: ((Int) -> String)?
+    /// 何に当たったか(海なら nil)と、指が落ちた点(この View の座標)。
+    var onTap: ((Int?, CGPoint) -> Void)?
+
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @GestureState private var pinch: CGFloat = 1
+
+    var body: some View {
+        GeometryReader { geo in
+            GlobeSurface(
+                longitude: center.longitude,
+                latitude: center.latitude,
+                radius: Self.radius(in: geo.size, zoom: zoom * pinch),
+                canvasSize: geo.size,
+                globe: globe,
+                appearance: appearance,
+                interactiveCodes: interactiveCodes,
+                targetCode: targetCode,
+                hintCode: hintCode,
+                effect: effect,
+                comboBurst: comboBurst,
+                accessibilityName: accessibilityName,
+                reduceMotion: reduceMotion,
+                onRotate: { center = $0 },
+                onTap: onTap)
+                .simultaneousGesture(magnify)
+                // ヒントが裏側の国を指したら、点滅の前に正面へ回す(設計 §7
+                // 未決の解決)。平面 ⇄ 地球儀の切替でヒントが立ったまま
+                // 現れることもあるので、onAppear でも同じ判定を通す。
+                .onChange(of: hintCode) { _, code in rotate(toHint: code) }
+                .onAppear { rotate(toHint: hintCode) }
+        }
+    }
+
+    private var magnify: some Gesture {
+        MagnifyGesture()
+            .updating($pinch) { value, state, _ in state = value.magnification }
+            .onEnded { value in zoom = ZoomPan.clamp(scale: zoom * value.magnification) }
+    }
+
+    private func rotate(toHint code: Int?) {
+        guard let code,
+              let destination = Self.hintRotation(code: code,
+                                                  shapes: globe.shapes,
+                                                  from: center)
+        else { return }
+        if reduceMotion {
+            center = destination
+        } else {
+            withAnimation(.easeInOut(duration: GameRules.globeCenteringDuration)) {
+                center = destination
+            }
+        }
+    }
+
+    // MARK: - 純ロジック(GlobeMapViewTests)
+
+    /// 円盤の半径。フレームの短辺に収まる円からリムが縁に触れないぶんの
+    /// 余白(`GameRules.mapPaddingPoints`)を引き、1...4 に畳んだズーム
+    /// 倍率を掛ける。余白より小さいフレーム(レイアウト初回)は 0 —
+    /// 負の半径の円盤を作らない。
+    nonisolated static func radius(in size: CGSize, zoom: CGFloat) -> CGFloat {
+        let base = min(size.width, size.height) / 2 - GameRules.mapPaddingPoints
+        guard base > 0 else { return 0 }
+        return base * ZoomPan.clamp(scale: zoom)
+    }
+
+    /// ヒントの回転先。正解国の重心がすでに正面半球なら nil(見えている
+    /// 答えを回すと、点滅を見つけかけた子から地図が逃げる)。可視判定は
+    /// 角度だけで決まるので、投影の半径・スクリーンは仮値でよい。
+    nonisolated static func hintRotation(code: Int,
+                                         shapes: [GlobeShape],
+                                         from current: GlobeCenter) -> GlobeCenter? {
+        guard let shape = shapes.first(where: { $0.code == code }) else { return nil }
+        let probe = GlobeProjection(centerLongitude: current.longitude,
+                                    centerLatitude: current.latitude,
+                                    radius: 1, screenCenter: .zero)
+        guard !probe.isVisible(lon: Double(shape.centroid.x),
+                               lat: Double(shape.centroid.y)) else { return nil }
+        return current.facing(GlobeGeometry.centering(on: shape))
+    }
+
+    /// 重なり順(平面版 `PrefectureMapView.zIndex` の球面鏡 — 理由も同じ:
+    /// 動いている物が最上位、輪を着けた物がその下、他は平ら)。
+    nonisolated static func zIndex(for code: Int, paint: PrefectureAppearance,
+                                   effect: MapEffect?, hintCode: Int?) -> Double {
+        if effect?.code == code { return 2 }
+        if hintCode == code || paint.outline != nil { return 1 }
+        return 0
+    }
+}
+
+// MARK: - 描画面
+
+/// 実際に描く面。`Animatable` なのはヒント・出題の回転を SwiftUI に補間
+/// させるため — `withAnimation { center = … }` のトランザクションがここの
+/// `animatableData` に届き、フレームごとに補間された中心で再投影される。
+/// ジェスチャもここに付く: タップとドラッグは「いま描かれている」投影で
+/// 解決されるべきで、アニメーション中の到達値で解決すると、子どもが見て
+/// いる場所と当たる場所が食い違う(GlobeGeometry.cgPath の註と同じ理由)。
+private struct GlobeSurface: View, Animatable {
+    var longitude: Double
+    var latitude: Double
+    var radius: CGFloat
+    let canvasSize: CGSize
+    let globe: GlobeData
+    let appearance: (Int) -> PrefectureAppearance
+    let interactiveCodes: Set<Int>
+    let targetCode: Int?
+    let hintCode: Int?
+    let effect: MapEffect?
+    let comboBurst: ComboBurst?
+    let accessibilityName: ((Int) -> String)?
+    let reduceMotion: Bool
+    let onRotate: ((GlobeCenter) -> Void)?
+    let onTap: ((Int?, CGPoint) -> Void)?
+
+    /// ドラッグの前回 translation。差分だけを `dragged(by:)` に食わせる —
+    /// 累積を毎回適用し直す形だと、緯度クランプで捨てた分が指を返した
+    /// 瞬間にまとめて戻ってくる。
+    @State private var lastDrag: CGSize = .zero
+
+    nonisolated var animatableData: AnimatablePair<AnimatablePair<Double, Double>, CGFloat> {
+        get { AnimatablePair(AnimatablePair(longitude, latitude), radius) }
+        set {
+            longitude = newValue.first.first
+            latitude = newValue.first.second
+            radius = newValue.second
+        }
+    }
+
+    private var projection: GlobeProjection {
+        GlobeProjection(centerLongitude: longitude,
+                        centerLatitude: latitude,
+                        radius: radius,
+                        screenCenter: CGPoint(x: canvasSize.width / 2,
+                                              y: canvasSize.height / 2))
+    }
+
+    var body: some View {
+        let projection = self.projection
+        // 重心が正面半球の国だけがラベルを持つ(GlobeGeometry.visibleCodes の
+        // 註 — 読み上げても押せない国を VoiceOver に並べない)。
+        let labeled = accessibilityName == nil
+            ? []
+            : GlobeGeometry.visibleCodes(among: globe.shapes, projection: projection)
+
+        ZStack(alignment: .topLeading) {
+            seaDisk
+
+            backgroundLayer(projection: projection)
+
+            // 貼られたシールの影は平面版と同じく 1 枚(通常の塗りでは
+            // isStuck が無いので空 — クイズの正解演出のときだけ現れる)。
+            stuckSilhouette(projection: projection)
+                .fill(Palette.stickerShadow)
+                .offset(y: min(max(canvasSize.width * 0.008, 1), Sticker.lift))
+                .blur(radius: min(max(canvasSize.width * 0.007, 0.8), 2.5))
+                .allowsHitTesting(false)
+
+            ForEach(globe.shapes) { shape in
+                let paint = appearance(shape.code)
+                GlobeCountryLayer(
+                    shape: shape,
+                    projection: projection,
+                    canvasSize: canvasSize,
+                    appearance: paint,
+                    isHinted: hintCode == shape.code,
+                    effect: effect?.code == shape.code ? effect : nil,
+                    accessibilityLabel: labeled.contains(shape.code)
+                        ? accessibilityName?(shape.code) : nil,
+                    reduceMotion: reduceMotion)
+                    .zIndex(GlobeMapView.zIndex(for: shape.code, paint: paint,
+                                                effect: effect, hintCode: hintCode))
+            }
+        }
+        .frame(width: canvasSize.width, height: canvasSize.height)
+        // ズームした円盤はフレームからあふれる。平面版と同じく自分の縁で切る。
+        .clipped()
+        .contentShape(Rectangle())
+        .onTapGesture { location in
+            guard let onTap else { return }
+            // 平面版と同じ「interactiveCodes で絞るだけ」。許容 22pt は
+            // ガラス座標のままでよい — 拡大は半径に入っていて、タップも
+            // 輪郭も同じガラスの上にある。
+            let candidates = globe.shapes.filter { interactiveCodes.contains($0.code) }
+            let target = targetCode.flatMap { code in
+                globe.shapes.first { $0.code == code }
+            }
+            let hit = GlobeGeometry.resolveTap(at: location, target: target,
+                                               among: candidates, projection: projection)
+            onTap(hit?.code, location)
+        }
+        .gesture(rotation(projection: projection))
+        .overlay(alignment: .topLeading) { comboLabel(projection: projection) }
+    }
+
+    // MARK: - 回転ドラッグ
+
+    /// ドラッグ = 回転(`GlobeProjection.dragged(by:)`)。慣性は付けない:
+    /// 回した分だけ回る方が 5 歳に予測可能で、Reduce Motion で切るべき
+    /// 演出も増えない(計画 Task 3 の明示判断)。minimumDistance は既定の
+    /// 10pt — それ未満はタップのまま。
+    private func rotation(projection: GlobeProjection) -> some Gesture {
+        DragGesture()
+            .onChanged { value in
+                let delta = CGSize(width: value.translation.width - lastDrag.width,
+                                   height: value.translation.height - lastDrag.height)
+                lastDrag = value.translation
+                let next = projection.dragged(by: delta)
+                onRotate?(GlobeCenter(longitude: next.centerLongitude,
+                                      latitude: next.centerLatitude))
+            }
+            .onEnded { _ in lastDrag = .zero }
+    }
+
+    // MARK: - 海と背景
+
+    /// 海 = 円盤。光を上左に寄せたラジアルグラデーションが球に見せる —
+    /// 平面の海と同じ 2 色(§9 に無い色を持ち込まない)。リムは惑星の
+    /// 輪郭線で、インセット枠と同じインクの薄め。
+    private var seaDisk: some View {
+        ZStack {
+            Circle()
+                .fill(RadialGradient(colors: Palette.sea,
+                                     center: UnitPoint(x: 0.42, y: 0.36),
+                                     startRadius: 0,
+                                     endRadius: radius * 1.4))
+            Circle()
+                .strokeBorder(Palette.ink.opacity(0.22), lineWidth: 1.5)
+        }
+        .frame(width: radius * 2, height: radius * 2)
+        .position(x: canvasSize.width / 2, y: canvasSize.height / 2)
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
+    }
+
+    /// 収録外の海岸線。平面版は 1 本の Path に束ねて 1 回で塗るが、地球儀
+    /// では束ねない: リムへクランプされた形どうしは縁で重なり合い、形の
+    /// **間**に even-odd が効くと重なりが海色に抜ける。WorldDataLoader が
+    /// 保った形状単位の入れ子(穴の even-odd)のまま、形ごとに塗る。
+    private func backgroundLayer(projection: GlobeProjection) -> some View {
+        ForEach(globe.backgroundRings.indices, id: \.self) { index in
+            let path = GlobeGeometry.path(rings: globe.backgroundRings[index],
+                                          projection: projection)
+            if !path.isEmpty {
+                ZStack(alignment: .topLeading) {
+                    path.fill(Palette.backgroundLand, style: FillStyle(eoFill: true))
+                    path.stroke(Palette.backgroundShore,
+                                lineWidth: hairlineWidth(canvasWidth: canvasSize.width,
+                                                         zoom: 1))
+                }
+            }
+        }
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
+    }
+
+    private func stuckSilhouette(projection: GlobeProjection) -> Path {
+        var path = Path()
+        for shape in globe.shapes where appearance(shape.code).isStuck {
+            path.addPath(GlobeGeometry.path(for: shape, projection: projection))
+        }
+        return path
+    }
+
+    // MARK: - コンボスタンプ
+
+    @ViewBuilder private func comboLabel(projection: GlobeProjection) -> some View {
+        if let comboBurst,
+           let point = burstPoint(comboBurst.anchor, projection: projection) {
+            let radius = ComboBurstLabel.visualRadius(for: comboBurst.tier)
+            ComboBurstLabel(burst: comboBurst, reduceMotion: reduceMotion)
+                .position(stampPoint(point, radius: radius, projection: projection))
+                .allowsHitTesting(false)
+                .id(comboBurst.id)
+        }
+    }
+
+    private func burstPoint(_ anchor: ComboBurst.Anchor,
+                            projection: GlobeProjection) -> CGPoint? {
+        switch anchor {
+        case .point(let point):
+            point
+        case .prefecture(let code):
+            // 名は「県」でも運ぶのはコード — この本では国を指す。
+            globe.shapes.first { $0.code == code }.map {
+                GlobeGeometry.screenCentroid(of: $0, projection: projection)
+            }
+        }
+    }
+
+    /// バッジ(浮上する絵文字)の位置だけ球面で解き、配置そのものは
+    /// 平面版と同じ式(`ComboBurstLabel.stampAnchor`)に任せる。
+    private func stampPoint(_ point: CGPoint, radius: CGFloat,
+                            projection: GlobeProjection) -> CGPoint {
+        var badgeOrigin: CGPoint?
+        if let effect,
+           let shape = globe.shapes.first(where: { $0.code == effect.code }),
+           appearance(effect.code).badge != nil {
+            badgeOrigin = GlobeGeometry.screenCentroid(of: shape, projection: projection)
+        }
+        return ComboBurstLabel.stampAnchor(tap: point, radius: radius,
+                                           badgeOrigin: badgeOrigin,
+                                           canvasSize: canvasSize)
+    }
+}
+
+// MARK: - 1 国ぶん
+
+/// `PrefectureLayer` の球面鏡。演出はすべて共有の Effect View(平面版の
+/// ファイルから最小限の可視性で持ち上げたもの)で、違いは座標変換だけ。
+private struct GlobeCountryLayer: View {
+    let shape: GlobeShape
+    let projection: GlobeProjection
+    let canvasSize: CGSize
+    let appearance: PrefectureAppearance
+    let isHinted: Bool
+    let effect: MapEffect?
+    /// nil はラベル無し(重心が裏側、または親が名前を渡していない)。
+    let accessibilityLabel: String?
+    let reduceMotion: Bool
+
+    /// よその国宛てのエフェクトを生き延びる(`EffectTriggers` の註)。
+    @State private var triggers = EffectTriggers()
+
+    /// 拡大は半径に入っているので、平面版と違いどの幅も zoom で割らない。
+    private var dieCutWidth: CGFloat {
+        min(max(canvasSize.width * 0.009, 0.5), 3)
+    }
+
+    private var boundaryWidth: CGFloat {
+        hairlineWidth(canvasWidth: canvasSize.width, zoom: 1)
+    }
+
+    /// 赤い輪(出題・ヒント)の共通幅 — 平面版と同じ重さ。
+    private let ringWidth: CGFloat = 3.5
+
+    var body: some View {
+        // 1 回の body 評価につき投影は 1 回。塗り・縁・輪が同じ Path を見る。
+        let path = GlobeGeometry.path(for: shape, projection: projection)
+        let centroid = GlobeGeometry.screenCentroid(of: shape, projection: projection)
+
+        layers(path: path)
+            .modifier(PopEffect(trigger: triggers.pop,
+                                anchor: anchor(for: centroid),
+                                enabled: !reduceMotion))
+            .modifier(ShakeEffect(trigger: triggers.shake,
+                                  enabled: !reduceMotion))
+            // nil は「自分宛てではない」— 何も動かしてはいけない(平面版と同じ)。
+            .onChange(of: effect) { _, new in triggers.apply(new) }
+            .overlay(alignment: .topLeading) {
+                // 全点が裏側なら国は存在しないのと同じ — バッジも出さない。
+                if !path.isEmpty { badge(at: centroid) }
+            }
+            .accessibilityHidden(true)
+            .overlay(alignment: .topLeading) {
+                accessibilityProxy(path: path, centroid: centroid)
+            }
+    }
+
+    private func layers(path: Path) -> some View {
+        ZStack(alignment: .topLeading) {
+            path.fill(appearance.fill, style: FillStyle(eoFill: true))
+
+            if appearance.isStuck {
+                path.stroke(appearance.stroke, lineWidth: dieCutWidth)
+            } else {
+                path.stroke(appearance.stroke, lineWidth: boundaryWidth)
+            }
+
+            if appearance.isStuck, case .pop? = effect?.kind {
+                CorrectFoilTrace(path: path,
+                                 lineWidth: max(dieCutWidth * 0.8, 1),
+                                 reduceMotion: reduceMotion)
+                    .id(effect?.id)
+            }
+
+            if appearance.isSparkling {
+                path.fill(.white.opacity(0.14), style: FillStyle(eoFill: true))
+                    .modifier(SlowGlow(enabled: !reduceMotion))
+            }
+
+            if let outline = appearance.outline {
+                path.stroke(outline, lineWidth: ringWidth)
+            }
+
+            if isHinted {
+                path.stroke(Palette.red, lineWidth: ringWidth)
+                    .modifier(HintBlink(enabled: !reduceMotion))
+            }
+        }
+    }
+
+    /// scaleEffect の錨はキャンバス全体の単位空間(平面版と同じ理由)。
+    private func anchor(for centroid: CGPoint) -> UnitPoint {
+        guard canvasSize.width > 0, canvasSize.height > 0 else { return .center }
+        return UnitPoint(x: centroid.x / canvasSize.width,
+                         y: centroid.y / canvasSize.height)
+    }
+
+    @ViewBuilder private func badge(at centroid: CGPoint) -> some View {
+        if let badge = appearance.badge {
+            Text(badge)
+                .font(.system(size: 26))
+                .shadow(color: .black.opacity(0.18), radius: 2, y: 1)
+                .modifier(RiseEffect(enabled: !reduceMotion))
+                .position(x: centroid.x, y: centroid.y)
+                .allowsHitTesting(false)
+        }
+    }
+
+    /// 平面版 `accessibilityProxy` と同じ理屈の代理要素。枠は投影済み
+    /// Path の boundingRect から取る(リムへクランプされた点も含む —
+    /// 見えている広がりそのもの)ので、44pt の下限ごと平面版と同じ形。
+    @ViewBuilder private func accessibilityProxy(path: Path,
+                                                 centroid: CGPoint) -> some View {
+        if let accessibilityLabel {
+            let box = path.boundingRect
+            Color.clear
+                .frame(width: max(box.width, 44), height: max(box.height, 44))
+                .position(centroid)
+                .allowsHitTesting(false)
+                .accessibilityElement()
+                .accessibilityLabel(accessibilityLabel)
+                .accessibilityAddTraits(.isButton)
+        }
+    }
+}
+
+// MARK: - Preview
+
+/// 実データ(WorldShapes.json)で地球儀を回すハーネス。マイマップ相当の
+/// 習熟見本をコードで散らし、ドラッグ・ピンチ・タップを手で確かめられる。
+private struct GlobeMapPreview: View {
+    @State private var center: GlobeCenter
+    @State private var zoom: CGFloat
+    private let atlas = Atlas.loadWorld()
+
+    init(center: GlobeCenter = GlobeCenter(longitude: 138, latitude: 36),
+         zoom: CGFloat = 1) {
+        _center = State(initialValue: center)
+        _zoom = State(initialValue: zoom)
+    }
+
+    var body: some View {
+        if let globe = atlas.globe {
+            GlobeMapView(
+                globe: globe,
+                appearance: { code in
+                    PrefectureAppearance(
+                        fill: MasteryStyle.fill(level: code % 6),
+                        stroke: Palette.boundary,
+                        isSparkling: code % 6 >= GameRules.maxMastery,
+                        isStuck: false)
+                },
+                interactiveCodes: Set(globe.shapes.map(\.code)),
+                center: $center,
+                zoom: $zoom,
+                accessibilityName: { code in atlas.mapData[code]?.kana ?? "" },
+                onTap: { _, _ in })
+                .padding()
+                .background(Palette.background)
+        } else {
+            Text("WorldShapes.json が よみこめない")
+        }
+    }
+}
+
+#Preview("せかい ちきゅうぎ") {
+    GlobeMapPreview()
+}
+
+#Preview("かいてん・ズーム") {
+    GlobeMapPreview(center: GlobeCenter(longitude: -60, latitude: -15), zoom: 2)
+}

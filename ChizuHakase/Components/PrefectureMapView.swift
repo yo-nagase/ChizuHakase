@@ -270,46 +270,21 @@ struct PrefectureMapView: View {
     /// Places the stamp clear of the specialty emoji rising from the rewarded
     /// prefecture. Both effects used to travel upward from virtually the same
     /// point, leaving the emoji hidden behind the much larger stamp.
+    /// This resolves the map-specific part — where the badge is — and hands the
+    /// placement itself to `ComboBurstLabel.stampAnchor`, which the globe shares.
     private func comboPoint(_ point: CGPoint, radius: CGFloat,
                             transform: CGAffineTransform,
                             canvasSize: CGSize) -> CGPoint {
-        // ComboBurstLabel finishes 34pt above its position anchor.
-        var stampCenter = CGPoint(x: point.x, y: point.y - 34)
-
+        var badgeOrigin: CGPoint?
         if let effect,
            let prefecture = mapData[effect.code],
            appearance(prefecture).badge != nil {
-            let badgeOrigin = PrefectureGeometry.screenCentroid(
+            badgeOrigin = PrefectureGeometry.screenCentroid(
                 of: prefecture, transform: transform)
-            // The emoji rises 26pt. Its swept area is represented by the
-            // midpoint of that short path plus enough room for the 26pt glyph.
-            let badgePathCenter = CGPoint(x: badgeOrigin.x, y: badgeOrigin.y - 13)
-            let dx = stampCenter.x - badgePathCenter.x
-            let dy = stampCenter.y - badgePathCenter.y
-            // Extra clearance also covers the stamp's brief 1.34x arrival,
-            // not just its resting circle.
-            let clearance = radius + 42
-
-            if hypot(dx, dy) < clearance {
-                let left = badgeOrigin.x - clearance
-                let right = badgeOrigin.x + clearance
-                let leftRoom = left - radius
-                let rightRoom = canvasSize.width - (right + radius)
-
-                // Prefer the side with enough paper; when both fit, use the
-                // roomier side so coastal prefectures naturally move inward.
-                stampCenter.x = rightRoom > leftRoom ? right : left
-            }
         }
-
-        // Keep the full foil rays inside the clipped map panel. Return the
-        // anchor rather than the visual centre, restoring the label's -34pt
-        // resting offset.
-        stampCenter.x = min(max(stampCenter.x, radius),
-                            max(radius, canvasSize.width - radius))
-        stampCenter.y = min(max(stampCenter.y, radius),
-                            max(radius, canvasSize.height - radius))
-        return CGPoint(x: stampCenter.x, y: stampCenter.y + 34)
+        return ComboBurstLabel.stampAnchor(tap: point, radius: radius,
+                                           badgeOrigin: badgeOrigin,
+                                           canvasSize: canvasSize)
     }
 
     private func burstPoint(_ anchor: ComboBurst.Anchor,
@@ -373,7 +348,9 @@ struct PrefectureMapView: View {
 /// border — the two call sites used to duplicate it and merely promise to
 /// match. Divided by the zoom because the stroke is drawn inside the magnified
 /// content (see `PrefectureMapView.zoom`).
-private func hairlineWidth(canvasWidth: CGFloat, zoom: CGFloat) -> CGFloat {
+/// Internal, not private: `GlobeMapView` draws the same hairline (at zoom 1 —
+/// its magnification is in the radius, not in a scaleEffect).
+func hairlineWidth(canvasWidth: CGFloat, zoom: CGFloat) -> CGFloat {
     min(max(canvasWidth * 0.0019, 0.3), 0.7) / max(zoom, 1)
 }
 
@@ -535,8 +512,13 @@ private struct PrefectureLayer: View {
 //
 // Every one of these is a no-op when Reduce Motion is on; the state change is
 // still legible because colour carries it (CLAUDE.md §9).
+//
+// Internal, not private: `GlobeMapView` replays the same celebrations on the
+// globe. One implementation per animation, or the two maps drift apart in
+// exactly the moments a child watches most closely (minimal visibility hoist —
+// only `StampRays` and `InsetFrame` stay file-private).
 
-private struct PopEffect: ViewModifier {
+struct PopEffect: ViewModifier {
     let trigger: Int
     let anchor: UnitPoint
     let enabled: Bool
@@ -559,7 +541,7 @@ private struct PopEffect: ViewModifier {
     }
 }
 
-private struct ShakeEffect: ViewModifier {
+struct ShakeEffect: ViewModifier {
     let trigger: Int
     let enabled: Bool
 
@@ -584,7 +566,7 @@ private struct ShakeEffect: ViewModifier {
     }
 }
 
-private struct HintBlink: ViewModifier {
+struct HintBlink: ViewModifier {
     let enabled: Bool
     @State private var on = false
 
@@ -601,7 +583,7 @@ private struct HintBlink: ViewModifier {
     }
 }
 
-private struct SlowGlow: ViewModifier {
+struct SlowGlow: ViewModifier {
     let enabled: Bool
     @State private var on = false
 
@@ -618,7 +600,7 @@ private struct SlowGlow: ViewModifier {
     }
 }
 
-private struct RiseEffect: ViewModifier {
+struct RiseEffect: ViewModifier {
     let enabled: Bool
     @State private var lifted = false
 
@@ -642,7 +624,7 @@ private struct RiseEffect: ViewModifier {
 /// over the map. This uses the album's paper, ink and foil instead: the count is
 /// printed inside a round souvenir stamp and restrained rays make longer runs
 /// feel rarer without throwing confetti over the question.
-private struct ComboBurstLabel: View {
+struct ComboBurstLabel: View {
     let burst: ComboBurst
     let reduceMotion: Bool
 
@@ -659,6 +641,49 @@ private struct ComboBurstLabel: View {
         let diameters: [CGFloat] = [72, 84, 98]
         let rayLengths: [CGFloat] = [7, 10, 13]
         return diameters[index] / 2 + 5 + rayLengths[index]
+    }
+
+    /// Where the stamp's position anchor should land, given where the finger
+    /// tapped and (when a specialty emoji is rising) where it rises from.
+    /// Pure and shared by both maps — the flat map and the globe resolve the
+    /// badge's screen position their own way, but the stamp must dodge and
+    /// clamp by the same rules on either one.
+    nonisolated static func stampAnchor(tap point: CGPoint, radius: CGFloat,
+                                        badgeOrigin: CGPoint?,
+                                        canvasSize: CGSize) -> CGPoint {
+        // The label finishes 34pt above its position anchor.
+        var stampCenter = CGPoint(x: point.x, y: point.y - 34)
+
+        if let badgeOrigin {
+            // The emoji rises 26pt. Its swept area is represented by the
+            // midpoint of that short path plus enough room for the 26pt glyph.
+            let badgePathCenter = CGPoint(x: badgeOrigin.x, y: badgeOrigin.y - 13)
+            let dx = stampCenter.x - badgePathCenter.x
+            let dy = stampCenter.y - badgePathCenter.y
+            // Extra clearance also covers the stamp's brief 1.34x arrival,
+            // not just its resting circle.
+            let clearance = radius + 42
+
+            if hypot(dx, dy) < clearance {
+                let left = badgeOrigin.x - clearance
+                let right = badgeOrigin.x + clearance
+                let leftRoom = left - radius
+                let rightRoom = canvasSize.width - (right + radius)
+
+                // Prefer the side with enough paper; when both fit, use the
+                // roomier side so coastal prefectures naturally move inward.
+                stampCenter.x = rightRoom > leftRoom ? right : left
+            }
+        }
+
+        // Keep the full foil rays inside the clipped map panel. Return the
+        // anchor rather than the visual centre, restoring the label's -34pt
+        // resting offset.
+        stampCenter.x = min(max(stampCenter.x, radius),
+                            max(radius, canvasSize.width - radius))
+        stampCenter.y = min(max(stampCenter.y, radius),
+                            max(radius, canvasSize.height - radius))
+        return CGPoint(x: stampCenter.x, y: stampCenter.y + 34)
     }
 
     private var parts: (count: String, label: String) {
@@ -756,7 +781,7 @@ private struct StampRays: View {
 
 /// A bright segment runs once around the rewarded prefecture. With Reduce
 /// Motion the existing steady gold edge carries the same meaning on its own.
-private struct CorrectFoilTrace: View {
+struct CorrectFoilTrace: View {
     let path: Path
     let lineWidth: CGFloat
     let reduceMotion: Bool
