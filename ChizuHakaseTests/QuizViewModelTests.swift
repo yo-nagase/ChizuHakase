@@ -151,6 +151,25 @@ struct QuizViewModelTests {
         #expect(quiz.order.count == 47)
     }
 
+    /// 抽選された 47 カ国だけでなく、本の全収録国がタップに応える。地図
+    /// (平面 167 国・地球儀の全形状)は全部を描くので、描かれている国への
+    /// 誤タップが海のように黙殺されたらアプリが壊れて見える — 外れは外れと
+    /// して揺れ、ミスに数えられるべき(QuizView は nameIt でだけ空に上書き)。
+    @Test func 世界チャレンジは全収録国がタップに応える() throws {
+        let atlas = Atlas.world(from: try QuizModeTests.world.get())
+        let quiz = try makeWorldQuiz(stageIndex: WorldStage.challengeIndex)
+        #expect(quiz.interactiveCodes == Set(atlas.mapData.prefectures.map(\.code)))
+        #expect(quiz.interactiveCodes.count > quiz.questionCount)
+
+        // 抽選に入らなかった国への誤タップもミスとして記録される。
+        let target = try #require(quiz.target)
+        let outsider = try #require(
+            quiz.interactiveCodes.subtracting(quiz.order).first)
+        #expect(quiz.answer(outsider) == .wrong(code: outsider))
+        #expect(quiz.answer(target.code)
+                == .correct(firstTry: false, points: GameRules.retryScore, draw: nil))
+    }
+
     /// `askedCodes` は抽選で組んだ回だけが運ぶ: 世界チャレンジは訊いた 47 を、
     /// 日本のぜんこくと世界の地方ステージは空を返す — 空のままなのが、
     /// 日本の save slice の askedInChallenge が永遠に空である仕組みそのもの。

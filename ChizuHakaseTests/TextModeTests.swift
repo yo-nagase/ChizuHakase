@@ -223,7 +223,7 @@ extension TextMode {
          becameSparkling(.prefecture), becameSparkling(.country), becameRainbow,
          starCount(3),
          sparklingCards, learnedTally(.prefecture), learnedTally(.country), ownedCards,
-         learnedCount, resetZoom, zoomHint,
+         learnedCount, resetZoom, zoomHint, toGlobe, toFlatMap,
          AtlasNoun.eastJapan.label(self), AtlasNoun.middleJapan.label(self),
          AtlasNoun.westJapan.label(self),
          eraseEverything, eraseConfirm1, eraseConfirm2, eraseCancel, eraseNext,

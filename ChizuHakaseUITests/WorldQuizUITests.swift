@@ -49,6 +49,84 @@ final class WorldQuizUITests: XCTestCase {
                       "a correct first tap on \(target) should score 100")
     }
 
+    /// The world challenge opens on the globe (P7 Task 6): the toggle chip is
+    /// there offering the flat map, the globe labels visible countries by
+    /// their reading — home is front and centre — and the flat map's
+    /// one-finger-zoom hint is nowhere (the globe doesn't run that gesture).
+    func testWorldChallengeOpensOnTheGlobe() {
+        app.launchArguments = ["-resetSave", "-atlas", "world", "-startAt", "quiz:18"]
+        app.launch()
+        XCTAssertTrue(app.staticTexts["47 もんちゅう 1 もんめ"].waitForExistence(timeout: 10),
+                      "the world challenge never appeared")
+        // The chip names its far side, so on the globe it reads ちず.
+        XCTAssertTrue(app.buttons["🗺️ ちず"].waitForExistence(timeout: 5),
+                      "no toggle chip — the challenge did not open on the globe")
+        // The globe opens facing home; its visible countries carry kana labels.
+        XCTAssertTrue(app.buttons["にほん"].waitForExistence(timeout: 5),
+                      "the globe's home-facing side shows no にほん")
+        XCTAssertFalse(app.staticTexts["👆 ながおしして うえしたで おおきく できるよ"].exists,
+                       "the flat map's zoom hint leaked onto the globe")
+        record("world-challenge-globe")
+    }
+
+    /// The toggle is a display mode, never quiz state (design §7): switching
+    /// to the flat map keeps the same question, a score earned there survives
+    /// switching back, and the globe returns mid-sitting.
+    func testGlobeToggleCarriesTheSittingAcross() throws {
+        app.launchArguments = ["-resetSave", "-atlas", "world", "-startAt", "quiz:18"]
+        app.launch()
+        XCTAssertTrue(app.staticTexts["47 もんちゅう 1 もんめ"].waitForExistence(timeout: 10))
+        let toFlat = app.buttons["🗺️ ちず"]
+        XCTAssertTrue(toFlat.waitForExistence(timeout: 5))
+        toFlat.tap()
+        XCTAssertTrue(app.buttons["🌍 ちきゅうぎ"].waitForExistence(timeout: 3),
+                      "the toggle did not swap to the flat map")
+        XCTAssertTrue(app.staticTexts["47 もんちゅう 1 もんめ"].exists,
+                      "toggling to the flat map restarted the sitting")
+        // The sitting samples 47 questions, but the map is still the whole
+        // world. Pin the regression where only those 47 shapes were drawn and
+        // the other 120 countries became country-shaped holes in the sea.
+        XCTAssertGreaterThan(app.buttons.count, 160,
+                             "the flat challenge map does not show the full atlas")
+        record("world-challenge-flat")
+
+        // Answer one question on the flat map — same target-reading and
+        // offset walk as the 47-question smoke below.
+        let target = try XCTUnwrap(askedCountryLabel(),
+                                   "no country question on screen")
+        XCTAssertTrue(scoreByTapping(app.buttons[target]),
+                      "no tap on \(target) scored on the flat map")
+        XCTAssertTrue(app.staticTexts["47 もんちゅう 2 もんめ"].waitForExistence(timeout: 8),
+                      "the answered question did not advance")
+
+        app.buttons["🌍 ちきゅうぎ"].tap()
+        XCTAssertTrue(app.buttons["🗺️ ちず"].waitForExistence(timeout: 3),
+                      "the toggle did not swap back to the globe")
+        XCTAssertTrue(app.staticTexts["47 もんちゅう 2 もんめ"].exists,
+                      "toggling back to the globe lost the question")
+        XCTAssertTrue(app.staticTexts["100"].exists || app.staticTexts["50"].exists,
+                      "the flat map's score did not carry back to the globe")
+    }
+
+    /// 「なまえを あてる」 runs on the globe too: the same question and
+    /// choices, with the asked country turned to the front (the red ring is
+    /// reviewed on the attached screenshot — no assertion can see it).
+    func testWorldChallengeNameItRunsOnTheGlobe() {
+        app.launchArguments = ["-resetSave", "-atlas", "world", "-nameIt",
+                               "-startAt", "quiz:18"]
+        app.launch()
+        XCTAssertTrue(app.staticTexts["47 もんちゅう 1 もんめ"].waitForExistence(timeout: 10),
+                      "the world nameIt challenge never appeared")
+        XCTAssertTrue(app.staticTexts["この くには どこかな?"].exists,
+                      "the nameIt question is missing on the globe")
+        XCTAssertTrue(app.staticTexts["なまえを えらんでね"].exists)
+        XCTAssertTrue(app.buttons["🗺️ ちず"].exists,
+                      "nameIt did not open on the globe")
+        // Let the face-the-target rotation land before the picture is taken.
+        RunLoop.current.run(until: Date().addingTimeInterval(1.2))
+        record("world-challenge-nameit")
+    }
+
     /// The world challenge (stage 18, P7 Task 5): one sitting is 47 questions —
     /// not the 167 recorded countries and not a doubled 334 — drawn from the
     /// whole book. Smoke: the counter reads /47, a correct tap scores, and
@@ -61,41 +139,17 @@ final class WorldQuizUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["せかい チャレンジ"].exists,
                       "quiz:18 did not resolve to the world challenge")
 
-        // The asked country could be any of 167, so the test reads it off the
-        // screen: the question card's secondary line is the one static text
-        // whose label also names a map element (the map's accessibility
-        // labels carry the same written form).
-        let labels = app.staticTexts.allElementsBoundByIndex.compactMap {
-            $0.exists ? $0.label : nil
-        }
-        let target = try XCTUnwrap(
-            labels.first { !$0.isEmpty && app.buttons[$0].exists },
-            "no country question on screen (labels: \(labels))")
+        // The challenge opens on the globe (P7 Task 6, pinned above); this
+        // smoke is about the sitting's shape on the flat map, so step through
+        // the toggle first.
+        app.buttons["🗺️ ちず"].tap()
+        XCTAssertTrue(app.buttons["🌍 ちきゅうぎ"].waitForExistence(timeout: 3),
+                      "the toggle did not swap to the flat map")
 
-        // The a11y frame's centre is the centroid for almost every country,
-        // but for a measured handful of slim ones (4 of 167 — e.g. ノルウェー,
-        // ラオス) it direct-hits a neighbour, and a direct hit beats the 22pt
-        // forgiveness. The challenge draws question 1 uniformly from all 167,
-        // so on a miss the tap walks a small offset grid until the score
-        // moves — a second-try 「50」 is a legitimate pass here (this smoke is
-        // about the sitting's shape, not first-tap accuracy).
-        let element = app.buttons[target]
-        let offsets: [(dx: Double, dy: Double)] = [
-            (0.5, 0.5), (0.35, 0.5), (0.65, 0.5), (0.5, 0.35), (0.5, 0.65),
-            (0.35, 0.35), (0.65, 0.65),
-        ]
-        var scored = false
-        for offset in offsets {
-            element.coordinate(withNormalizedOffset:
-                CGVector(dx: offset.dx, dy: offset.dy)).tap()
-            if app.staticTexts["100"].waitForExistence(timeout: 1)
-                || app.staticTexts["50"].exists {
-                scored = true
-                break
-            }
-        }
-        XCTAssertTrue(scored,
-                      "no tap on \(target) scored after \(offsets.count) offsets")
+        let target = try XCTUnwrap(askedCountryLabel(),
+                                   "no country question on screen")
+        XCTAssertTrue(scoreByTapping(app.buttons[target]),
+                      "no tap on \(target) scored after the offset walk")
 
         // Quit mid-sitting: back to the shelf, nothing saved, nothing stuck.
         app.buttons["やめる"].tap()
@@ -279,23 +333,68 @@ final class WorldQuizUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["3 / 167"].exists,
                       "the owned count is not reading the world's slice")
 
-        // Open the first owned flag — アルジェリア's, the colliding "12-1".
-        // Its description proves which catalog answered: japan's 12-1 talks
-        // about peanuts, the world's about アルジェリア's flag.
-        // Assumes catalog order puts "12-1" first among the three granted
-        // flags (ISO 12 < 36 < 392) — the book lists cards in catalog order.
+        // The world book is one acquisition-order grid, without country
+        // headings. -grantCards deals Australia first, then Algeria, then
+        // Japan; opening the first chip therefore pins the visible order too.
+        XCTAssertFalse(app.staticTexts["あるじぇりあ"].exists,
+                       "the world cards are still grouped under country headings")
         let card = chip(named: "こっき")
         XCTAssertTrue(card.waitForExistence(timeout: 5), "no owned flag card in the book")
         card.tap()
         XCTAssertTrue(app.buttons["とじる"].waitForExistence(timeout: 3),
                       "tapping a flag card did not open it")
-        XCTAssertTrue(app.staticTexts["あるじぇりあの こっきだよ"].exists,
-                      "the opened card is not the world's 12-1")
+        XCTAssertTrue(app.staticTexts["おーすとらりあの こっきだよ"].exists,
+                      "the first card is not the first one granted")
         XCTAssertFalse(anythingNamed("らっかせい"),
                        "japan's 12-1 leaked into the world card book")
     }
 
     // MARK: - Helpers
+
+    /// The asked country's written name, read off the screen — the challenge
+    /// could ask any of 167, so the test finds the question card's secondary
+    /// line as the one static text whose label also names a flat-map element
+    /// (the map's accessibility labels carry the same written form). Reads
+    /// the flat map: the globe's labels are readings, not written names.
+    private func askedCountryLabel() -> String? {
+        let labels = app.staticTexts.allElementsBoundByIndex.compactMap {
+            $0.exists ? $0.label : nil
+        }
+        return labels.first { !$0.isEmpty && app.buttons[$0].exists }
+    }
+
+    /// Taps `element` until the score moves. The a11y frame's centre is the
+    /// centroid for almost every country, but for a measured handful of slim
+    /// ones (4 of 167 — e.g. ノルウェー, ラオス) it direct-hits a neighbour,
+    /// and a direct hit beats the 22pt forgiveness. The challenge draws its
+    /// questions uniformly from all 167, so on a miss the tap walks a small
+    /// offset grid — a second-try 「50」 is a legitimate pass here (these
+    /// smokes are about the sitting's shape, not first-tap accuracy).
+    private func scoreByTapping(_ element: XCUIElement) -> Bool {
+        let offsets: [(dx: Double, dy: Double)] = [
+            (0.5, 0.5), (0.35, 0.5), (0.65, 0.5), (0.5, 0.35), (0.5, 0.65),
+            (0.35, 0.35), (0.65, 0.65),
+        ]
+        for offset in offsets {
+            element.coordinate(withNormalizedOffset:
+                CGVector(dx: offset.dx, dy: offset.dy)).tap()
+            if app.staticTexts["100"].waitForExistence(timeout: 1)
+                || app.staticTexts["50"].exists {
+                return true
+            }
+        }
+        return false
+    }
+
+    /// Attached rather than asserted, LandscapeUITests' way: no assertion can
+    /// tell whether the globe looks like a globe or the ring sits on the
+    /// right country — the attachments are how those get reviewed at all.
+    private func record(_ name: String) {
+        let shot = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+        shot.name = name
+        shot.lifetime = .keepAlways
+        add(shot)
+    }
 
     /// Whether `button` goes dim (still on screen, no longer pressable)
     /// within `timeout`. Checks immediately first: a ruled-out choice is

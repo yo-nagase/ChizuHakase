@@ -32,6 +32,38 @@ struct QuizView: View {
     @State private var comboBurst: ComboBurst?
     @State private var burstCount = 0
 
+    /// How the map panel is shown. A **display mode, never quiz state**: the
+    /// question, score and streaks live in `QuizViewModel`, which knows
+    /// nothing about it, so toggling carries the sitting across untouched
+    /// (world design §7 — the toggle ranks with the zoom reset, not with the
+    /// title's japan/world branch).
+    private enum MapDisplay { case globe, flat }
+    /// Nil until the child toggles: `@State` cannot see `stage` for its
+    /// initial value, so the default — open on the globe when there is one —
+    /// lives in the computed `mapDisplay` instead.
+    @State private var mapDisplayOverride: MapDisplay?
+    /// The globe's rotation. Opens facing home — the one place on the sphere
+    /// a five-year-old already knows, so the world starts from somewhere
+    /// rather than from open ocean.
+    @State private var globeCenter = GlobeCenter(longitude: 138, latitude: 36)
+    /// The globe's radius multiplier — a separate camera from the flat map's
+    /// `zoom` (same 1...4 range, different coordinate system; see
+    /// `toggleMapDisplay`).
+    @State private var globeZoom: CGFloat = 1
+
+    /// The globe this sitting can show, or nil. Two gates, neither of them a
+    /// which-book branch: the atlas must carry globe data (japan's never
+    /// does), and the stage must be the challenge — a regional stage is a
+    /// region cropped to its own proportions, and a globe can only ever show
+    /// the whole sphere.
+    private var globeData: GlobeData? {
+        stage.isChallenge ? atlas.globe : nil
+    }
+
+    private var mapDisplay: MapDisplay {
+        mapDisplayOverride ?? (globeData != nil ? .globe : .flat)
+    }
+
     var body: some View {
         ZStack {
             StageAtlasBackground()
@@ -251,23 +283,19 @@ struct QuizView: View {
     /// magnifying never turns into a wider net.
     private func map(_ quiz: QuizViewModel) -> some View {
         Group {
-            // Regional stages hug their region's own proportions. A challenge
-            // stage — 全国チャレンジ, and the world challenge's flat map alike —
-            // takes every point of height the column has spare instead: the
-            // whole book cannot be drawn any bigger — the screen's width
-            // already caps it — so all the spare height becomes sea, and a
-            // zoomed-in child gets that much more viewport to move around in.
-            // A frame rather than a taller fixed ratio, so a short screen
-            // simply yields a shorter panel instead of shrinking the map to
-            // honour a ratio it has no room for.
-            if stage.isChallenge {
-                mapView(quiz).frame(maxWidth: .infinity, maxHeight: .infinity)
+            if let globe = globeData, mapDisplay == .globe {
+                // The globe takes every point of spare height the way the
+                // flat challenge panel does: the disk's size comes from the
+                // short side, and the vertical slack is where a rotating
+                // finger gets to rest. No `zoomPan` here — dragging rotates,
+                // and the pinch lives inside the component, folded into the
+                // radius rather than into a scaleEffect.
+                globeView(quiz, globe: globe)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
-                mapView(quiz).aspectRatio(PrefectureGeometry.aspectRatio(
-                    of: atlas.mapData.prefectures(in: quiz.order)), contentMode: .fit)
+                flatMap(quiz)
             }
         }
-        .zoomPan(scale: $zoom, offset: $pan, oneFingerZoom: true)
         // The frame the region buttons aim their zoom at — the same size the
         // zoom-pan clamps against, so a framed region obeys the same limits.
         .background {
@@ -278,7 +306,11 @@ struct QuizView: View {
             }
         }
         .clipShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
-        .background(Palette.seaGradient)
+        // The flat map floats on sea; the globe carries its own sea inside the
+        // disk, and more sea around a sea-rimmed planet would swallow its
+        // edge — behind the globe the panel stays album paper instead.
+        .background(mapDisplay == .globe ? AnyShapeStyle(Palette.background)
+                                         : AnyShapeStyle(Palette.seaGradient))
         .stickerCard(fill: .clear, cornerRadius: 26)
         // In the same corner as the region buttons it swaps in for, so the way
         // back out appears exactly where the finger that zoomed just pressed.
@@ -293,22 +325,36 @@ struct QuizView: View {
         // finger-sized, and a pill repeated on every question would be
         // furniture in front of the thing being aimed at. It sits on the
         // northern sea here — the southern edge belongs to the region buttons,
-        // and to Okinawa's inset.
+        // and to Okinawa's inset. Never on the globe: the chip teaches
+        // ZoomPan's press-and-slide, a gesture the globe does not run — there,
+        // a drag rotates, and the way to get closer to a place is to turn it
+        // to the front, so the hidden move the chip exists to reveal has no
+        // globe equivalent.
         .overlay(alignment: .top) {
-            if stage.isChallenge { ZoomHintChip(zoom: zoom).padding(.top, 10) }
+            if stage.isChallenge, mapDisplay == .flat {
+                ZoomHintChip(zoom: zoom).padding(.top, 10)
+            }
         }
+        // The globe ⇄ flat toggle shares the reset button's band across the
+        // panel's foot, in the opposite corner — the same corner would make
+        // the two chips fight whenever the child is zoomed in.
+        .overlay(alignment: .bottomLeading) { mapDisplayToggle }
         .overlay(alignment: .bottomTrailing) { regionZoomButtons }
         // Reaches wider than the rest of the column. The map is limited by the
         // screen's width, never its height, so every point of margin here is a
         // point off how big each prefecture is drawn — and this is the one
         // element on the screen the child has to aim at.
         .padding(.horizontal, -10)
-        // Every question starts on the whole map. Staying zoomed would let a
-        // child be asked about a prefecture that is off screen — and panning to
-        // it automatically would point straight at the answer.
+        // Every question starts on the whole map — both cameras. Staying
+        // zoomed would let a child be asked about a prefecture that is off
+        // screen — and panning to it automatically would point straight at
+        // the answer. The globe's rotation is left alone: it shows the whole
+        // sphere at zoom 1 from any angle, and re-aiming it would either
+        // reveal the answer or yank the view for no reason.
         .onChange(of: quiz.questionNumber) { _, _ in
             zoom = 1
             pan = .zero
+            globeZoom = 1
             comboBurst = nil
         }
         // Ahead of the surrounding Spacers, or the flexible nationwide panel
@@ -317,10 +363,38 @@ struct QuizView: View {
         .layoutPriority(stage.isChallenge ? 1 : 0)
     }
 
+    /// The flat map — every stage's home, and the world challenge's stand-in
+    /// behind the globe.
+    private func flatMap(_ quiz: QuizViewModel) -> some View {
+        Group {
+            // Regional stages hug their region's own proportions. A challenge
+            // stage — 全国チャレンジ, and the world challenge's flat map alike —
+            // takes every point of height the column has spare instead: the
+            // whole book cannot be drawn any bigger — the screen's width
+            // already caps it — so all the spare height becomes sea, and a
+            // zoomed-in child gets that much more viewport to move around in.
+            // A frame rather than a taller fixed ratio, so a short screen
+            // simply yields a shorter panel instead of shrinking the map to
+            // honour a ratio it has no room for.
+            if stage.isChallenge {
+                mapView(quiz).frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else {
+                mapView(quiz).aspectRatio(PrefectureGeometry.aspectRatio(
+                    of: atlas.mapData.prefectures(in: stage.codes)), contentMode: .fit)
+            }
+        }
+        .zoomPan(scale: $zoom, offset: $pan, oneFingerZoom: true)
+    }
+
     private func mapView(_ quiz: QuizViewModel) -> some View {
         PrefectureMapView(
             mapData: atlas.mapData,
-            codes: quiz.order,
+            // A sampling challenge asks 47 countries out of the whole book,
+            // but its map must still be the whole world — drawing only that
+            // sitting's sample leaves 120 country-shaped holes in the sea
+            // (the globe never had this hole: it draws every shape). On every
+            // non-sampling stage the two lists name the same shapes.
+            codes: stage.isChallenge ? stage.codes : quiz.order,
             appearance: { appearance(for: $0, quiz: quiz) },
             interactiveCodes: quiz.mode == .nameIt ? [] : quiz.interactiveCodes,
             targetCode: quiz.target?.code,
@@ -339,20 +413,109 @@ struct QuizView: View {
             })
     }
 
+    /// The globe, wired the same way the flat map is — same appearance
+    /// closure, same effects, same `handleTap` — with the one identity
+    /// difference the component documents: it deals in codes, so the tap and
+    /// the labels go through `atlas.mapData[code]` on the way in and out.
+    private func globeView(_ quiz: QuizViewModel, globe: GlobeData) -> some View {
+        GlobeMapView(
+            globe: globe,
+            appearance: { code in
+                atlas.mapData[code].map { appearance(for: $0, quiz: quiz) }
+                    ?? .slot(for: code)
+            },
+            interactiveCodes: quiz.mode == .nameIt ? [] : quiz.interactiveCodes,
+            targetCode: quiz.target?.code,
+            hintCode: quiz.hintCode,
+            effect: quiz.effect,
+            comboBurst: comboBurst,
+            center: $globeCenter,
+            zoom: $globeZoom,
+            // The reading, not the written name: country names are exactly
+            // where VoiceOver's kanji guesses go wrong, and the reading is
+            // the form the child is being taught.
+            accessibilityName: { atlas.mapData[$0]?.kana ?? "" },
+            onTap: { code, point in
+                // No `ZoomPan.isVisible` gate here (unlike the flat map's):
+                // the globe's magnification lives in its radius, so the touch
+                // region never outgrows the clipped panel the child sees.
+                handleTap(code.flatMap { atlas.mapData[$0] },
+                          at: .point(point), quiz: quiz)
+            })
+            // 「なまえを あてる」 asks about the ringed country — asked on the
+            // far side, the question itself is invisible. Turn it comfortably
+            // to the front when it is asked (target change) and when the globe
+            // comes back mid-question from the flat map (appear). Never in
+            // 「ちずで さがす」: there, turning to the target is pointing at
+            // the answer (the 3-miss hint rotation the component itself runs
+            // is that mode's only rescue).
+            .onChange(of: quiz.target?.code) { _, _ in faceNameItTarget(quiz) }
+            .onAppear { faceNameItTarget(quiz) }
+    }
+
+    /// Rotate the globe so the asked-about country is comfortably visible —
+    /// the same predicate and destination as the hint's (`hintRotation`), so
+    /// a country already well in view is left where the child is looking.
+    private func faceNameItTarget(_ quiz: QuizViewModel) {
+        guard quiz.mode == .nameIt, let code = quiz.target?.code,
+              let globe = globeData,
+              let destination = GlobeMapView.hintRotation(
+                  code: code, shapes: globe.shapes, from: globeCenter)
+        else { return }
+        if reduceMotion {
+            globeCenter = destination
+        } else {
+            withAnimation(.easeInOut(duration: GameRules.globeCenteringDuration)) {
+                globeCenter = destination
+            }
+        }
+    }
+
     @ViewBuilder private var resetZoomButton: some View {
-        if ZoomPan.isZoomed(zoom) {
-            Button(mode.resetZoom) {
-                let reset = { zoom = 1; pan = .zero }
+        // Whichever camera is on screen is the one the button resets — the
+        // flat ×4 and the globe's radius multiplier are separate coordinate
+        // systems (`toggleMapDisplay`). The globe's rotation is not reset:
+        // where the child turned the world is not a mistake to undo.
+        if mapDisplay == .globe ? ZoomPan.isZoomed(globeZoom) : ZoomPan.isZoomed(zoom) {
+            mapChip(mode.resetZoom) {
+                let reset = {
+                    if mapDisplay == .globe {
+                        globeZoom = 1
+                    } else {
+                        zoom = 1
+                        pan = .zero
+                    }
+                }
                 if reduceMotion { reset() } else { withAnimation(.spring(duration: 0.3), reset) }
             }
-            .font(AppFont.rounded(13, relativeTo: .caption))
-            .foregroundStyle(Palette.ink)
-            .padding(.horizontal, 12)
-            .padding(.vertical, 7)
-            .background(Capsule().fill(.white.opacity(0.92)))
-            .overlay(Capsule().strokeBorder(Palette.ink.opacity(0.12)))
             .padding(10)
         }
+    }
+
+    /// The globe ⇄ flat toggle. Appears exactly where a globe exists to show
+    /// (`globeData` — data presence, never a which-book branch), and names its
+    /// far side the way the title's page-edge tabs do: the chip is a door.
+    @ViewBuilder private var mapDisplayToggle: some View {
+        if globeData != nil {
+            mapChip(mapDisplay == .globe ? mode.toFlatMap : mode.toGlobe) {
+                toggleMapDisplay()
+            }
+            .padding(10)
+        }
+    }
+
+    /// Swap how the map is shown; the sitting itself — question, score,
+    /// streaks — lives in `QuizViewModel` and is not touched (design §7).
+    /// Both cameras go back to 1: the flat ×4 and the globe's radius
+    /// multiplier magnify different geometries, so carrying either across
+    /// lands the child somewhere they never zoomed to — every toggle starting
+    /// on the whole map is the predictable thing, the same judgement as the
+    /// per-question reset.
+    private func toggleMapDisplay() {
+        zoom = 1
+        pan = .zero
+        globeZoom = 1
+        mapDisplayOverride = mapDisplay == .flat ? .globe : .flat
     }
 
     /// One press to a third of the country, for the child the hold-and-slide
@@ -374,18 +537,26 @@ struct QuizView: View {
     /// on the smallest phones, and a button must never sit on a prefecture a
     /// tap might be aiming for.
     @ViewBuilder private var regionZoomButtons: some View {
-        if stage.isChallenge, !atlas.regionZooms.isEmpty, !ZoomPan.isZoomed(zoom) {
+        // Flat only, on top of the data gate: these buttons drive the flat
+        // camera (`zoom`/`pan`). Academic today — the one atlas with a globe
+        // carries no regionZooms — but a stack of buttons steering a camera
+        // that is not on screen would be wrong the day that changes.
+        if stage.isChallenge, mapDisplay == .flat,
+           !atlas.regionZooms.isEmpty, !ZoomPan.isZoomed(zoom) {
             VStack(alignment: .trailing, spacing: 6) {
                 ForEach(atlas.regionZooms) { region in
-                    regionButton(region.label.label(mode), codes: region.codes)
+                    mapChip(region.label.label(mode)) { zoomToRegion(region.codes) }
                 }
             }
             .padding(10)
         }
     }
 
-    private func regionButton(_ title: String, codes: [Int]) -> some View {
-        Button(title) { zoomToRegion(codes) }
+    /// The one dress every chip standing on the map panel wears — zoom reset,
+    /// region zooms, the globe toggle — so the panel's furniture reads as one
+    /// family (three call sites had grown identical copies).
+    private func mapChip(_ title: String, action: @escaping () -> Void) -> some View {
+        Button(title, action: action)
             .font(AppFont.rounded(13, relativeTo: .caption))
             .foregroundStyle(Palette.ink)
             .padding(.horizontal, 12)

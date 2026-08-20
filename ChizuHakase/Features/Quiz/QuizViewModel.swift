@@ -94,6 +94,7 @@ final class QuizViewModel {
         // truncated resource shortens the stage instead of asking the
         // impossible.
         let codes = mapData.prefectures(in: stage.codes).map(\.code)
+        self.tappableCodes = Set(codes)
         if stage.isChallenge && codes.count > GameRules.challengeQuestionCount {
             // A challenge over more codes than one sitting: draw 47, unasked
             // first (world design §8), each exactly once. Japan's ぜんこく
@@ -144,9 +145,19 @@ final class QuizViewModel {
     /// to make each question easier than the last — by the seventh there was
     /// one shape left and no question worth asking. They also get asked again,
     /// so they have to stay live.
+    ///
+    /// The stage's codes, not `order`'s: on a sampling challenge the sitting
+    /// asks 47 of the book's countries but the map shows all of them, and a
+    /// wrong tap on one that was not drawn has to shake as a miss — a tap the
+    /// map swallows in silence reads as the app being broken. Everywhere else
+    /// the two sets are equal.
     var interactiveCodes: Set<Int> {
-        phase == .asking ? Set(order) : []
+        phase == .asking ? tappableCodes : []
     }
+
+    /// `Set` of every code in the stage that has a shape (see
+    /// `interactiveCodes`). Fixed at init alongside `order`.
+    private let tappableCodes: Set<Int>
 
     /// Distinct prefectures asked, which is what stars are judged against.
     /// Not `order.count`: a stage that asks 7 prefectures twice is still a

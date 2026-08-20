@@ -212,6 +212,12 @@ nonisolated extension TextMode {
     var toJapanAtlas: String { isKids ? "にほんの ちずへ" : "日本の地図へ" }
     var learnedCount: String { isKids ? "おぼえた" : "覚えた" }
     var resetZoom: String { isKids ? "もとの おおきさ" : "元の大きさ" }
+    // 地球儀 ⇄ 平面のトグルチップ(地球儀データを運ぶ本のチャレンジだけに
+    // 出る)。チップは行き先を名乗る — タイトルのページ端タブと同じ
+    // 「扉は向こう側の名前」。
+    // ★ユーザーサインオフ待ちの仮文言(計画 2026-08-20 P7)。
+    var toGlobe: String { isKids ? "🌍 ちきゅうぎ" : "🌍 地球儀" }
+    var toFlatMap: String { isKids ? "🗺️ ちず" : "🗺️ 地図" }
     /// How the one-finger zoom is discovered: press and hold, then slide up
     /// or down. Pinch works too, but nobody needs a label to find a pinch.
     var zoomHint: String { isKids ? "ながおしして うえしたで おおきく できるよ"
