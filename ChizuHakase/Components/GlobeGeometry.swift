@@ -128,6 +128,16 @@ nonisolated enum GlobeGeometry {
 
     // MARK: - 可視と回転
 
+    /// 投影後の重心(平面版 `screenCentroid` の同型)。正解 pop・絵文字
+    /// 浮上・コンボの錨はここから取る — 呼び手に度数(x=lon, y=lat,
+    /// y 上向き)の解釈をさせると、GlobeShape の註が警告する取り違えを
+    /// 呼び手の数だけ再演することになる。
+    static func screenCentroid(of shape: GlobeShape,
+                               projection: GlobeProjection) -> CGPoint {
+        projection.point(lon: Double(shape.centroid.x),
+                         lat: Double(shape.centroid.y))
+    }
+
     /// 重心が正面半球にある国(対話・VoiceOver の対象)。リングの一部が
     /// 地平線からのぞいていても重心が裏なら含めない — 読み上げても
     /// 子どもには押せないため。
@@ -146,6 +156,13 @@ nonisolated enum GlobeGeometry {
     static func centering(on centroid: CGPoint) -> (longitude: Double, latitude: Double) {
         (GlobeProjection.wrappedLongitude(Double(centroid.x)),
          GlobeProjection.clampedLatitude(Double(centroid.y)))
+    }
+
+    /// 形そのものから正面へ。CGPoint 版の引数は「度数の重心」であって
+    /// スクリーン点ではないので、間違えようのないこちらを常用にする
+    /// (平面版の rings:/prefecture: ペアと同じ気配り)。
+    static func centering(on shape: GlobeShape) -> (longitude: Double, latitude: Double) {
+        centering(on: shape.centroid)
     }
 
     // MARK: - Small helpers

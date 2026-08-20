@@ -16,6 +16,8 @@ import Foundation
 ///   (落とすと 2 つの地図でデータ規約が割れる)。
 /// - 経度は日付変更線またぎを +360 正規化した値(フィジー 189.75 など)を
 ///   そのまま持ってよい。三角関数上は等価で、球には日付変更線問題が無い。
+/// - 置き場所(Components)は仮 — Atlas 側の置き場が定まったら移す
+///   (WorldDataLoader の値型と同じ「一時的な同居」の規律)。
 nonisolated struct GlobeShape: Identifiable, Sendable, Equatable {
     /// ISO 3166-1 numeric(`WorldCountry.code` と同じ)。
     let code: Int
@@ -67,6 +69,11 @@ nonisolated struct GlobeProjection: Sendable, Equatable {
     /// 不可視(地平線とその向こう)の点は `(x, y′)` を長さ R に正規化して
     /// 縁(リム)へ写す。地平線をまたぐポリゴンを閉じたまま保つための
     /// 標準手法で、全点が不可視のリングを描かない選別は `GlobeGeometry` の側。
+    ///
+    /// 性能の註(Task 3 の描画へ): sin/cos(lat0) は点ごとに再計算される —
+    /// libm 呼び出しはコンパイラが共通化しない。ドラッグ 1 フレームで
+    /// 数千点を写して足りなくなったら、lat0 の三角関数を事前計算した
+    /// プロジェクタへ持ち上げること(プロファイルが求めるまではしない)。
     func project(lon: Double, lat: Double) -> (point: CGPoint, isVisible: Bool) {
         let lambda = (lon - centerLongitude) * Self.radiansPerDegree
         let phi = lat * Self.radiansPerDegree

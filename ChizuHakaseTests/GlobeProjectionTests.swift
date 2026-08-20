@@ -71,6 +71,23 @@ struct GlobeProjectionTests {
         #expect(!projection.isVisible(lon: 180, lat: 0))
     }
 
+    @Test func 傾いた中心では緯度項が可視を決める() {
+        // cosC = sin(lat0)·sin(lat) + cos(lat0)·cos(lat)·cosΔλ の第 1 項は
+        // lat0 = 0 だと消えて、どの符号でもテストが通ってしまう。北へ 60°
+        // 傾けた中心から南緯 45° は cosC = sin60·sin(−45) + cos60·cos(−45)
+        // ≈ −0.259 で不可視。第 1 項の符号を間違えると ≈ +0.966 で可視に
+        // 化けるので、ここで殺す。
+        let projection = makeProjection(lat0: 60)
+        #expect(!projection.isVisible(lon: 0, lat: -45))
+    }
+
+    @Test func 地平線の手前は可視のまま() {
+        // 不可視側のしきい値は丸め誤差ぶんの幅しかないはず。しきい値が
+        // 育って実在の点(89.9° 離れ ≈ cosC 0.0017)を飲み込んだら
+        // ここで気づく。
+        #expect(makeProjection().isVisible(lon: 89.9, lat: 0))
+    }
+
     @Test func 高緯度ほど経度1度が狭く写る() {
         // 緯度 60° では cos(60°) = 0.5 — 赤道の半分の幅。
         // この前縮みが無いと地球儀が円筒に見える。
@@ -198,6 +215,21 @@ struct GlobeGeometryTests {
                                         shape: frontBox, projection: projection))
     }
 
+    @Test func 穴の中は国の外() {
+        // ドーナツ国: 外周 ±5°・穴 ±2°。even-odd なので穴の中(スクリーン
+        // 中心)は外、外周と穴の間の帯は中。穴を別 path にすると帯ごと
+        // 塗り潰されるので、この判定が描画規約(同一 path + even-odd)を守る。
+        let outer = frontBox.rings[0]
+        let hole = box(code: 0, lon: -2...2, lat: -2...2).rings[0]
+        let donut = GlobeShape(code: 8, rings: [outer, hole], centroid: .zero)
+        let projection = makeProjection()
+        #expect(!GlobeGeometry.contains(CGPoint(x: 200, y: 300),
+                                        shape: donut, projection: projection))
+        // 帯の中ほど lon 3.5°: 穴の縁 ≈ 203.5、外周 ≈ 208.7 の間。
+        #expect(GlobeGeometry.contains(CGPoint(x: 206.1, y: 300),
+                                       shape: donut, projection: projection))
+    }
+
     @Test func 直接ヒットで国に解決する() {
         let resolved = GlobeGeometry.resolveTap(at: CGPoint(x: 200, y: 300),
                                                 target: nil,
@@ -219,6 +251,17 @@ struct GlobeGeometryTests {
     @Test func 許容を超えたタップは海になる() {
         // (250, 300) は右端から約 41pt。許容 22pt の外。
         let resolved = GlobeGeometry.resolveTap(at: CGPoint(x: 250, y: 300),
+                                                target: frontBox,
+                                                among: [frontBox],
+                                                projection: makeProjection())
+        #expect(resolved == nil)
+    }
+
+    @Test func バイアスは許容を広げない() {
+        // 右端(x ≈ 208.7)から約 26pt — 許容 22pt の外・バイアス 10pt の内。
+        // 下駄は許容内の綱引きにだけ効き、届く範囲そのものは広げないこと
+        // (バイアスを引いてから許容と比べる実装だとここで落ちる)。
+        let resolved = GlobeGeometry.resolveTap(at: CGPoint(x: 235, y: 300),
                                                 target: frontBox,
                                                 among: [frontBox],
                                                 projection: makeProjection())
@@ -252,6 +295,16 @@ struct GlobeGeometryTests {
 
     // MARK: - 可視コード
 
+    @Test func 投影後の重心が取れる() {
+        // エフェクトのアンカー(平面版 screenCentroid の同型)。度数重心
+        // (10, 20) の手計算: x = 100·cos(20°)·sin(10°) ≈ 16.3176、
+        // y′ = 100·sin(20°) ≈ 34.2020(スクリーンでは C.y から引く)。
+        let shape = box(code: 4, lon: 5...15, lat: 15...25)
+        let point = GlobeGeometry.screenCentroid(of: shape, projection: makeProjection())
+        #expect(abs(point.x - 216.31759111665348) < 1e-6)
+        #expect(abs(point.y - 265.79798566743313) < 1e-6)
+    }
+
     @Test func 重心が正面の国だけが可視コードに入る() {
         let front = frontBox
         let back = box(code: 2, lon: 175...185, lat: -5...5)
@@ -276,6 +329,15 @@ struct GlobeGeometryTests {
         #expect(abs(point.x - 200) < 1e-9)
         #expect(abs(point.y - 300) < 1e-9)
         #expect(projection.isVisible(lon: 103.8, lat: 1.35))
+    }
+
+    @Test func centeringは形からも呼べる() {
+        // 呼び手が度数重心を手で取り出さなくてよい形のオーバーロード。
+        // CGPoint 版と同じく wrap(189.75 → −170.25)まで通ること。
+        let fiji = box(code: 6, lon: 184.75...194.75, lat: (-22)...(-12))
+        let center = GlobeGeometry.centering(on: fiji)
+        #expect(abs(center.longitude - (-170.25)) < 1e-9)
+        #expect(center.latitude == -17)
     }
 
     @Test func centeringは緯度をクランプし経度を畳む() {
