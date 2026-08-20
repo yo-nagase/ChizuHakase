@@ -250,7 +250,7 @@ struct QuizView: View {
             // rather than a taller fixed ratio, so a short screen simply
             // yields a shorter panel instead of shrinking the country to
             // honour a ratio it has no room for.
-            if stage.isNationwide {
+            if stage.isChallenge {
                 mapView(quiz).frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 mapView(quiz).aspectRatio(PrefectureGeometry.aspectRatio(
@@ -281,7 +281,7 @@ struct QuizView: View {
         // northern sea here — the southern edge belongs to the region buttons,
         // and to Okinawa's inset.
         .overlay(alignment: .top) {
-            if stage.isNationwide { ZoomHintChip(zoom: zoom).padding(.top, 10) }
+            if stage.isChallenge { ZoomHintChip(zoom: zoom).padding(.top, 10) }
         }
         .overlay(alignment: .bottomTrailing) { regionZoomButtons }
         // Reaches wider than the rest of the column. The map is limited by the
@@ -300,7 +300,7 @@ struct QuizView: View {
         // Ahead of the surrounding Spacers, or the flexible nationwide panel
         // would be offered only an equal split of the leftover height and the
         // rest would sit in the margins it was meant to absorb.
-        .layoutPriority(stage.isNationwide ? 1 : 0)
+        .layoutPriority(stage.isChallenge ? 1 : 0)
     }
 
     private func mapView(_ quiz: QuizViewModel) -> some View {
@@ -342,8 +342,12 @@ struct QuizView: View {
     }
 
     /// One press to a third of the country, for the child the hold-and-slide
-    /// is still too fiddly for — 全国チャレンジ only, where the whole point of
-    /// zooming is that 47 prefectures in one frame leaves Kagawa unreachable.
+    /// is still too fiddly for — the challenge stage only, where the whole
+    /// point of zooming is that 47 prefectures in one frame leaves Kagawa
+    /// unreachable. Which regions — and whether there are any — rides the
+    /// atlas as `regionZooms`: the buttons are geography, and this view lays
+    /// out whatever list comes in (the world's is empty; its flat map is the
+    /// stand-in behind the globe, not a place to grow furniture).
     ///
     /// Only while at rest: once zoomed the stack gives way to
     /// 「もとの おおきさ」 in this same corner, and a "zoom somewhere else"
@@ -356,11 +360,11 @@ struct QuizView: View {
     /// on the smallest phones, and a button must never sit on a prefecture a
     /// tap might be aiming for.
     @ViewBuilder private var regionZoomButtons: some View {
-        if stage.isNationwide, !ZoomPan.isZoomed(zoom) {
+        if stage.isChallenge, !atlas.regionZooms.isEmpty, !ZoomPan.isZoomed(zoom) {
             VStack(alignment: .trailing, spacing: 6) {
-                regionButton(mode.eastJapan, codes: Stage.eastJapanCodes)
-                regionButton(mode.middleJapan, codes: Stage.middleJapanCodes)
-                regionButton(mode.westJapan, codes: Stage.westJapanCodes)
+                ForEach(atlas.regionZooms) { region in
+                    regionButton(region.label.label(mode), codes: region.codes)
+                }
             }
             .padding(10)
         }

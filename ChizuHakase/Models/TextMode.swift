@@ -58,6 +58,14 @@ nonisolated extension AtlasNoun {
     /// 先に選んだもの — 動機の表がずかんの空きマスを「せかいのカード」と
     /// 呼んでいる(docs/plans/2026-08-16-world-atlas-design.md:22)。
     static let worldCards = AtlasNoun(kids: "せかいの カード", adult: "世界のカード")
+
+    /// The nationwide map's one-press zooms — the japan atlas carries these on
+    /// its `RegionZoom`s. 「にほん」 spelt out rather than 「にし」「なか」
+    /// 「ひがし」 alone: a five-year-old meets these words here first, and the
+    /// regions should sound like parts of the country.
+    static let eastJapan = AtlasNoun(kids: "ひがしにほん", adult: "東日本")
+    static let middleJapan = AtlasNoun(kids: "なかにほん", adult: "中日本")
+    static let westJapan = AtlasNoun(kids: "にしにほん", adult: "西日本")
 }
 
 // MARK: - Interface vocabulary
@@ -206,12 +214,8 @@ nonisolated extension TextMode {
     /// or down. Pinch works too, but nobody needs a label to find a pinch.
     var zoomHint: String { isKids ? "ながおしして うえしたで おおきく できるよ"
                                   : "長押しして上下で拡大縮小できます" }
-    /// The nationwide map's one-press zooms. 「にほん」 spelt out rather than
-    /// 「にし」「なか」「ひがし」 alone: a five-year-old meets these words here
-    /// first, and the regions should sound like parts of the country.
-    var westJapan: String { isKids ? "にしにほん" : "西日本" }
-    var middleJapan: String { isKids ? "なかにほん" : "中日本" }
-    var eastJapan: String { isKids ? "ひがしにほん" : "東日本" }
+    // The region zoom labels (にしにほん…) live on `AtlasNoun` above — they
+    // are the japan atlas's words, carried by its `RegionZoom`s.
     var eraseEverything: String { isKids ? "きろくを ぜんぶ けす" : "記録をすべて消去" }
     var eraseConfirm1: String { isKids ? "ほんとうに けしても いい?" : "本当に消去しますか?" }
     /// The second confirmation names both books: the erase is whole-app, and

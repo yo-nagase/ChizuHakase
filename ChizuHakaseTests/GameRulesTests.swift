@@ -172,6 +172,41 @@ struct GameRulesTests {
         #expect(GameRules.stars(missedPrefectures: 0, prefectureCount: 0) == 3)
     }
 
+    // MARK: - Challenge stage
+
+    /// The P7 redefinition (stored `isChallenge` instead of `codes.count == 47`)
+    /// must not move japan an inch: stage 6 is the one challenge, still 47
+    /// single-pass questions, and stages 0–5 still ask each prefecture twice.
+    @Test func japansChallengeFlagAndLengthsAreUnchanged() {
+        for stage in Stage.all {
+            #expect(stage.isChallenge == (stage.index == 6), "stage \(stage.index)")
+        }
+        let challenge = Stage.all[6]
+        #expect(!challenge.asksEachTwice)
+        #expect(challenge.questionCount == 47)
+        for stage in Stage.all where !stage.isChallenge {
+            #expect(stage.asksEachTwice, "stage \(stage.index)")
+            #expect(stage.questionCount == stage.codes.count * 2,
+                    "stage \(stage.index)")
+        }
+    }
+
+    /// The cap in both directions, on synthetic stages: a challenge over more
+    /// codes than one sitting is cut to `challengeQuestionCount`, and one with
+    /// fewer asks each code once. The world's 167-country challenge (a later
+    /// task) is built on exactly this min.
+    @Test func aChallengeSessionIsCappedAtTheChallengeQuestionCount() {
+        #expect(GameRules.challengeQuestionCount == 47)
+        let world = Stage(index: 99, name: "せかい", kanjiName: "世界",
+                          codes: Array(1...167), isChallenge: true)
+        #expect(!world.asksEachTwice)
+        #expect(world.questionCount == GameRules.challengeQuestionCount)
+        let small = Stage(index: 98, name: "ちいさい", kanjiName: "小さい",
+                          codes: Array(1...10), isChallenge: true)
+        #expect(!small.asksEachTwice)
+        #expect(small.questionCount == 10)
+    }
+
     // MARK: - Mastery
 
     @Test func masteryRisesOnlyOnFirstTryCorrect() {

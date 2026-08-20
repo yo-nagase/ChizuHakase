@@ -48,6 +48,13 @@ nonisolated enum GameRules {
     /// How many names 「なまえを あてる」 offers at once.
     static let nameChoiceCount = 4
 
+    /// How many questions one challenge-stage session asks. 47 — the length
+    /// 全国チャレンジ has always been, and the one sitting a child is proven to
+    /// run to the end. The world challenge (167 countries, world design §8) is
+    /// cut to the same length per session, which also keeps its two-star band
+    /// — ceil(47/4) — identical to japan's.
+    static let challengeQuestionCount = 47
+
     /// How loudly a streak should be celebrated. 0 means say nothing.
     ///
     /// A streak that always shouts the same way stops being news by the third

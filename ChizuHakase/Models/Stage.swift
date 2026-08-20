@@ -12,21 +12,44 @@ nonisolated struct Stage: Identifiable, Sendable, Equatable {
     /// Ordinary written form, shown in adult mode.
     let kanjiName: String
     let codes: [Int]
+    /// The one stage per atlas that draws the whole book in a single frame —
+    /// 全国チャレンジ today, the world's challenge stage next (P7).
+    ///
+    /// Stored, not derived: this used to be `codes.count == 47`, which was
+    /// really "is this japan's biggest stage" wearing a general name. The
+    /// world's challenge spans 167 countries, and 47 of its ISO codes belong
+    /// to other countries entirely — no count can tell a challenge apart.
+    let isChallenge: Bool
+
+    init(index: Int, name: String, kanjiName: String, codes: [Int],
+         isChallenge: Bool = false) {
+        self.index = index
+        self.name = name
+        self.kanjiName = kanjiName
+        self.codes = codes
+        self.isChallenge = isChallenge
+    }
 
     var id: Int { index }
-
-    /// The one stage that draws the whole country in a single frame.
-    var isNationwide: Bool { codes.count == 47 }
 
     /// Regional stages ask each prefecture twice.
     ///
     /// Once is a coin-flip a child can pass by luck, and with the answered
     /// prefectures no longer changing colour there is no elimination shortcut
-    /// to shorten the second pass either. 全国チャレンジ is exempt: 47 questions
-    /// is already a long sitting, and 94 would be a different activity.
-    var asksEachTwice: Bool { !isNationwide }
+    /// to shorten the second pass either. The challenge stage is exempt: 47
+    /// questions is already a long sitting, and 94 would be a different
+    /// activity.
+    var asksEachTwice: Bool { !isChallenge }
 
-    var questionCount: Int { codes.count * (asksEachTwice ? 2 : 1) }
+    /// A challenge session is capped at `GameRules.challengeQuestionCount`.
+    /// Japan's 47 codes pass through the `min` untouched — the stage is
+    /// exactly as long as it has always been — and the world's 167 become one
+    /// 47-question sitting (which countries fill it is the draw's job, not
+    /// this count's).
+    var questionCount: Int {
+        isChallenge ? min(codes.count, GameRules.challengeQuestionCount)
+                    : codes.count * 2
+    }
 
     static let all: [Stage] = [
         Stage(index: 0, name: "ほっかいどう・とうほく", kanjiName: "北海道・東北",
@@ -42,27 +65,10 @@ nonisolated struct Stage: Identifiable, Sendable, Equatable {
         Stage(index: 5, name: "きゅうしゅう・おきなわ", kanjiName: "九州・沖縄",
               codes: Array(40...47)),
         Stage(index: 6, name: "ぜんこく チャレンジ", kanjiName: "全国チャレンジ",
-              codes: Array(1...47)),
+              codes: Array(1...47), isChallenge: true),
     ]
 
     static func stage(at index: Int) -> Stage? {
         all.first { $0.index == index }
     }
-
-    /// The thirds the nationwide map's quick-zoom buttons frame.
-    ///
-    /// Camera targets, not a partition — 大阪 and 兵庫 appear in two frames,
-    /// and nothing counts membership. Thirds rather than halves because halves
-    /// barely magnified: 北海道〜愛知 in one frame is still most of the
-    /// country's diagonal, and a zoom that changes little teaches that the
-    /// buttons do nothing.
-    ///
-    /// 西日本 runs from 大阪 westward rather than cutting at the 中国 stage:
-    /// in everyday speech 大阪 *is* west Japan, and a west button that leaves
-    /// it out betrays the word on the button. 奈良 and 和歌山 ride along inside
-    /// the frame's own margin.
-    static let eastJapanCodes = Array(1...14)               // 北海道・東北 + 関東
-    static let middleJapanCodes = Array(15...30)            // 中部 + 近畿
-    static let westJapanCodes = [27, 28] + Array(31...47)   // 大阪から西
-
 }

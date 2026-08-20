@@ -119,15 +119,40 @@ struct AtlasTests {
         #expect(Set(allCodes) == Set(atlas.mapData.prefectures.map(\.code)))
     }
 
-    /// `Stage.isNationwide` は「47 県」で判定している。世界の 18 ステージは
-    /// 最大 16 カ国なので誤爆せず、設計どおり全ステージが 1 国 2 回出題になる。
+    /// `Stage.isChallenge` は stored で既定 false(P7 Task 4 — 「47 県か」の
+    /// 導出をやめた)。WorldStage → Stage の変換は既定のまま通すので、世界の
+    /// 18 面は設計どおり全ステージが 1 国 2 回出題になる。総合ステージだけが
+    /// 明示的に true を名乗る(ワールドチャレンジは Task 5)。
     @Test func 世界のステージはすべて2回出題の地方ステージ() throws {
         let atlas = try worldAtlas()
         for stage in atlas.stages {
-            #expect(!stage.isNationwide, "stage \(stage.index)")
+            #expect(!stage.isChallenge, "stage \(stage.index)")
             #expect(stage.asksEachTwice, "stage \(stage.index)")
             #expect(stage.questionCount == stage.codes.count * 2, "stage \(stage.index)")
         }
+    }
+
+    // MARK: - 地域ズーム(P7 Task 4 — ボタンの地理も Atlas が運ぶ)
+
+    /// 日本は従来の 3 分割(コードは旧 `Stage.eastJapanCodes` らと同値)。
+    /// 並びは画面の縦積み順 — 東が上、西が下(列島の斜めに合わせる)。
+    @Test func 日本アトラスは3つの地域ズームを運ぶ() {
+        let zooms = japanAtlas.regionZooms
+        #expect(zooms.map(\.codes) == [Array(1...14), Array(15...30),
+                                       [27, 28] + Array(31...47)])
+        #expect(zooms.map { $0.label.label(.kids) }
+                == ["ひがしにほん", "なかにほん", "にしにほん"])
+        #expect(zooms.map { $0.label.label(.adult) }
+                == ["東日本", "中日本", "西日本"])
+    }
+
+    /// 世界は空 — 1–47 は世界では別の国の ISO コードで、日本の分割は世界地図を
+    /// でたらめに囲む(Atlas.swift の旧道標が言っていた罠)。ワールドチャレンジの
+    /// 平面は地球儀の控えなので、世界用の分割も足さない(YAGNI)。
+    @Test func 世界アトラスは地域ズームを運ばない() throws {
+        #expect(try worldAtlas().regionZooms.isEmpty)
+        let missing = URL(fileURLWithPath: "/nonexistent/WorldShapes.json")
+        #expect(Atlas.loadWorld(contentsOf: missing).regionZooms.isEmpty)
     }
 
     // MARK: - ステージ棚のセクション(大陸見出し — UI 決定 2026-08-20)
@@ -170,7 +195,8 @@ struct AtlasTests {
         let stray = Stage(index: 99, name: "はぐれ", kanjiName: "逸れ", codes: [1])
         let atlas = Atlas(mapData: .empty, globe: nil, stages: Stage.all + [stray],
                           sections: [AtlasSection(title: "テスト", stageIndexes: 0..<7)],
-                          cards: .empty, drawPolicy: .random, saveKey: "test",
+                          regionZooms: [], cards: .empty, drawPolicy: .random,
+                          saveKey: "test",
                           regionNoun: .prefecture, cardNoun: .specialtyCards)
         let shelves = atlas.stageShelves
         #expect(shelves.count == 2)

@@ -15,6 +15,37 @@ nonisolated struct AtlasSection: Sendable, Equatable {
     let stageIndexes: Range<Int>
 }
 
+/// チャレンジステージの地図に出すワンプレスズーム 1 個: ボタンの語と、
+/// 押したとき枠に収めるコードの集まり。アトラスが運ぶ — ボタンは地理そのもので、
+/// View はどの本の地理かを知らないまま並べるだけ(日本の県コード 1–47 を
+/// 直に持った旧 `Stage.eastJapanCodes` は、世界では別の国の ISO コードを
+/// でたらめに囲む罠だった)。
+nonisolated struct RegionZoom: Sendable, Equatable, Identifiable {
+    /// ボタンの語。こども ⇄ おとな の解決は `AtlasNoun.label(_:)` のまま —
+    /// 語彙は従来どおり TextMode.swift に綴じてある。
+    let label: AtlasNoun
+    let codes: [Int]
+
+    var id: String { label.kids }
+
+    /// 全国チャレンジの 3 分割。カメラの的であって区分けではない — 大阪と
+    /// 兵庫は 2 つの枠に現れ、所属を数える者はいない。半分ではなく 3 分の 1
+    /// なのは、半分ではほとんど拡大にならないから: 北海道〜愛知が 1 枠でも
+    /// 国の対角線の大半のままで、押しても変わらないズームは「このボタンは
+    /// 何もしない」を教えてしまう。
+    ///
+    /// にしにほんは中国ステージで切らず大阪から西へ: ふだんの言葉で大阪は
+    /// 西日本で、大阪の入らない「にし」はボタンの語を裏切る。奈良と和歌山は
+    /// 枠自身の余白に同乗する。並びは画面の縦積み順 — 東が上、西が下
+    /// (列島が斜めに走る向きに合わせる)。
+    static let japanThirds: [RegionZoom] = [
+        RegionZoom(label: .eastJapan, codes: Array(1...14)),    // 北海道・東北 + 関東
+        RegionZoom(label: .middleJapan, codes: Array(15...30)), // 中部 + 近畿
+        RegionZoom(label: .westJapan,
+                   codes: [27, 28] + Array(31...47)),           // 大阪から西
+    ]
+}
+
 /// ちずちょう 1 冊ぶんの資源の束: 地図 + ステージ + カード(設計 §3)。
 ///
 /// 「View はアトラス非依存のまま保つ」を、共通プロトコルではなく
@@ -39,6 +70,9 @@ nonisolated struct Atlas: Sendable {
     let stages: [Stage]
     /// ステージ棚の区切り(世界 = 大陸見出し、日本 = 空)。
     let sections: [AtlasSection]
+    /// チャレンジステージのワンプレスズーム(日本 = 3 分割、世界 = 空 —
+    /// 世界チャレンジの平面は地球儀の控えで、ボタンを育てる場所ではない)。
+    let regionZooms: [RegionZoom]
     /// 日本は SpecialtyCards.json、世界は WorldCards.json(国旗のみ。
     /// オリジナル札は P6)。読み込み失敗は空(空の本 > クラッシュ)。
     let cards: CardCatalog
@@ -113,7 +147,8 @@ nonisolated struct Atlas: Sendable {
     /// 現行アプリそのまま: ローダの結果と `Stage.all` を束ねるだけで、
     /// データにも挙動にも手を加えない。
     static func japan(mapData: MapData, cards: CardCatalog) -> Atlas {
-        Atlas(mapData: mapData, globe: nil, stages: Stage.all, sections: [], cards: cards,
+        Atlas(mapData: mapData, globe: nil, stages: Stage.all, sections: [],
+              regionZooms: RegionZoom.japanThirds, cards: cards,
               drawPolicy: .random, saveKey: SaveData.japanAtlas,
               regionNoun: .prefecture, cardNoun: .specialtyCards)
     }
@@ -155,7 +190,7 @@ nonisolated struct Atlas: Sendable {
             // 空へ倒れても方針・名前空間・見出し定義・語彙は世界のまま —
             // カードを失っても「どの本か」までは失わない(棚はステージが無いので空)。
             return Atlas(mapData: .empty, globe: nil, stages: [],
-                         sections: WorldStage.sections,
+                         sections: WorldStage.sections, regionZooms: [],
                          cards: .empty, drawPolicy: .flagFirstSilverGate,
                          saveKey: SaveData.worldAtlas,
                          regionNoun: .country, cardNoun: .worldCards)
@@ -177,14 +212,11 @@ nonisolated struct Atlas: Sendable {
                        rings: country.flatRings,
                        frameBbox: country.europeBbox)
         }
-        // `Stage.isNationwide`(== 47 県)は世界の 18 ステージ(最大 16 カ国)
-        // には該当しないので、全ステージが設計どおり 1 国 2 回出題になる。
-        // ワールドチャレンジ(167 カ国)を足すタスクは isNationwide の定義を
-        // 見直すこと — 47 と比べたままだと 334 問の総合ステージができてしまう。
-        // 罠は問題数だけではない: QuizView の地域ズームボタン(QuizView.swift:359
-        // 付近の にしにほん/なかにほん/ひがしにほん — `Stage.eastJapanCodes` が
-        // 日本の県コードを直に持つ)も同じ旗で出る。世界では 1–47 が別の国の
-        // ISO コードなので、P7 で再定義する際は両方の罠を同時に外すこと。
+        // isNationwide(== 47 県)と地域ズームの 2 つの罠は P7 Task 4 で
+        // 解決済み: 総合ステージは stored な `Stage.isChallenge` になり
+        // (ここでは既定 false のまま通す — 18 面は全部 2 回出題の地方
+        // ステージで、ワールドチャレンジだけが Task 5 で明示的に名乗る)、
+        // ズームボタンの県コードは `Atlas.regionZooms` が運ぶ(世界は空)。
         let stages = world.stages.map { stage in
             Stage(index: stage.index,
                   name: stage.name,
@@ -201,7 +233,7 @@ nonisolated struct Atlas: Sendable {
             // degenerateExtent を先に投げる)— `world(from:)` を直接組んだ
             // WorldMapData のための防衛線。
             return Atlas(mapData: .empty, globe: nil, stages: stages,
-                         sections: WorldStage.sections,
+                         sections: WorldStage.sections, regionZooms: [],
                          cards: cards, drawPolicy: .flagFirstSilverGate,
                          saveKey: SaveData.worldAtlas,
                          regionNoun: .country, cardNoun: .worldCards)
@@ -219,7 +251,7 @@ nonisolated struct Atlas: Sendable {
                               prefectures: prefectures)
         // 国旗カードが銀になるまでオリジナルを配らないゲート(設計 §5)。
         return Atlas(mapData: mapData, globe: world.globe, stages: stages,
-                     sections: WorldStage.sections,
+                     sections: WorldStage.sections, regionZooms: [],
                      cards: cards, drawPolicy: .flagFirstSilverGate,
                      saveKey: SaveData.worldAtlas,
                      regionNoun: .country, cardNoun: .worldCards)
