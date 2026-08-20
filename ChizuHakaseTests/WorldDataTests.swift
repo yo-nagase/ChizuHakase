@@ -337,4 +337,17 @@ struct WorldDataLoaderErrorTests {
             _ = try WorldDataLoader.load(contentsOf: shrink)
         }
     }
+
+    @Test func 重複したインセット宣言は投げる() throws {
+        // 同じコードが 2 回宣言されたら、黙って 1 つに畳まずに投げる —
+        // 配列のまま ForEach(id: \.code) へ流れると重複 ID の描画になる。
+        let url = try writeFixture(
+            countries: [countryJSON(code: 10)],
+            insets: #"[{"code": 10, "scale": 2, "frame": [3, -3, 7, 1]}, "# +
+                #"{"code": 10, "scale": 3, "frame": [3, -3, 7, 1]}]"#)
+        defer { try? FileManager.default.removeItem(at: url) }
+        #expect(throws: WorldDataLoader.WorldDataError.malformedInset(code: 10)) {
+            _ = try WorldDataLoader.load(contentsOf: url)
+        }
+    }
 }

@@ -142,6 +142,25 @@ def main():
         and set(inset_codes) == wc.INSET_COUNTRIES, \
         ("insets がマスタと食い違う", inset_codes)
     by_code = {c["code"]: c for c in countries}
+    inset_by_code = {i["code"]: i for i in data["insets"]}
+
+    def runtime_box(c):
+        """実行時のステージ枠が見る箱 (PrefectureGeometry.boundingBox の写し):
+        ロシアは europeBbox、インセット国は移設後の bbox、他は素の bbox。
+        移設 (WorldDataLoader.relocation) は投影座標で軸ごとに線形なので、
+        度のまま「枠中心 ± 元スパン×scale/2」で写せる。"""
+        if "europeBbox" in c:
+            return c["europeBbox"]
+        decl = inset_by_code.get(c["code"])
+        if decl is None:
+            return c["bbox"]
+        gx0, gy0, gx1, gy1 = decl["frame"]
+        b = c["bbox"]
+        w = (b[2] - b[0]) * decl["scale"]
+        h = (b[3] - b[1]) * decl["scale"]
+        return [(gx0 + gx1 - w) / 2, (gy0 + gy1 - h) / 2,
+                (gx0 + gx1 + w) / 2, (gy0 + gy1 + h) / 2]
+
     for inset in data["insets"]:
         code = inset["code"]
         assert inset["scale"] > 1, (code, "縮小するインセットは無意味")
@@ -155,6 +174,10 @@ def main():
                        if c["stage"] == by_code[code]["stage"]]
         stage_w = (max(b[2] for b in stage_boxes)
                    - min(b[0] for b in stage_boxes)) * PROJ_COS
+        stage_h = max(b[3] for b in stage_boxes) - min(b[1] for b in stage_boxes)
+        # pt 換算 (下の pt_per_unit) は幅しか割らない — aspect fit で幅が
+        # 律速という前提。縦長ステージが生まれたらその前提ごと崩れる
+        assert stage_w >= stage_h, (code, stage_w, stage_h, "ステージ枠が縦長")
         pt_per_unit = ((INSET_PANEL_PT - 2 * MAP_PADDING_PT)
                        / (stage_w * (1 + 2 * MAP_PADDING_RATIO)))
         cb = by_code[code]["bbox"]
@@ -190,6 +213,23 @@ def main():
         sy1 = max(b[3] for b in boxes)
         assert sx0 <= fx0 and fy0 >= sy0 and fx1 <= sx1 and fy1 <= sy1, \
             (code, "frame がステージ枠の外", inset["frame"], [sx0, sy0, sx1, sy1])
+
+        # 実行時のステージ枠は build の枠 (真の位置) と違い、インセット国を
+        # 移設後の位置で束ねる — 破線枠がその枠より外へ出たぶんは fit の
+        # 4.5% 余白 (GameRules.mapPaddingRatio) しか描画域が無く、余白を
+        # 食い切ると再生成がアプリの .clipped() で枠を黙って欠けさせる。
+        # 各辺のはみ出しは余白の半分まで、を再生成の契約にする。
+        rboxes = [runtime_box(c) for c in members]
+        rx0, ry0 = min(b[0] for b in rboxes), min(b[1] for b in rboxes)
+        rx1, ry1 = max(b[2] for b in rboxes), max(b[3] for b in rboxes)
+        half_x = MAP_PADDING_RATIO * (rx1 - rx0) / 2
+        half_y = MAP_PADDING_RATIO * (ry1 - ry0) / 2
+        for edge, overhang, half in (("west", rx0 - fx0, half_x),
+                                     ("east", fx1 - rx1, half_x),
+                                     ("south", ry0 - fy0, half_y),
+                                     ("north", fy1 - ry1, half_y)):
+            assert overhang <= half + 1e-9, \
+                (code, edge, overhang, half, "破線枠が実行時枠の余白を半分超えて食う")
 
         # 空き海域であること: どの地物の頂点も枠に入らず、枠の四隅と中心も
         # どの地物の中に落ちない (斜め横断は build の走査が辺交差まで見ている)

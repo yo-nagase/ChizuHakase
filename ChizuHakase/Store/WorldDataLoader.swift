@@ -216,8 +216,16 @@ nonisolated enum WorldDataLoader {
             }
             return WorldInset(code: inset.code, scale: inset.scale, frame: frame)
         }
-        let insetByCode = Dictionary(insets.map { ($0.code, $0) },
-                                     uniquingKeysWith: { first, _ in first })
+        // 重複コードは黙って 1 つに畳まない: insets の配列はこのまま
+        // MapData.insets → ForEach(id: \.code) へ流れ、重複 ID の描画は
+        // 未定義。並びの契約 (countriesNotSortedUniquely) と同じ生成器の
+        // 契約違反として投げる。
+        var insetByCode: [Int: WorldInset] = [:]
+        for inset in insets {
+            guard insetByCode.updateValue(inset, forKey: inset.code) == nil else {
+                throw WorldDataError.malformedInset(code: inset.code)
+            }
+        }
         let countries = try file.countries.map {
             try makeCountry($0, projection: projection, inset: insetByCode[$0.code])
         }

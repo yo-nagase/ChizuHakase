@@ -317,9 +317,10 @@ def rect_hits_ring(rect, pts, pts_bbox):
 
 def inset_scale(raw_max_pt):
     """素の最大寸法 (pt) → 倍率。規則は INSET_SCALE_FLOOR のコメント。"""
-    bar = INSET_BAND_MIN_PT / raw_max_pt    # 帯の下端に届く最小の倍率
-    cap = INSET_BAND_MAX_PT / raw_max_pt    # 帯の上端を超えない倍率
-    scale = max(INSET_SCALE_FLOOR, min(cap, max(INSET_SCALE_FLOOR, bar)))
+    # 上端 22pt は構造的に守られる (10/raw で置く限り 22/raw を超えない)。
+    # 帯を突き抜けうるのは ×2.5 の床だけで、床は検証側が明示的に免除する —
+    # 網は validate_world_data.py に 1 つあれば足りる。
+    scale = max(INSET_SCALE_FLOOR, INSET_BAND_MIN_PT / raw_max_pt)
     # 端数は切り上げて丸める — 切り捨てると「10pt ちょうど」が 9.99pt になり、
     # 検証 (validate_world_data.py) が自分の丸めで落ちる。
     return math.ceil(scale * 100) / 100

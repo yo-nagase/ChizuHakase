@@ -236,11 +236,10 @@ struct PrefectureMapView: View {
             ZStack(alignment: .topLeading) {
                 path.fill(Palette.backgroundLand, style: FillStyle(eoFill: true))
                 // A shoreline hairline, or the grey mass reads as a stain on
-                // the sea rather than as land. Same weight as the printed
-                // prefecture boundary so no line here outweighs a real border.
+                // the sea rather than as land.
                 path.stroke(Palette.backgroundShore,
-                            lineWidth: min(max(canvasSize.width * 0.0019, 0.3), 0.7)
-                                / max(zoom, 1))
+                            lineWidth: hairlineWidth(canvasWidth: canvasSize.width,
+                                                     zoom: zoom))
             }
             .allowsHitTesting(false)
             .accessibilityHidden(true)
@@ -367,6 +366,17 @@ struct PrefectureMapView: View {
     }
 }
 
+/// The map's one hairline weight, shared by the printed prefecture boundary
+/// and the background shoreline. Deliberately hair-thin: at 47 shapes it is a
+/// grid of borders, and anything heavier reads as the lines being the subject
+/// rather than the country. One formula so no line ever outweighs a real
+/// border — the two call sites used to duplicate it and merely promise to
+/// match. Divided by the zoom because the stroke is drawn inside the magnified
+/// content (see `PrefectureMapView.zoom`).
+private func hairlineWidth(canvasWidth: CGFloat, zoom: CGFloat) -> CGFloat {
+    min(max(canvasWidth * 0.0019, 0.3), 0.7) / max(zoom, 1)
+}
+
 // MARK: - One prefecture
 
 private struct PrefectureLayer: View {
@@ -400,11 +410,9 @@ private struct PrefectureLayer: View {
         min(max(canvasSize.width * 0.009, 0.5), 3) / max(zoom, 1)
     }
 
-    /// The prefecture boundary itself. Deliberately hair-thin: at 47 shapes it
-    /// is a grid of borders, and anything heavier reads as the lines being the
-    /// subject rather than the country.
+    /// The prefecture boundary itself (see `hairlineWidth`).
     private var boundaryWidth: CGFloat {
-        min(max(canvasSize.width * 0.0019, 0.3), 0.7) / max(zoom, 1)
+        hairlineWidth(canvasWidth: canvasSize.width, zoom: zoom)
     }
 
     /// One width for every red ring — the asked-about prefecture and the
