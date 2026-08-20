@@ -53,7 +53,6 @@ struct TitleView: View {
             // what is on it.
             TabView(selection: $atlasKey) {
                 albumPage(for: app.japan,
-                          learnedLabel: mode.learnedPrefectures,
                           turn: PageTurn(target: SaveData.worldAtlas,
                                          label: mode.toWorldAtlas,
                                          onTrailingEdge: true))
@@ -133,7 +132,6 @@ struct TitleView: View {
     private var worldPage: some View {
         if worldPageTouched || atlasKey == SaveData.worldAtlas {
             albumPage(for: app.world,
-                      learnedLabel: mode.learnedCountries,
                       turn: PageTurn(target: SaveData.japanAtlas,
                                      label: mode.toJapanAtlas,
                                      onTrailingEdge: false))
@@ -160,8 +158,7 @@ struct TitleView: View {
     /// One album page. The two pages are this one structure fed different
     /// books — the world gets no layout of its own, only world data and world
     /// wording, so the flip reads as the same album continuing (design doc §2).
-    private func albumPage(for atlas: Atlas, learnedLabel: String,
-                           turn: PageTurn) -> some View {
+    private func albumPage(for atlas: Atlas, turn: PageTurn) -> some View {
         // The page's one read of its book. Every number below comes off this
         // slice, so the two pages cannot mix their tallies.
         let slice = app.save.data.atlas(atlas.saveKey)
@@ -216,7 +213,7 @@ struct TitleView: View {
                     .padding(.bottom, isShort ? -92
                                              : (hSize == .regular ? -104 : -78))
 
-                progressLine(for: atlas, slice: slice, learnedLabel: learnedLabel)
+                progressLine(for: atlas, slice: slice)
 
                 Spacer(minLength: isShort ? 4 : 8)
 
@@ -413,16 +410,18 @@ struct TitleView: View {
     /// breakdown of that collection, not a third destination. Gold, silver
     /// and rainbow are exclusive here: a rainbow card is no longer repeated
     /// under gold, so the three numbers remain an honest inventory.
-    private func progressLine(for atlas: Atlas, slice: AtlasSave,
-                              learnedLabel: String) -> some View {
+    private func progressLine(for atlas: Atlas, slice: AtlasSave) -> some View {
         HStack(spacing: 10) {
             // 「おぼえた」 is claimed at the top of the mastery ladder, not on
             // the first clean answer — counting first answers filled the bar
             // to 47/47 while the map was still mostly green, and a full meter
             // over an unfinished map called the child done when they were not.
+            // The thing counted is the atlas's noun (けん ⇄ くに) — everything
+            // else about the two pages' tallies reads identically.
             tally("TitleLearnedHUD", slice.sparklingRegionCount,
                   max(atlas.mapData.prefectures.count, 1),
-                  learnedLabel, Palette.learned, hint: mode.myMap,
+                  mode.learnedTally(atlas.regionNoun), Palette.learned,
+                  hint: mode.myMap,
                   action: onMyMap)
             // Opens the book unfiltered now rather than straight onto the キラ
             // cards, which the third tile used to do. One tile cannot lead two

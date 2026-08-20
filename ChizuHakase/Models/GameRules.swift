@@ -319,12 +319,13 @@ nonisolated enum GameRules {
     /// the draw is among the cards that can still take a star, which is what
     /// keeps a cleared prefecture worth playing (CLAUDE.md §5) — drawing from
     /// all of them instead would spend wins on cards already at the cap while
-    /// others sat at one. `policy` narrows the pool before any of that; the
-    /// default keeps every existing call site on the Japan behavior unchanged.
+    /// others sat at one. `policy` narrows the pool before any of that, and it
+    /// has no default: the policy is the atlas's one rule difference, and a
+    /// call site that forgets to pass it would silently deal japan's way.
     static func drawCard(
         from cards: [SpecialtyCard],
         owned: [String: Int],
-        policy: DrawPolicy = .random,
+        policy: DrawPolicy,
         using generator: inout some RandomNumberGenerator
     ) -> CardDraw? {
         let pool = drawPool(cards, owned: owned, policy: policy)

@@ -122,8 +122,41 @@ struct TextModeTests {
     @Test func theMasteryLadderEndsOnLearned() {
         #expect(TextMode.kids.masteryLabel(GameRules.maxMastery) == "おぼえた")
         #expect(TextMode.adult.masteryLabel(GameRules.maxMastery) == "覚えた")
-        #expect(TextMode.kids.becameSparkling == "✨ おぼえた けん!")
-        #expect(!TextMode.adult.becameSparkling.contains("キラキラ"))
+        #expect(TextMode.kids.becameSparkling(.prefecture) == "✨ おぼえた けん!")
+        #expect(!TextMode.adult.becameSparkling(.prefecture).contains("キラキラ"))
+    }
+
+    /// The screens are shared between the two books, so the sentences are one
+    /// structure and the noun rides the atlas (P6 Task 6): a world result must
+    /// say くに where japan's says けん, and its card panel has no 特産品.
+    @Test func thePhrasesTakeTheirNounFromTheAtlas() {
+        let kids = TextMode.kids
+        #expect(kids.nameItQuestion(.prefecture) == "この けんは どこかな?")
+        #expect(kids.nameItQuestion(.country) == "この くには どこかな?")
+        #expect(kids.becameSparkling(.country) == "✨ おぼえた くに!")
+        #expect(kids.learnedTally(.prefecture) == "おぼえた けん")
+        #expect(kids.learnedTally(.country) == "おぼえた くに")
+        #expect(AtlasNoun.specialtyCards.label(kids) == "とくさんひん カード")
+        #expect(AtlasNoun.worldCards.label(kids) == "せかいの カード")
+
+        let adult = TextMode.adult
+        #expect(adult.nameItQuestion(.country) == "この国はどこ?")
+        #expect(adult.becameSparkling(.country) == "✨ 覚えた国")
+        #expect(adult.learnedTally(.country) == "覚えた国")
+        #expect(AtlasNoun.specialtyCards.label(adult) == "特産品カード")
+        #expect(AtlasNoun.worldCards.label(adult) == "世界のカード")
+    }
+
+    /// The mode switch's one-line blurb also names the thing in the red ring.
+    @Test func theNameItBlurbTakesTheAtlasNoun() {
+        #expect(QuizMode.nameIt.blurb(.kids, region: .country)
+                == "あかい わくの くにを こたえる")
+        #expect(QuizMode.nameIt.blurb(.adult, region: .country) == "赤い枠の国を答える")
+        #expect(QuizMode.nameIt.blurb(.kids, region: .prefecture)
+                == "あかい わくの けんを こたえる")
+        // findOnMap's blurb has no noun in it — the question carries the name.
+        #expect(QuizMode.findOnMap.blurb(.kids, region: .country)
+                == QuizMode.findOnMap.blurb(.kids, region: .prefecture))
     }
 
     @Test func categoryLabelsExistInBothModes() {
@@ -180,12 +213,15 @@ extension TextMode {
          settings, stages, close, quit,
          questionSuffix, readAloud, answerByVoice, listening, hintNudge, combo,
          questionCounter(1, 7),
+         nameItQuestion(.prefecture), nameItQuestion(.country), nameItPrompt,
          cardWonNew, cardWonStar, cardWonSilver, cardWonGold, cardWonDuplicate,
-         specialtyCards, notCollectedYet,
+         AtlasNoun.specialtyCards.label(self), AtlasNoun.worldCards.label(self),
+         notCollectedYet,
          allCategories,
-         points, bestScore, playAgain, chooseStage, becameSparkling, becameRainbow,
+         points, bestScore, playAgain, chooseStage,
+         becameSparkling(.prefecture), becameSparkling(.country), becameRainbow,
          starCount(3),
-         sparklingCards, learnedPrefectures, ownedCards,
+         sparklingCards, learnedTally(.prefecture), learnedTally(.country), ownedCards,
          learnedCount, resetZoom, zoomHint, westJapan, middleJapan, eastJapan,
          eraseEverything, eraseConfirm1, eraseConfirm2, eraseCancel, eraseNext,
          eraseConfirmAction,

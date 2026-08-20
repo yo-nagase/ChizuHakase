@@ -124,7 +124,7 @@ struct StageSelectView: View {
                                         .foregroundStyle(Palette.ink)
                                 }
 
-                                Text(candidate.blurb(mode))
+                                Text(candidate.blurb(mode, region: atlas.regionNoun))
                                     .font(AppFont.rounded(9, relativeTo: .caption2))
                                     .foregroundStyle(Palette.ink.opacity(0.58))
                             }

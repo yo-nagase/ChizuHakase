@@ -197,7 +197,7 @@ struct ResultView: View {
 
     private var sparklePanel: some View {
         VStack(spacing: 10) {
-            Text(mode.becameSparkling)
+            Text(mode.becameSparkling(atlas.regionNoun))
                 .font(AppFont.rounded(19, relativeTo: .headline))
                 .foregroundStyle(Palette.ink)
             FlowRow(spacing: 8) {
@@ -265,7 +265,7 @@ struct ResultView: View {
 
     private var cardPanel: some View {
         VStack(spacing: 10) {
-            Text(mode.specialtyCards)
+            Text(atlas.cardNoun.label(mode))
                 .font(AppFont.rounded(19, relativeTo: .headline))
                 .foregroundStyle(Palette.ink)
 

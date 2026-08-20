@@ -26,6 +26,36 @@ nonisolated enum TextMode: String, Codable, Sendable, CaseIterable {
     }
 }
 
+// MARK: - Atlas-carried nouns
+
+/// A noun the open ちずちょう puts into otherwise shared sentences.
+///
+/// The screens are the same for both books, so the sentences are built once in
+/// `TextMode` and the one word that differs — けん ⇄ くに, the card panel's
+/// title — rides the `Atlas` value the way its draw policy and save key do.
+/// The view asks the atlas for the word and never asks which book it is in.
+nonisolated struct AtlasNoun: Sendable, Equatable {
+    let kids: String
+    let adult: String
+
+    /// The script the current mode reads — same shape as `displayName(_:)`.
+    func label(_ mode: TextMode) -> String { mode.isKids ? kids : adult }
+}
+
+nonisolated extension AtlasNoun {
+    /// 日本: the thing a stage asks about. Only the standalone noun — a
+    /// prefecture's own けん (「あいちけん」) is part of its name, not this.
+    static let prefecture = AtlasNoun(kids: "けん", adult: "県")
+    static let country = AtlasNoun(kids: "くに", adult: "国")
+    /// 日本のカード欄の見出し。
+    static let specialtyCards = AtlasNoun(kids: "とくさんひん カード",
+                                          adult: "特産品カード")
+    /// 世界のカード欄の見出し。「こっきカード」ではなく「せかいの カード」:
+    /// P8 でオリジナル札が国旗の隣に並んでも(設計 §5)この見出しは嘘に
+    /// ならない。札の種別名(国旗カード)は個々の札が言う。
+    static let worldCards = AtlasNoun(kids: "せかいの カード", adult: "世界のカード")
+}
+
 // MARK: - Interface vocabulary
 //
 // Every user-facing string in one place. Keeping them together is what makes
@@ -53,9 +83,11 @@ nonisolated extension TextMode {
 
     // Quiz
     var questionSuffix: String { isKids ? "は どこかな?" : "はどこ?" }
-    /// 「なまえを あてる」 asks about the prefecture lit up on the map, so the
-    /// question has no name in it to read out.
-    var nameItQuestion: String { isKids ? "この けんは どこかな?" : "この県はどこ?" }
+    /// 「なまえを あてる」 asks about the region lit up on the map, so the
+    /// question has no name in it to read out — only the atlas's noun.
+    func nameItQuestion(_ region: AtlasNoun) -> String {
+        isKids ? "この \(region.kids)は どこかな?" : "この\(region.adult)はどこ?"
+    }
     var nameItPrompt: String { isKids ? "なまえを えらんでね" : "名前を選んでください" }
     var readAloud: String { isKids ? "もんだいを よむ" : "問題を読む" }
     var answerByVoice: String { isKids ? "こえで こたえる" : "音声で答える" }
@@ -74,7 +106,8 @@ nonisolated extension TextMode {
     var cardWonSilver: String { isKids ? "シルバーカードに なった!" : "シルバーカードになりました" }
     var cardWonGold: String { isKids ? "ゴールドカードに なった!" : "ゴールドカードになりました" }
     var cardWonDuplicate: String { isKids ? "もっている カードだね" : "所持済みのカードです" }
-    var specialtyCards: String { isKids ? "とくさんひん カード" : "特産品カード" }
+    // The card panel's title is the atlas's `cardNoun` (「とくさんひん カード」
+    // ⇄ 「せかいの カード」), rendered through `AtlasNoun.label(_:)` above.
     /// Nil for a card with nothing to say about its tier yet. Katakana in both
     /// modes: シルバー and ゴールド are the words a six-year-old already has for
     /// second and first place.
@@ -126,7 +159,11 @@ nonisolated extension TextMode {
     /// The top of the mastery ladder is called 「おぼえた」, so reaching it is
     /// announced in the same word — a celebration named 「キラキラ」 over a
     /// legend that says 「おぼえた」 reads as two different achievements.
-    var becameSparkling: String { isKids ? "✨ おぼえた けん!" : "✨ 覚えた県" }
+    /// The thing that was learned is the atlas's noun: けん on japan's result
+    /// screen, くに on the world's.
+    func becameSparkling(_ region: AtlasNoun) -> String {
+        isKids ? "✨ おぼえた \(region.kids)!" : "✨ 覚えた\(region.adult)"
+    }
     /// The rarest thing in the game, and the only one a child can reach without
     /// drawing anything — so it has to be said out loud here or it happens in
     /// silence.
@@ -145,12 +182,13 @@ nonisolated extension TextMode {
     // Title tallies. Verbs, not bare nouns: 「けん」 and 「カード」 name the things
     // rather than what the number says about them, and the title screen is
     // where a child has the least context to guess from.
-    var learnedPrefectures: String { isKids ? "おぼえた けん" : "覚えた県" }
-    /// The world page's copy of the learned tally: the thing counted there is
-    /// a country. Everything else about the tally reads identically — same
+    /// The learned tally, counted in whatever the open book asks about.
+    /// Everything else about the two pages' tallies reads identically — same
     /// artwork, same bar — so this one noun is the whole difference the child
-    /// sees between the two pages' numbers.
-    var learnedCountries: String { isKids ? "おぼえた くに" : "覚えた国" }
+    /// sees between their numbers.
+    func learnedTally(_ region: AtlasNoun) -> String {
+        isKids ? "おぼえた \(region.kids)" : "覚えた\(region.adult)"
+    }
     var ownedCards: String { isKids ? "もっている カード" : "持っているカード" }
 
     // Title pages. Each page-edge tab names where it leads, not where the

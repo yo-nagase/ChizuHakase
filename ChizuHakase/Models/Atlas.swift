@@ -46,6 +46,12 @@ nonisolated struct Atlas: Sendable {
     /// 「どの本を遊んだか」と「どこへ記録するか」を別々に選べる形にすると
     /// いつか必ず食い違うから。
     let saveKey: String
+    /// この本の 1 マスを指す名詞(けん ⇄ くに)。文はどちらの本でも同じ形で、
+    /// 差はこの語だけ — 抽選方針と同じく値で運び、view は本を知らない
+    /// (P6 Task 6: 世界の結果画面に「けん」が出た穴を語彙の綴じ込みで塞ぐ)。
+    let regionNoun: AtlasNoun
+    /// カード欄の見出し(とくさんひん カード ⇄ せかいの カード)。
+    let cardNoun: AtlasNoun
 
     /// 音声入力へ渡す語彙(よみ + 表記)。AppState が起動時に組み立てていた
     /// 式をアトラス側へ移しただけで、日本版の挙動は変えていない。世界版の
@@ -104,7 +110,8 @@ nonisolated struct Atlas: Sendable {
     /// データにも挙動にも手を加えない。
     static func japan(mapData: MapData, cards: CardCatalog) -> Atlas {
         Atlas(mapData: mapData, stages: Stage.all, sections: [], cards: cards,
-              drawPolicy: .random, saveKey: SaveData.japanAtlas)
+              drawPolicy: .random, saveKey: SaveData.japanAtlas,
+              regionNoun: .prefecture, cardNoun: .specialtyCards)
     }
 
     // MARK: - 世界
@@ -141,11 +148,12 @@ nonisolated struct Atlas: Sendable {
             return world(from: try load(), cards: cards)
         } catch {
             log.error("world atlas load failed: \(error.localizedDescription, privacy: .public)")
-            // 空へ倒れても方針・名前空間・見出し定義は世界のまま — カードを
-            // 失っても「どの本か」までは失わない(棚はステージが無いので空)。
+            // 空へ倒れても方針・名前空間・見出し定義・語彙は世界のまま —
+            // カードを失っても「どの本か」までは失わない(棚はステージが無いので空)。
             return Atlas(mapData: .empty, stages: [], sections: WorldStage.sections,
                          cards: .empty, drawPolicy: .flagFirstSilverGate,
-                         saveKey: SaveData.worldAtlas)
+                         saveKey: SaveData.worldAtlas,
+                         regionNoun: .country, cardNoun: .worldCards)
         }
     }
 
@@ -180,7 +188,8 @@ nonisolated struct Atlas: Sendable {
         guard !bounds.isNull else {
             return Atlas(mapData: .empty, stages: stages, sections: WorldStage.sections,
                          cards: cards, drawPolicy: .flagFirstSilverGate,
-                         saveKey: SaveData.worldAtlas)
+                         saveKey: SaveData.worldAtlas,
+                         regionNoun: .country, cardNoun: .worldCards)
         }
         let mapData = MapData(width: bounds.maxX,
                               height: bounds.maxY,
@@ -196,7 +205,8 @@ nonisolated struct Atlas: Sendable {
         // 国旗カードが銀になるまでオリジナルを配らないゲート(設計 §5)。
         return Atlas(mapData: mapData, stages: stages, sections: WorldStage.sections,
                      cards: cards, drawPolicy: .flagFirstSilverGate,
-                     saveKey: SaveData.worldAtlas)
+                     saveKey: SaveData.worldAtlas,
+                     regionNoun: .country, cardNoun: .worldCards)
     }
 
     /// 背景の海岸線には bbox が付いて来ない(WorldShapes.json は名も範囲も

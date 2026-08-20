@@ -167,7 +167,7 @@ struct QuizView: View {
 
     private func questionName(_ quiz: QuizViewModel) -> some View {
         VStack(alignment: typeSize.isAccessibilitySize ? .leading : .center, spacing: 1) {
-            Text(quiz.mode == .nameIt ? mode.nameItQuestion
+            Text(quiz.mode == .nameIt ? mode.nameItQuestion(atlas.regionNoun)
                                       : (quiz.target?.displayName(mode) ?? ""))
                 .font(AppFont.rounded(31, relativeTo: .title))
                 .foregroundStyle(Palette.ink)

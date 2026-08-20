@@ -89,14 +89,34 @@ final class WorldQuizUITests: XCTestCase {
                       "a perfect run of 12 should total 2520")
         XCTAssertTrue(app.otherElements["ほし 3 こ"].exists, "a perfect run earns 3 stars")
 
-        // The cards this run won are the world's flags…
+        // The cards this run won are the world's flags, under the world's own
+        // panel title — 「とくさんひん」 is japan's word (P6 Task 6)…
         XCTAssertTrue(chip(named: "こっき").waitForExistence(timeout: 3),
                       "no flag card in the world result's card panel")
+        XCTAssertTrue(app.staticTexts["せかいの カード"].exists,
+                      "the world result's card panel is not titled せかいの カード")
+        XCTAssertFalse(anythingNamed("とくさんひん"),
+                       "japan's card-panel noun leaked onto the world result")
         // …and never japan's colliding card. アルジェリア (12) was answered
         // twice above, so its "12-1" was certainly drawn — the leak this
         // guards against is exactly that ID resolving to 千葉の らっかせい.
         XCTAssertFalse(anythingNamed("らっかせい"),
                        "japan's 12-1 leaked into the world result screen")
+    }
+
+    /// The mastery celebration on a world result says くに, not けん (P6
+    /// Task 6). A real run can't show this panel cheaply — Lv5 takes five
+    /// clean answers — so this rides the staged `-startAt result` route,
+    /// which fills the sparkle slot from the session atlas's own stage.
+    func testWorldResultCelebratesCountriesNotPrefectures() {
+        app.launchArguments = ["-resetSave", "-atlas", "world", "-startAt", "result"]
+        app.launch()
+        XCTAssertTrue(app.staticTexts["✨ おぼえた くに!"].waitForExistence(timeout: 10),
+                      "the world result's mastery panel does not say くに")
+        XCTAssertFalse(anythingNamed("おぼえた けん"),
+                       "japan's noun leaked into the world result's celebration")
+        XCTAssertTrue(app.staticTexts["せかいの カード"].exists,
+                      "the staged world result's card panel is not titled せかいの カード")
     }
 
     /// 「なまえを あてる」 on the world (P6 Task 5): the four kana choices are
@@ -113,6 +133,9 @@ final class WorldQuizUITests: XCTestCase {
                       "quiz:15 did not resolve against the world's stages")
         XCTAssertTrue(app.staticTexts["なまえを えらんでね"].exists,
                       "the nameIt prompt is missing — did -nameIt not take?")
+        // The question names the thing in the red ring in the world's noun.
+        XCTAssertTrue(app.staticTexts["この くには どこかな?"].exists,
+                      "the world nameIt question does not say くに")
 
         // The test cannot read which choice is right (the question is the
         // ringed shape, deliberately unnamed), so it taps through the offered

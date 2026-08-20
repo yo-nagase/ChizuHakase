@@ -208,14 +208,16 @@ struct GameRulesTests {
     @Test func unownedCardsAreDrawnFirst() {
         var rng = SeededGenerator(seed: 42)
         let owned = ["01-1": 1, "01-2": 1]
-        let draw = GameRules.drawCard(from: Self.sample, owned: owned, using: &rng)
+        let draw = GameRules.drawCard(from: Self.sample, owned: owned, policy: .random,
+                                      using: &rng)
         #expect(draw == .new(Self.sample[2]), "should have drawn the only unowned card")
     }
 
     @Test func aCompleteSetStartsAddingStars() {
         var rng = SeededGenerator(seed: 7)
         let owned = ["01-1": 1, "01-2": 1, "01-3": 1]
-        let draw = GameRules.drawCard(from: Self.sample, owned: owned, using: &rng)
+        let draw = GameRules.drawCard(from: Self.sample, owned: owned, policy: .random,
+                                      using: &rng)
         guard case .star(_, let stars) = draw else {
             Issue.record("expected a star, got \(String(describing: draw))")
             return
@@ -231,7 +233,8 @@ struct GameRulesTests {
         let owned = ["01-1": GameRules.maxCardStars, "01-2": GameRules.maxCardStars,
                      "01-3": 2]
         for _ in 0..<20 {
-            let draw = GameRules.drawCard(from: Self.sample, owned: owned, using: &rng)
+            let draw = GameRules.drawCard(from: Self.sample, owned: owned,
+                                          policy: .random, using: &rng)
             #expect(draw?.card.id == "01-3", "a full card was drawn while one was unfinished")
         }
     }
@@ -240,7 +243,8 @@ struct GameRulesTests {
         var rng = SeededGenerator(seed: 7)
         let owned = Dictionary(uniqueKeysWithValues:
             Self.sample.map { ($0.id, GameRules.maxCardStars) })
-        let draw = GameRules.drawCard(from: Self.sample, owned: owned, using: &rng)
+        let draw = GameRules.drawCard(from: Self.sample, owned: owned, policy: .random,
+                                      using: &rng)
         if case .duplicate = draw {} else {
             Issue.record("expected a duplicate, got \(String(describing: draw))")
         }
@@ -405,14 +409,15 @@ struct GameRulesTests {
 
     @Test func drawingFromNoCardsIsNilNotACrash() {
         var rng = SeededGenerator(seed: 1)
-        #expect(GameRules.drawCard(from: [], owned: [:], using: &rng) == nil)
+        #expect(GameRules.drawCard(from: [], owned: [:], policy: .random, using: &rng) == nil)
     }
 
     @Test func repeatedDrawsEventuallyCompleteTheSet() {
         var rng = SeededGenerator(seed: 99)
         var owned: [String: Int] = [:]
         for _ in 0..<80 {
-            guard let draw = GameRules.drawCard(from: Self.sample, owned: owned, using: &rng)
+            guard let draw = GameRules.drawCard(from: Self.sample, owned: owned,
+                                                policy: .random, using: &rng)
             else { break }
             owned = GameRules.applyDraw(draw, to: owned)
         }
@@ -425,7 +430,8 @@ struct GameRulesTests {
         var rng = SeededGenerator(seed: 3)
         var owned: [String: Int] = [:]
         for _ in 0..<100 {
-            guard let draw = GameRules.drawCard(from: Self.sample, owned: owned, using: &rng)
+            guard let draw = GameRules.drawCard(from: Self.sample, owned: owned,
+                                                policy: .random, using: &rng)
             else { break }
             owned = GameRules.applyDraw(draw, to: owned)
             #expect(owned.values.allSatisfy { $0 <= GameRules.maxCardStars })
@@ -542,27 +548,9 @@ struct GameRulesTests {
         #expect(owned["392-2"] == GameRules.maxCardStars)
     }
 
-    /// 日本版の回帰: 方針の既定値は従来ランダムで、方針を明示しても
-    /// 既定引数の呼び出しと 1 ビットも変わらない(view の呼び出しは無改修)。
-    @Test func 抽選方針の既定は従来ランダムのまま() {
-        let ownedStates: [[String: Int]] = [
-            [:],
-            ["01-1": 1, "01-2": 1],
-            ["01-1": 3, "01-2": GameRules.maxCardStars, "01-3": 7],
-            Dictionary(uniqueKeysWithValues: Self.sample.map { ($0.id, GameRules.maxCardStars) }),
-        ]
-        for owned in ownedStates {
-            for seed in UInt64(1)...10 {
-                var defaultRNG = SeededGenerator(seed: seed)
-                var explicitRNG = SeededGenerator(seed: seed)
-                let byDefault = GameRules.drawCard(from: Self.sample, owned: owned,
-                                                   using: &defaultRNG)
-                let byPolicy = GameRules.drawCard(from: Self.sample, owned: owned,
-                                                  policy: .random, using: &explicitRNG)
-                #expect(byDefault == byPolicy, "seed \(seed), owned \(owned)")
-            }
-        }
-    }
+    // 「方針の既定値は .random と同一」という回帰テストはここにあったが、
+    // 既定引数そのものを外した(P6 Task 6・引き継ぎ 7)ので前提ごと消えた:
+    // 全呼び出しが方針を明示し、渡し忘れはコンパイルエラーが捕まえる。
 
     /// Task 8 が頼る契約の錨: 目録は 1 国のカードを収載順のまま返す。
     /// 世界のゲートは「先頭 = 国旗」というこの並びに乗り、id は解析しない。

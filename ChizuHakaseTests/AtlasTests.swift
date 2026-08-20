@@ -170,7 +170,8 @@ struct AtlasTests {
         let stray = Stage(index: 99, name: "はぐれ", kanjiName: "逸れ", codes: [1])
         let atlas = Atlas(mapData: .empty, stages: Stage.all + [stray],
                           sections: [AtlasSection(title: "テスト", stageIndexes: 0..<7)],
-                          cards: .empty, drawPolicy: .random, saveKey: "test")
+                          cards: .empty, drawPolicy: .random, saveKey: "test",
+                          regionNoun: .prefecture, cardNoun: .specialtyCards)
         let shelves = atlas.stageShelves
         #expect(shelves.count == 2)
         #expect(shelves.first?.title == "テスト")
@@ -408,6 +409,28 @@ struct AtlasTests {
         // カードが空でも「どの本か」までは失わない。
         let missing = URL(fileURLWithPath: "/nonexistent/WorldShapes.json")
         #expect(Atlas.loadWorld(contentsOf: missing).drawPolicy == .flagFirstSilverGate)
+    }
+
+    // MARK: - 語彙(名詞もアトラスが運ぶ — view に japan/world 分岐を作らない)
+
+    /// 結果画面の「✨ おぼえた ◯!」やなまえあての問いに入る名詞(P6 Task 6)。
+    /// 世界の結果画面に「けん」が出た Task 3 レビューへの答えで、語は文言の
+    /// 分岐ではなくデータとして本に綴じる — 抽選方針や saveKey と同じ運び方。
+    @Test func アトラスは地域の名詞を運ぶ() throws {
+        #expect(japanAtlas.regionNoun == .prefecture)
+        #expect(try worldAtlas().regionNoun == .country)
+        // 読み込みに失敗して空へ倒れた世界も、語までは失わない。
+        let missing = URL(fileURLWithPath: "/nonexistent/WorldShapes.json")
+        #expect(Atlas.loadWorld(contentsOf: missing).regionNoun == .country)
+    }
+
+    /// カード欄の見出し: 日本は とくさんひん、世界は(国旗しかない今も P8 で
+    /// オリジナル札が並んだ後も嘘にならない)せかいの カード。
+    @Test func アトラスはカード欄の見出しを運ぶ() throws {
+        #expect(japanAtlas.cardNoun == .specialtyCards)
+        #expect(try worldAtlas().cardNoun == .worldCards)
+        let missing = URL(fileURLWithPath: "/nonexistent/WorldShapes.json")
+        #expect(Atlas.loadWorld(contentsOf: missing).cardNoun == .worldCards)
     }
 
     // MARK: - セーブの名前空間とステージ引き

@@ -121,7 +121,7 @@ mv PrefectureShapes.json ../ChizuHakase/Resources/
 ```jsonc
 {
   "mapWidth": 1000.0,
-  "mapHeight": 997.9,
+  "mapHeight": 1066.7,
   "okinawaInset": [0.0, 832.5, 56.7, 915.9],  // 沖縄インセットの枠 [x0,y0,x1,y1]
   "prefectures": [
     {
