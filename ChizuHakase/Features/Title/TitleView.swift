@@ -144,11 +144,14 @@ struct TitleView: View {
             GeometryReader { geo in
                 let x = geo.frame(in: .global).minX
                 Color.clear
-                    .onChange(of: x) { restingX, movedX in
+                    .onChange(of: x) { oldX, newX in
                         // Toward the centre only: a resize (iPad rotation)
                         // can also move the slot, and loading on one of
-                        // those is merely early, never wrong.
-                        if movedX < restingX { worldPageTouched = true }
+                        // those is merely early, never wrong. "Toward" means
+                        // x decreasing because the world slot rests one
+                        // screen to the trailing side — an LTR assumption,
+                        // fine for a Japanese-only UI that never mirrors.
+                        if newX < oldX { worldPageTouched = true }
                     }
             }
         }
@@ -703,14 +706,10 @@ enum MasteryStyle {
     /// the sea while the rest stayed printed flat — the border between 東北 and
     /// 関東 became a seam. The outline is now the same printed edge at every
     /// level, so progress reads as colour spreading across one whole map.
-    static func appearance(for code: Int, save: SaveData) -> PrefectureAppearance {
-        // The japan-facing convenience, like SaveData's own derived reads: a
-        // caller that knows which book it is in hands the slice directly.
-        appearance(for: code, save: save.atlas(SaveData.japanAtlas))
-    }
-
-    /// One atlas's slice — the stage picker reads whichever book the session
-    /// opened, so a world signboard colours by the world's mastery, not japan's.
+    ///
+    /// Takes one atlas's slice, never the whole save: every caller names the
+    /// book it is colouring for (a SaveData convenience that silently meant
+    /// "japan's slice" let a world screen compile while lying).
     static func appearance(for code: Int, save: AtlasSave) -> PrefectureAppearance {
         let level = save.masteryLevel(of: code)
         return PrefectureAppearance(fill: fill(level: level),

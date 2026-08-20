@@ -1,12 +1,18 @@
 import SwiftUI
 
-/// The whole country coloured by how well each prefecture is known
-/// (CLAUDE.md §5). Tapping a prefecture shows its detail; this screen also
-/// owns the erase-everything control.
+/// The open book's whole map coloured by how well each region is known
+/// (CLAUDE.md §5). Tapping a region shows its detail; this screen also owns
+/// the erase-everything control — which erases the *whole app*, both books,
+/// whichever page it was opened from (design doc: one record, one eraser).
 struct MyMapView: View {
     @Environment(AppState.self) private var app
     @Environment(\.dynamicTypeSize) private var typeSize
     @Environment(\.textMode) private var mode
+
+    /// The book this map shows. Regions, mastery and the tallies all come off
+    /// this one value and its save slice, so japan's greens can never colour
+    /// the world's countries (their codes collide — 44 is 大分県 and バハマ).
+    let atlas: Atlas
 
     @State private var selected: Prefecture?
     @State private var eraseStep = 0   // 0 = idle, 1 = asked once, 2 = confirming
@@ -17,7 +23,7 @@ struct MyMapView: View {
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    private var save: SaveData { app.save.data }
+    private var save: AtlasSave { app.save.data.atlas(atlas.saveKey) }
 
     var body: some View {
         ScrollView {
@@ -39,7 +45,7 @@ struct MyMapView: View {
         .background(AlbumPage())
         .navigationTitle(mode.myMap)
         .navigationBarTitleDisplayMode(.inline)
-        .sheet(item: $selected) { PrefectureDetailSheet(prefecture: $0) }
+        .sheet(item: $selected) { PrefectureDetailSheet(atlas: atlas, prefecture: $0) }
     }
 
     /// Pinchable, and draggable once pinched. The zoom lives on the map itself
@@ -48,10 +54,13 @@ struct MyMapView: View {
     /// looking closely at a prefecture would be backwards.
     private var map: some View {
         PrefectureMapView(
-            mapData: app.mapData,
-            codes: Array(1...47),
+            mapData: atlas.mapData,
+            codes: atlas.mapData.prefectures.map(\.code),
             appearance: appearance,
-            interactiveCodes: Set(1...47),
+            interactiveCodes: Set(atlas.mapData.prefectures.map(\.code)),
+            // Data-driven, the same expression as the title's mini map: the
+            // dashed inset frame is drawn wherever the map declares one.
+            showsOkinawaInset: atlas.mapData.okinawaInset != .zero,
             zoom: zoom,
             onTap: { prefecture, point in
                 // The touch region outgrows the clipped panel while zoomed
@@ -61,10 +70,13 @@ struct MyMapView: View {
                                         in: mapSize) else { return }
                 selected = prefecture
             })
-        // 0.8, taller than the country's own near-square ratio: the extra
-        // height becomes sea above and below the diagonal archipelago, and a
-        // zoomed-in child gets that much more viewport to move around in.
-        .aspectRatio(0.8, contentMode: .fit)
+        // A quarter more height than the map itself needs: the extra becomes
+        // sea above and below, and a zoomed-in child gets that much more
+        // viewport to move around in. Derived from the map's own proportions
+        // rather than fixed at japan's 0.8, so the world's wide band earns the
+        // same margin of sea instead of floating in a tall empty panel.
+        .aspectRatio(0.8 * PrefectureGeometry.aspectRatio(of: atlas.mapData.prefectures),
+                     contentMode: .fit)
         // Same gesture as the quiz map: a child who learns it on one country
         // should not find it missing on the other.
         .zoomPan(scale: $zoom, offset: $pan, oneFingerZoom: true)
@@ -141,10 +153,13 @@ struct MyMapView: View {
     /// One stat, not two: 「おぼえた」 *means* reaching the top of the ladder
     /// now, so a second count beside this one was the same number wearing
     /// another name. The word matches the legend's gold swatch and the title's
-    /// 「おぼえた けん」 tile — one measurement, one name, wherever it appears.
+    /// tally tile — one measurement, one name, wherever it appears. The
+    /// denominator is whatever the open book holds (47 or 167), never a
+    /// literal.
     private var summary: some View {
         HStack(spacing: 12) {
-            stat("✨ \(mode.learnedCount)", "\(save.sparklingPrefectureCount) / 47")
+            stat("✨ \(mode.learnedCount)",
+                 "\(save.sparklingRegionCount) / \(atlas.mapData.prefectures.count)")
         }
     }
 
@@ -164,6 +179,12 @@ struct MyMapView: View {
     }
 
     /// Two deliberate steps before anything is destroyed (CLAUDE.md §6).
+    ///
+    /// Whole-app on purpose, whichever book's map sits above it: `eraseAll`
+    /// clears both books (design-doc recommendation — one record, one eraser),
+    /// and the second confirmation names both so nobody erases 「the world's
+    /// records」 and loses japan's. See `SaveStore.eraseAll` for the lastAtlas
+    /// side effect.
     private var eraseSection: some View {
         VStack(spacing: 10) {
             switch eraseStep {
@@ -205,11 +226,16 @@ private struct PrefectureDetailSheet: View {
     @Environment(AppState.self) private var app
     @Environment(\.dynamicTypeSize) private var typeSize
     @Environment(\.textMode) private var mode
+    /// The book the tapped region lives in — its catalog and its save slice,
+    /// because the region's code only means anything inside that book.
+    let atlas: Atlas
     let prefecture: Prefecture
 
+    private var save: AtlasSave { app.save.data.atlas(atlas.saveKey) }
+
     var body: some View {
-        let level = app.save.data.masteryLevel(of: prefecture.code)
-        let cards = app.cards.cards(for: prefecture.code)
+        let level = save.masteryLevel(of: prefecture.code)
+        let cards = atlas.cards.cards(for: prefecture.code)
 
         ScrollView {
             VStack(spacing: 14) {
@@ -235,8 +261,8 @@ private struct PrefectureDetailSheet: View {
                                          count: typeSize.cardColumns), spacing: 10) {
                     ForEach(cards) { card in
                         CardChipView(card: card,
-                                     stars: app.save.data.stars(of: card.id),
-                                     rainbow: app.save.data.isRainbow(card.id))
+                                     stars: save.stars(of: card.id),
+                                     rainbow: save.isRainbow(card.id))
                     }
                 }
                 .padding(.top, 4)

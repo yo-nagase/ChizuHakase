@@ -181,8 +181,15 @@ final class SaveStore {
         save()
     }
 
-    /// Wipe everything. The two-step confirmation lives in the my-map screen
+    /// Wipe everything — both books at once (the my-map eraser is whole-app
+    /// by design). The two-step confirmation lives in the my-map screen
     /// (CLAUDE.md §6) — this is the mechanism, not the guard.
+    ///
+    /// `SaveData()` also resets `settings.lastAtlas`, so the next launch opens
+    /// on japan's title page even when the erase was asked for from the world
+    /// map. Accepted: after a full wipe the first page is the honest starting
+    /// point, and remembering a view of records that no longer exist is not
+    /// worth a settings carve-out here.
     func eraseAll() {
         data = SaveData()
         if let fileURL {

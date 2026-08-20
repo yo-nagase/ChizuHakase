@@ -172,7 +172,12 @@ nonisolated extension TextMode {
     var eastJapan: String { isKids ? "ひがしにほん" : "東日本" }
     var eraseEverything: String { isKids ? "きろくを ぜんぶ けす" : "記録をすべて消去" }
     var eraseConfirm1: String { isKids ? "ほんとうに けしても いい?" : "本当に消去しますか?" }
-    var eraseConfirm2: String { isKids ? "けすと もどせないよ。いい?" : "消去すると元に戻せません" }
+    /// The second confirmation names both books: the erase is whole-app, and
+    /// a child on the world page must not think only that page's records go.
+    /// 「にほん」「せかい」 are the words the title's page tabs already taught —
+    /// not 「ちずちょう」, which never appears on the glass.
+    var eraseConfirm2: String { isKids ? "にほんも せかいも けすと もどせないよ。いい?"
+                                       : "日本も世界も消去すると元に戻せません" }
     var eraseCancel: String { isKids ? "やめる" : "キャンセル" }
     var eraseNext: String { isKids ? "つぎへ" : "次へ" }
     var eraseConfirmAction: String { isKids ? "けす" : "消去する" }

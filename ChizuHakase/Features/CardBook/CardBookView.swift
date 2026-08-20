@@ -1,12 +1,18 @@
 import SwiftUI
 
-/// The collection: all 141 cards, filterable by category, grouped by
-/// prefecture. Unowned cards stay visible as silhouettes so there is something
-/// to aim at.
+/// The collection: the open book's whole catalog (japan's 141 特産品 or the
+/// world's flags), filterable by category, grouped by region. Unowned cards
+/// stay visible as silhouettes so there is something to aim at.
 struct CardBookView: View {
     @Environment(AppState.self) private var app
     @Environment(\.dynamicTypeSize) private var typeSize
     @Environment(\.textMode) private var mode
+
+    /// The book on display. Catalog, region names and the owned stars all come
+    /// off this one value and its save slice — card IDs collide as strings
+    /// across books (world "12-1" is アルジェリア's flag, japan's is 千葉の
+    /// らっかせい), so a lookup outside the atlas shows the wrong card.
+    let atlas: Atlas
 
     /// Which cards the book opens on. A caller that already knows what the
     /// child is looking for should not make them find it again.
@@ -15,7 +21,7 @@ struct CardBookView: View {
     @State private var filter: CardFilter?
     @State private var opened: SpecialtyCard?
 
-    private var save: SaveData { app.save.data }
+    private var save: AtlasSave { app.save.data.atlas(atlas.saveKey) }
     private var active: CardFilter { filter ?? initialFilter }
     private var isOpeningOneCard: Bool {
         if case .card = active { true } else { false }
@@ -23,12 +29,12 @@ struct CardBookView: View {
 
     /// The categories with at least one card in this book's catalog.
     private var dealtCategories: Set<SpecialtyCard.Category> {
-        Set(app.cards.all.map(\.category))
+        Set(atlas.cards.all.map(\.category))
     }
 
     private var groups: [(prefecture: Prefecture, cards: [SpecialtyCard])] {
-        app.mapData.prefectures.compactMap { pref in
-            let cards = app.cards.cards(for: pref.code).filter { matches($0) }
+        atlas.mapData.prefectures.compactMap { pref in
+            let cards = atlas.cards.cards(for: pref.code).filter { matches($0) }
             return cards.isEmpty ? nil : (pref, cards)
         }
     }
@@ -76,11 +82,11 @@ struct CardBookView: View {
         .navigationTitle(mode.cardBook)
         .navigationBarTitleDisplayMode(.inline)
         .task {
-            if case .card(let id) = initialFilter, let card = app.cards[id] { open(card) }
+            if case .card(let id) = initialFilter, let card = atlas.cards[id] { open(card) }
         }
         .fullScreenCover(item: $opened) { card in
             CardDetailView(card: card,
-                           prefecture: app.mapData[card.prefectureCode],
+                           prefecture: atlas.mapData[card.prefectureCode],
                            stars: save.stars(of: card.id),
                            rainbow: save.isRainbow(card.id),
                            streak: save.streak(of: card.prefectureCode))
@@ -89,7 +95,7 @@ struct CardBookView: View {
         }
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
-                Text("\(save.totalOwnedCards) / \(app.cards.count)")
+                Text("\(save.totalOwnedCards) / \(atlas.cards.count)")
                     .font(AppFont.rounded(14, relativeTo: .footnote))
                     .foregroundStyle(Palette.ink.opacity(0.6))
                     .monospacedDigit()

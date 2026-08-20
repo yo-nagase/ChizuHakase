@@ -251,6 +251,24 @@ struct AtlasTests {
         #expect(Atlas.loadWorld().cards.count == 167)
     }
 
+    /// 引き継ぎ 2 の罠を実データで固定する: カード ID は 2 冊の間で文字列
+    /// 衝突する(日本 "12-1" = 千葉の らっかせい、世界 "12-1" = アルジェリア
+    /// の国旗)。結果・ずかん・マイマップの札解決が atlas.cards を通るのは
+    /// これが理由で、「目録は 1 本にまとめられる」式の簡素化はこのテストが
+    /// 落ちて止める。衝突が現に存在すること自体も pin する — 衝突が消えたら
+    /// このガードの前提ごと見直してよい。
+    @Test func カードIDは本の間で衝突し目録ごとに別の札へ解決する() {
+        let japanIDs = Set(Self.japanCards.all.map(\.id))
+        let collisions = japanIDs.intersection(Self.worldCards.all.map(\.id))
+        #expect(collisions.count == 7, "collisions = \(collisions.sorted())")
+        for id in collisions {
+            #expect(Self.japanCards[id]?.category != .flag,
+                    "\(id): japan's card should not be a flag")
+            #expect(Self.worldCards[id]?.category == .flag,
+                    "\(id): world's card should be a flag")
+        }
+    }
+
     @Test func 世界アトラスの地図寸法が投影と一致する() throws {
         let atlas = try worldAtlas()
         // 幅 1000 正規化は収録国基準(WorldDataTests と同じ根拠)。

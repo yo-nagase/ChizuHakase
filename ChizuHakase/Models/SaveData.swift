@@ -411,7 +411,9 @@ nonisolated struct SaveData: Codable, Sendable, Equatable {
     /// Gold and rainbow: a card that went rainbow has not stopped being gold.
     var goldCardCount: Int { cards.keys.filter { tier(of: $0) >= .gold }.count }
 
-    /// Prefectures at level 3 — the ones drawn with a gold border on the my-map.
+    /// Japan's prefectures at the top of the mastery ladder
+    /// (`GameRules.maxMastery`, five clean answers) — the ones the map paints
+    /// flat gold as 「おぼえた」.
     var sparklingPrefectureCount: Int {
         atlas(Self.japanAtlas).sparklingRegionCount
     }

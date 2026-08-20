@@ -1,23 +1,24 @@
 import SwiftUI
 
-/// End-of-stage summary: stars, score, cards won and any prefecture that
-/// reached mastery level 3 (CLAUDE.md §5).
+/// End-of-stage summary: stars, score, cards won and any region that reached
+/// the top of the mastery ladder (CLAUDE.md §5).
 ///
 /// Everything here is a gain. There is no "you lost" state to show.
 ///
-/// ⚠️ 日本の本(japan atlas)に固定されている。`app.cards` / `app.mapData` /
-/// `record(forStage:)` / `streak(of:)` はすべて日本側を読むため、世界ステージの
-/// デバッグ経路からこの画面に来ると、ベスト記録は日本の同 index のステージを、
-/// カード絵は日本の札を出す。しかもカード ID は文字列として 7 件衝突する
-/// (日本 "12-1"〜"47-1" と ISO 2 桁の世界 "12-1" 等 — 例: アルジェリアの国旗
-/// 札 ID が千葉県の札に解決する)。世界の結果画面を開くときは Atlas を
-/// ここへ通すこと(RootView の .stageSelect と同じ罠。P6 の必須作業)。
+/// Card resolution MUST stay on `atlas.cards`, and every save read on the
+/// atlas's own slice: card IDs collide as *strings* across the two books —
+/// seven of japan's IDs match the world's ISO-coded ones (world "12-1" is
+/// アルジェリア's flag, japan's "12-1" is 千葉の らっかせい). A japan-fixed
+/// catalog here would celebrate the wrong card on a world result.
 struct ResultView: View {
     @Environment(AppState.self) private var app
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.dynamicTypeSize) private var typeSize
     @Environment(\.textMode) private var mode
 
+    /// The book this result was played out of — cards, map and the save slice
+    /// all come off it (see the type comment).
+    let atlas: Atlas
     let stage: Stage
     let result: StageResult
     /// What crossed a threshold in this run, from `SaveStore`.
@@ -28,6 +29,10 @@ struct ResultView: View {
     @State private var revealedStars = 0
     @State private var celebrating = false
     @State private var opened: WonCard?
+
+    /// The played book's slice of the save — already updated with this result
+    /// by the time the screen shows (`SaveStore.applyStageResult` ran first).
+    private var save: AtlasSave { app.save.data.atlas(atlas.saveKey) }
 
     /// A card this run won, at the star count it ended on.
     ///
@@ -69,7 +74,7 @@ struct ResultView: View {
     /// this screen without persisting — honest about what it is showing.
     private var rainbowCards: [WonCard] {
         gains.rainbowCards.compactMap { id in
-            app.cards[id].map {
+            atlas.cards[id].map {
                 WonCard(card: $0, stars: GameRules.maxCardStars, rainbow: true)
             }
         }
@@ -79,7 +84,7 @@ struct ResultView: View {
     /// is the long-run truth and the run is the news — and on the debug route
     /// nothing was ever written, so the save alone would say no.
     private func isRainbow(_ cardID: String) -> Bool {
-        gains.rainbowCards.contains(cardID) || app.save.data.isRainbow(cardID)
+        gains.rainbowCards.contains(cardID) || save.isRainbow(cardID)
     }
 
     /// The card's next goal, from the save — which the result has already been
@@ -88,7 +93,7 @@ struct ResultView: View {
     /// debug route, which shows results that were never persisted.
     private func nextGoal(for won: WonCard) -> GameRules.NextGoal? {
         GameRules.nextGoal(stars: won.stars,
-                           streak: app.save.data.streak(of: won.card.prefectureCode),
+                           streak: save.streak(of: won.card.prefectureCode),
                            isRainbow: won.rainbow)
     }
 
@@ -139,10 +144,10 @@ struct ResultView: View {
         // celebration, not a way out of it — closing comes back to the stars.
         .fullScreenCover(item: $opened) { won in
             CardDetailView(card: won.card,
-                           prefecture: app.mapData[won.card.prefectureCode],
+                           prefecture: atlas.mapData[won.card.prefectureCode],
                            stars: won.stars,
                            rainbow: won.rainbow,
-                           streak: app.save.data.streak(of: won.card.prefectureCode))
+                           streak: save.streak(of: won.card.prefectureCode))
                 .environment(\.textMode, mode)
                 .presentationBackground(.clear)
         }
@@ -178,7 +183,7 @@ struct ResultView: View {
                 .font(AppFont.rounded(15, relativeTo: .subheadline))
                 .foregroundStyle(Palette.ink.opacity(0.6))
 
-            if let best = app.save.data.record(forStage: stage.index, mode: result.mode),
+            if let best = save.record(forStage: stage.index, mode: result.mode),
                best.score > result.score {
                 Text(verbatim: "\(mode.bestScore) \(best.score) \(mode.points)")
                     .font(AppFont.rounded(12, relativeTo: .caption))
@@ -197,7 +202,7 @@ struct ResultView: View {
                 .foregroundStyle(Palette.ink)
             FlowRow(spacing: 8) {
                 ForEach(gains.sparklingPrefectures, id: \.self) { code in
-                    Text(app.mapData[code]?.displayName(mode) ?? "")
+                    Text(atlas.mapData[code]?.displayName(mode) ?? "")
                         .font(AppFont.rounded(15, relativeTo: .subheadline))
                         .foregroundStyle(Palette.ink)
                         .padding(.horizontal, 12)
@@ -251,7 +256,7 @@ struct ResultView: View {
     /// and a full grid draw the card at the same size.
     private func chip(_ won: WonCard) -> some View {
         CardChipView(card: won.card,
-                     prefecture: app.mapData[won.card.prefectureCode],
+                     prefecture: atlas.mapData[won.card.prefectureCode],
                      stars: won.stars,
                      rainbow: won.rainbow,
                      onOpen: { open(won) })
@@ -269,7 +274,7 @@ struct ResultView: View {
                 ForEach(wonCards) { won in
                     VStack(spacing: 5) {
                         CardChipView(card: won.card,
-                                     prefecture: app.mapData[won.card.prefectureCode],
+                                     prefecture: atlas.mapData[won.card.prefectureCode],
                                      stars: won.stars,
                                      rainbow: won.rainbow,
                                      onOpen: { open(won) })

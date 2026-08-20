@@ -17,6 +17,12 @@ struct RootView: View {
     /// below reads are the same fact. Starts on whichever page was open last
     /// time (`Settings.lastAtlas`, handed in by ChizuHakaseApp); the debug
     /// launch argument `-atlas` overrides that in `applyDebugRoute`.
+    ///
+    /// Invariant: only the title writes this key (the pager binding, plus the
+    /// debug route before anything is pushed). The destinations below read it
+    /// live — through the computed `atlas` — and that is safe precisely
+    /// because pushes only ever start from the title, so the key cannot turn
+    /// under an open screen.
     @State private var atlasKey: String
 
     private var atlas: Atlas {
@@ -92,28 +98,24 @@ struct RootView: View {
         }
         // The page turn's side effects, in one place so they run once per
         // change rather than once per body evaluation (P6 引き継ぎ 4・5):
-        // - The voice-input vocabulary follows the open book (引き継ぎ 4) —
-        //   left alone, 「あめりか」 would be matched against 47 prefecture
-        //   names. Reading `atlas` here is also the world's first access on a
-        //   turn to that page, so the synchronous WorldShapes load (引き継ぎ 5)
-        //   is spent inside the page flip, not inside the first あそぶ tap.
-        // - `lastAtlas` is written so the next launch opens on this page
-        //   (design doc §2) — a settings write, like the mute button's.
+        // the vocabulary follows the open book, and `lastAtlas` is written so
+        // the next launch opens on this page (design doc §2) — a settings
+        // write, like the mute button's.
         .onChange(of: atlasKey) { _, key in
-            app.voice.configure(vocabulary: atlas.voiceVocabulary)
+            syncVoiceVocabulary(for: key)
             app.save.updateSettings { $0.lastAtlas = key }
         }
         // After the debug route, not before: a session launched straight into
         // another screen has no title to sing over.
         .task {
-            applyDebugRoute()
+            await applyDebugRoute()
             // A launch that starts off japan's page — lastAtlas restored, or
             // `-atlas` above — arrives with AppState's japan vocabulary still
             // in the voice service, and onChange only fires on *changes*. Say
             // it once here so the open book and the vocabulary agree from the
             // first question (引き継ぎ 4).
             if atlasKey != SaveData.japanAtlas {
-                app.voice.configure(vocabulary: atlas.voiceVocabulary)
+                syncVoiceVocabulary(for: atlasKey)
             }
             playThemeIfWanted()
             // After the first frame, before the first tap: the engine spin-up
@@ -121,6 +123,18 @@ struct RootView: View {
             // and read as the app hesitating.
             SoundService.shared.warmUp()
         }
+    }
+
+    /// Points the voice input at the open book's vocabulary (P6 引き継ぎ 4) —
+    /// left alone, 「あめりか」 would be matched against 47 prefecture names.
+    /// Derives the atlas from the key it is handed rather than reading the
+    /// `atlas` property, so the call is self-contained wherever it runs.
+    /// Resolving `app.world` here is also the world's first access on a turn
+    /// to that page, so the synchronous WorldShapes load (引き継ぎ 5) is spent
+    /// inside the page flip, not inside the first あそぶ tap.
+    private func syncVoiceVocabulary(for key: String) {
+        let book = key == SaveData.worldAtlas ? app.world : app.japan
+        app.voice.configure(vocabulary: book.voiceVocabulary)
     }
 
     /// The one gate for starting the theme: only on the title, only if the
@@ -133,7 +147,15 @@ struct RootView: View {
     /// Jump straight to a screen via `-startAt <route>`, for capturing store
     /// screenshots and for poking at one screen without replaying to it.
     /// Debug builds only — it must not be reachable in a shipped app.
-    private func applyDebugRoute() {
+    ///
+    /// Async because the `-startAt` push at the bottom must land on a later
+    /// frame than the staging above it: `-atlas world` moves the title pager's
+    /// selection and `-grantCards` moves the save store, and a `path` write
+    /// sharing that frame is dropped by NavigationStack (console: "Update
+    /// NavigationAuthority bound path tried to update multiple times per
+    /// frame" — seen as `-atlas world -grantCards -startAt …` landing on the
+    /// title). Debug-only sequencing; the shipping app never runs this.
+    private func applyDebugRoute() async {
         #if DEBUG
         let arguments = ProcessInfo.processInfo.arguments
         if arguments.contains("-resetSave") {
@@ -200,31 +222,54 @@ struct RootView: View {
                 mode: .nameIt, stageIndex: 1, score: 1180, stars: 2,
                 firstTryByPrefecture: [:], cardDraws: []), catalog: app.cards)
         }
+        // Parsed before the grant flags and -startAt, so both the granted book
+        // and `-atlas world -startAt quiz:15` resolve against the world's
+        // stages. Explicit in both directions, and it wins over the remembered
+        // lastAtlas the launch started from: tests and screenshots need runs
+        // that do not inherit whichever page the previous run happened to
+        // leave open.
+        if let i = arguments.firstIndex(of: "-atlas"), i + 1 < arguments.count {
+            switch arguments[i + 1] {
+            case "world": atlasKey = SaveData.worldAtlas
+            case "japan": atlasKey = SaveData.japanAtlas
+            default: break
+            }
+        }
         // Enough of a collection to exercise the book: one plain card, one gold
         // and one rainbow. Owning nothing hides every name behind 「？」, which
         // is correct but leaves nothing to open.
         if arguments.contains("-grantCards") {
+            // Per book, because IDs only mean anything inside one catalog —
+            // seven even collide as strings across the books (引き継ぎ 2). The
+            // world's gold is deliberately "12-1", the collision id itself:
+            // opening it must say アルジェリア, never 千葉の らっかせい.
+            let ids = atlasKey == SaveData.worldAtlas
+                ? (new: "36-1", gold: "12-1", rainbow: "392-1")
+                : (new: "01-1", gold: "04-2", rainbow: "13-2")
+            let catalog = atlas.cards
             app.save.applyStageResult(StageResult(
                 mode: .findOnMap, stageIndex: 0, score: 0, stars: 3,
                 firstTryByPrefecture: [:],
                 // Parenthesised: ?? binds looser than +, so without these the
                 // second array was swallowed and only one card was ever granted.
-                cardDraws: (app.cards["01-1"].map { [GameRules.CardDraw.new($0)] } ?? [])
-                    + (app.cards["04-2"].map {
+                cardDraws: (catalog[ids.new].map { [GameRules.CardDraw.new($0)] } ?? [])
+                    + (catalog[ids.gold].map {
                         [GameRules.CardDraw.star($0, stars: GameRules.maxCardStars)]
                     } ?? [])
-                    + (app.cards["13-2"].map {
+                    + (catalog[ids.rainbow].map {
                         [GameRules.CardDraw.star($0, stars: GameRules.maxCardStars)]
                     } ?? []),
-                // The gold-finishing answer plus a clean run on Tokyo, so 13-2
-                // comes out of the real latch rather than being written in as
-                // rainbow — a debug state that stages itself keeps looking
-                // right after the rule breaks. 13-2 gives the dense sushi
-                // painting a rainbow-foil stress case while keeping the state
-                // representative of real data.
-                outcomesByPrefecture: [13: Array(repeating: true,
-                                                 count: GameRules.rainbowStreak + 1)]),
-                catalog: app.cards)
+                // The gold-finishing answer plus a clean run on its region, so
+                // the rainbow card comes out of the real latch rather than
+                // being written in as rainbow — a debug state that stages
+                // itself keeps looking right after the rule breaks. Japan's
+                // 13-2 gives the dense sushi painting a rainbow-foil stress
+                // case while keeping the state representative of real data.
+                outcomesByPrefecture: catalog[ids.rainbow].map {
+                    [$0.prefectureCode: Array(repeating: true,
+                                              count: GameRules.rainbowStreak + 1)]
+                } ?? [:]),
+                catalog: catalog, atlas: atlas.saveKey)
         }
         // Every prefecture of one regional stage answered cleanly, which is the
         // state the stage list's 「おぼえた ◯ / ◯」 has to show as full. Its own
@@ -237,20 +282,11 @@ struct RootView: View {
                     stage.codes.map { ($0, true) }),
                 cardDraws: []), catalog: app.cards)
         }
-        // Before -startAt, so `-atlas world -startAt quiz:15` resolves the
-        // stage index against the world's stages. Explicit in both directions,
-        // and it wins over the remembered lastAtlas the launch started from:
-        // tests and screenshots need runs that do not inherit whichever page
-        // the previous run happened to leave open.
-        if let i = arguments.firstIndex(of: "-atlas"), i + 1 < arguments.count {
-            switch arguments[i + 1] {
-            case "world": atlasKey = SaveData.worldAtlas
-            case "japan": atlasKey = SaveData.japanAtlas
-            default: break
-            }
-        }
         guard let index = arguments.firstIndex(of: "-startAt"),
               index + 1 < arguments.count else { return }
+        // One beat between staging and navigating — see the function comment.
+        // A yield alone is not reliably a frame, so this waits one out.
+        try? await Task.sleep(for: .milliseconds(50))
         switch arguments[index + 1] {
         case "stageSelect": path = [.stageSelect]
         case "myMap": path = [.myMap]
@@ -268,28 +304,36 @@ struct RootView: View {
                 path = [.stageSelect, .quiz(stageIndex: i, mode: mode)]
             }
         case "result":
-            // Synthetic 3-star clear so the celebration can be captured.
+            // Synthetic 3-star clear so the celebration can be captured —
+            // staged from the session atlas, so `-atlas world -startAt result`
+            // shows the world's own cards and countries.
             //
             // Keep the キラ slot explicit so this route always exercises the
-            // silver treatment in addition to the two newly won cards.
-            let illustrated = app.cards.all.first { $0.art != nil }
-            let plain = app.cards.all.filter { $0.id != illustrated?.id }.prefix(2)
-            let demo = StageResult(
-                mode: .findOnMap, stageIndex: 1, score: 1120, stars: 3,
-                firstTryByPrefecture: Dictionary(uniqueKeysWithValues:
-                    Stage.all[1].codes.map { ($0, true) }),
-                cardDraws: plain.map { .new($0) }
-                    + (illustrated.map {
-                        [GameRules.CardDraw.star($0, stars: GameRules.silverStars)]
-                    } ?? []))
-            // Every panel at once, which no single honest run produces — that
-            // is the point of the route. The rainbow slot takes a card from a
-            // prefecture the sparkle list already names, so the screen reads
-            // as one stage's worth of luck rather than as a sampler.
-            let gains = StageGains(
-                sparklingPrefectures: [13, 14],
-                rainbowCards: app.cards.cards(for: 13).first.map { [$0.id] } ?? [])
-            path = [.stageSelect, .result(demo, gains: gains)]
+            // silver treatment in addition to the two newly won cards. (The
+            // world's catalog has no illustrated card yet, so there the silver
+            // slot simply stays empty — two new flags is still a result.)
+            if let stage = atlas.stage(at: 1) {
+                let illustrated = atlas.cards.all.first { $0.art != nil }
+                let plain = atlas.cards.all.filter { $0.id != illustrated?.id }.prefix(2)
+                let demo = StageResult(
+                    mode: .findOnMap, stageIndex: stage.index, score: 1120, stars: 3,
+                    firstTryByPrefecture: Dictionary(uniqueKeysWithValues:
+                        stage.codes.map { ($0, true) }),
+                    cardDraws: plain.map { .new($0) }
+                        + (illustrated.map {
+                            [GameRules.CardDraw.star($0, stars: GameRules.silverStars)]
+                        } ?? []))
+                // Every panel at once, which no single honest run produces —
+                // that is the point of the route. The sparkle and rainbow slots
+                // both take regions from the staged stage itself, so the screen
+                // reads as one stage's worth of luck rather than as a sampler.
+                let sparkling = Array(stage.codes.prefix(2))
+                let gains = StageGains(
+                    sparklingPrefectures: sparkling,
+                    rainbowCards: sparkling.first
+                        .flatMap { atlas.cards.cards(for: $0).first.map { [$0.id] } } ?? [])
+                path = [.stageSelect, .result(demo, gains: gains)]
+            }
         default: break
         }
         #endif
@@ -320,24 +364,22 @@ struct RootView: View {
 
         case .result(let result, let gains):
             if let stage = atlas.stage(at: result.stageIndex) {
-                ResultView(stage: stage,
+                ResultView(atlas: atlas,
+                           stage: stage,
                            result: result,
                            gains: gains,
                            onReplay: { replay(stage) },
                            onExit: { backToStageSelect() })
             }
 
+        // The two collection rooms read the session atlas like every other
+        // destination, so the title page's tallies open the book they counted.
+
         case .myMap:
-            // TODO(P6 Task 3): thread the atlas through — MyMapView still
-            // reads japan's book, so the world page's learned tally opens
-            // japan's map for now. Deliberately not half-rewired here: the
-            // view's own reads (map, mastery, legend) move together in Task 3.
-            MyMapView()
+            MyMapView(atlas: atlas)
 
         case .cardBook(let filter):
-            // TODO(P6 Task 3): same as .myMap — CardBookView still reads
-            // japan's catalog and cards until Task 3 threads the atlas.
-            CardBookView(initialFilter: filter)
+            CardBookView(atlas: atlas, initialFilter: filter)
         }
     }
 
