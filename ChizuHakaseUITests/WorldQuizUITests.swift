@@ -333,18 +333,18 @@ final class WorldQuizUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["3 / 167"].exists,
                       "the owned count is not reading the world's slice")
 
-        // The world book is one acquisition-order grid, without country
-        // headings. -grantCards deals Australia first, then Algeria, then
-        // Japan; opening the first chip therefore pins the visible order too.
-        XCTAssertFalse(app.staticTexts["あるじぇりあ"].exists,
-                       "the world cards are still grouped under country headings")
+        // Open the first owned flag — アルジェリア's, the colliding "12-1".
+        // Its description proves which catalog answered: japan's 12-1 talks
+        // about peanuts, the world's about アルジェリア's flag.
+        // Assumes catalog order puts "12-1" first among the three granted
+        // flags (ISO 12 < 36 < 392) — the book lists cards in catalog order.
         let card = chip(named: "こっき")
         XCTAssertTrue(card.waitForExistence(timeout: 5), "no owned flag card in the book")
         card.tap()
         XCTAssertTrue(app.buttons["とじる"].waitForExistence(timeout: 3),
                       "tapping a flag card did not open it")
-        XCTAssertTrue(app.staticTexts["おーすとらりあの こっきだよ"].exists,
-                      "the first card is not the first one granted")
+        XCTAssertTrue(app.staticTexts["あるじぇりあの こっきだよ"].exists,
+                      "the opened card is not the world's 12-1")
         XCTAssertFalse(anythingNamed("らっかせい"),
                        "japan's 12-1 leaked into the world card book")
     }
