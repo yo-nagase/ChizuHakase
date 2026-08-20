@@ -177,6 +177,94 @@ struct WorldDataTests {
         let spread = try #require(xs.max()) - (try #require(xs.min()))
         #expect(spread < 40, "フィジーの x 帯域 = \(spread)")
     }
+
+    // MARK: - 地球儀(度数リングの併産 — P7 Task 2)
+
+    @Test func 地球儀の形が収録国と一対一で並ぶ() throws {
+        let world = try loadedWorld()
+        #expect(world.globe.shapes.count == 167)
+        #expect(world.globe.shapes.map(\.code) == world.recordedCountries.map(\.code))
+    }
+
+    /// インセットの拡大・移設は平面専用(`WorldInset` の註)。地球儀側の
+    /// シンガポールは実位置(東経 103.8・北緯 1.35 — 符号ごと固定するので
+    /// y 反転の混入もここで捕まる)のままで、平面の移設先とは別の場所を指す。
+    @Test func シンガポールの地球儀重心は実位置のまま() throws {
+        let world = try loadedWorld()
+        let globe = try #require(world.globe.shapes.first { $0.code == 702 })
+        #expect(abs(globe.centroid.x - 103.8) < 0.5, "lon = \(globe.centroid.x)")
+        #expect(abs(globe.centroid.y - 1.35) < 0.5, "lat = \(globe.centroid.y)")
+        // 平面の重心は破線枠へ移設済み — 実位置をローダと同じ投影で写した点と
+        // 一致していたら、移設が地球儀へ漏れているか、逆に平面へ届いていない。
+        let flat = try #require(world[702])
+        let projection = try #require(reconstructedProjection(from: world))
+        let truePosition = projection.point(lon: globe.centroid.x, lat: globe.centroid.y)
+        let distance = hypot(truePosition.x - flat.flatCentroid.x,
+                             truePosition.y - flat.flatCentroid.y)
+        #expect(distance > 1, "flat \(flat.flatCentroid) は実位置 \(truePosition) のまま")
+    }
+
+    /// ステージ枠はウラルまでに切られる(europeBbox)が、地球儀のロシアは
+    /// 全土を運ぶ — 度数の東端が東経 100 を超えてベーリング海峡側まで届く。
+    @Test func ロシアの地球儀リングは全土に及ぶ() throws {
+        let world = try loadedWorld()
+        let russia = try #require(world.globe.shapes.first { $0.code == 643 })
+        let maxLon = try #require(russia.rings.flatMap { $0.map(\.x) }.max())
+        #expect(maxLon > 100, "max lon = \(maxLon)")
+    }
+
+    /// パイプラインの +360 正規化(平面の「割れない」ピンと同じ根拠)が
+    /// 度数側にも残る: 180 を超える経度があり、日付変更線で 2 つに割れていない。
+    @Test func フィジーの地球儀リングは正規化を保つ() throws {
+        let world = try loadedWorld()
+        let fiji = try #require(world.globe.shapes.first { $0.code == 242 })
+        let lons = fiji.rings.flatMap { $0.map(\.x) }
+        let maxLon = try #require(lons.max())
+        let minLon = try #require(lons.min())
+        #expect(maxLon > 180, "max lon = \(maxLon)")
+        #expect(maxLon - minLon < 30, "フィジーの経度帯域 = \(maxLon - minLon)")
+    }
+
+    /// 軸の取り違え(lon/lat の入れ替え・投影済み座標の混入)を全 167 カ国で
+    /// 一括検出する: どの重心も自形状の度数 bbox の中にある。生成器は重心を
+    /// 形の内部で検証してから丸めるので、bbox 内は常に成り立つ。
+    @Test func 地球儀の重心は自形状の度数bboxに収まる() throws {
+        let world = try loadedWorld()
+        for shape in world.globe.shapes {
+            let xs = shape.rings.flatMap { $0.map(\.x) }
+            let ys = shape.rings.flatMap { $0.map(\.y) }
+            let minLon = try #require(xs.min())
+            let maxLon = try #require(xs.max())
+            let minLat = try #require(ys.min())
+            let maxLat = try #require(ys.max())
+            #expect(minLon <= shape.centroid.x && shape.centroid.x <= maxLon,
+                    "code \(shape.code): lon \(shape.centroid.x) が \(minLon)...\(maxLon) の外")
+            #expect(minLat <= shape.centroid.y && shape.centroid.y <= maxLat,
+                    "code \(shape.code): lat \(shape.centroid.y) が \(minLat)...\(maxLat) の外")
+        }
+    }
+
+    /// 背景も度数のまま残る — 地球儀の裏側にだけ大陸が消える嘘を作らない。
+    @Test func 地球儀の背景も度数で残る() throws {
+        let world = try loadedWorld()
+        #expect(world.globe.backgroundRings.count == 77)
+        #expect(world.globe.backgroundRings.count == world.background.count)
+        for rings in world.globe.backgroundRings {
+            #expect(!rings.isEmpty)
+            #expect(rings.allSatisfy { $0.count >= 3 })
+        }
+    }
+
+    /// ローダが使った投影の再構成。`makeProjection` は収録国の bbox から
+    /// 枠を決め、bbox はリングの正確な範囲(パイプラインの契約)なので、
+    /// 度数リングの端から同じ投影が立つ。
+    private func reconstructedProjection(from world: WorldMapData) -> WorldProjection? {
+        let points = world.globe.shapes.flatMap { $0.rings.flatMap { $0 } }
+        guard let lonMin = points.map(\.x).min(),
+              let lonMax = points.map(\.x).max(),
+              let latMax = points.map(\.y).max() else { return nil }
+        return WorldProjection(lonMin: lonMin, lonMax: lonMax, latMax: latMax)
+    }
 }
 
 /// 純関数としての投影の性質。ロード済みデータに依存しない。
@@ -317,6 +405,21 @@ struct WorldDataLoaderErrorTests {
         #expect(abs(corner.x - frame.minX) < 0.01)
         #expect(abs(corner.y - frame.maxY) < 0.01)
         #expect(country.isInset)
+    }
+
+    /// インセットの拡大・移設が地球儀側へ漏れないことの検算(実データ非依存)。
+    /// 上と同じ宣言で平面は枠へ動くが、地球儀は JSON の度数そのまま。
+    @Test func インセットでも地球儀は実位置のまま() throws {
+        let url = try writeFixture(
+            countries: [countryJSON(code: 10)],
+            insets: #"[{"code": 10, "scale": 2, "frame": [3, -3, 7, 1]}]"#)
+        defer { try? FileManager.default.removeItem(at: url) }
+        let world = try WorldDataLoader.load(contentsOf: url)
+        let globe = try #require(world.globe.shapes.first)
+        #expect(globe.code == 10)
+        #expect(globe.rings == [[CGPoint(x: 0, y: 0), CGPoint(x: 2, y: 0),
+                                 CGPoint(x: 2, y: 2), CGPoint(x: 0, y: 0)]])
+        #expect(globe.centroid == CGPoint(x: 1.2, y: 0.7))
     }
 
     @Test func 壊れたインセット宣言は投げる() throws {

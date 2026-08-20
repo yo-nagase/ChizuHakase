@@ -32,6 +32,10 @@ nonisolated struct AtlasSection: Sendable, Equatable {
 /// 名前空間を経由しない読み書きはコードを別の本の記録に化けさせる。
 nonisolated struct Atlas: Sendable {
     let mapData: MapData
+    /// 地球儀モードの度数データ(P7)。世界だけが運び、日本と空へ倒れた
+    /// 世界は nil — View は「globe の有無」で振る舞いを変えるだけで、
+    /// どの本かでは分岐しない(インセット判定と同じ規律)。
+    let globe: GlobeData?
     let stages: [Stage]
     /// ステージ棚の区切り(世界 = 大陸見出し、日本 = 空)。
     let sections: [AtlasSection]
@@ -109,7 +113,7 @@ nonisolated struct Atlas: Sendable {
     /// 現行アプリそのまま: ローダの結果と `Stage.all` を束ねるだけで、
     /// データにも挙動にも手を加えない。
     static func japan(mapData: MapData, cards: CardCatalog) -> Atlas {
-        Atlas(mapData: mapData, stages: Stage.all, sections: [], cards: cards,
+        Atlas(mapData: mapData, globe: nil, stages: Stage.all, sections: [], cards: cards,
               drawPolicy: .random, saveKey: SaveData.japanAtlas,
               regionNoun: .prefecture, cardNoun: .specialtyCards)
     }
@@ -150,7 +154,8 @@ nonisolated struct Atlas: Sendable {
             log.error("world atlas load failed: \(error.localizedDescription, privacy: .public)")
             // 空へ倒れても方針・名前空間・見出し定義・語彙は世界のまま —
             // カードを失っても「どの本か」までは失わない(棚はステージが無いので空)。
-            return Atlas(mapData: .empty, stages: [], sections: WorldStage.sections,
+            return Atlas(mapData: .empty, globe: nil, stages: [],
+                         sections: WorldStage.sections,
                          cards: .empty, drawPolicy: .flagFirstSilverGate,
                          saveKey: SaveData.worldAtlas,
                          regionNoun: .country, cardNoun: .worldCards)
@@ -190,7 +195,10 @@ nonisolated struct Atlas: Sendable {
         // bbox の和の右下がそのままキャンバス寸法になる。
         let bounds = prefectures.map(\.bbox).reduce(CGRect.null) { $0.union($1) }
         guard !bounds.isNull else {
-            return Atlas(mapData: .empty, stages: stages, sections: WorldStage.sections,
+            // 収録国が無いなら球に描く物も無い — globe も一緒に落として、
+            // View の「有無」判定が平面と食い違わないようにする。
+            return Atlas(mapData: .empty, globe: nil, stages: stages,
+                         sections: WorldStage.sections,
                          cards: cards, drawPolicy: .flagFirstSilverGate,
                          saveKey: SaveData.worldAtlas,
                          regionNoun: .country, cardNoun: .worldCards)
@@ -207,7 +215,8 @@ nonisolated struct Atlas: Sendable {
                               },
                               prefectures: prefectures)
         // 国旗カードが銀になるまでオリジナルを配らないゲート(設計 §5)。
-        return Atlas(mapData: mapData, stages: stages, sections: WorldStage.sections,
+        return Atlas(mapData: mapData, globe: world.globe, stages: stages,
+                     sections: WorldStage.sections,
                      cards: cards, drawPolicy: .flagFirstSilverGate,
                      saveKey: SaveData.worldAtlas,
                      regionNoun: .country, cardNoun: .worldCards)

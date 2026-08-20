@@ -14,8 +14,9 @@ import Foundation
 ///
 /// - リング末尾の閉環重複点は `WorldCountry.flatRings` と同じく保持する
 ///   (落とすと 2 つの地図でデータ規約が割れる)。
-/// - 経度は日付変更線またぎを +360 正規化した値(フィジー 189.75 など)を
-///   そのまま持ってよい。三角関数上は等価で、球には日付変更線問題が無い。
+/// - 経度は日付変更線またぎを +360 正規化した値(フィジー 180.18、
+///   ロシア東端 189.76 など)をそのまま持ってよい。三角関数上は等価で、
+///   球には日付変更線問題が無い。
 /// - 置き場所(Components)は仮 — Atlas 側の置き場が定まったら移す
 ///   (WorldDataLoader の値型と同じ「一時的な同居」の規律)。
 nonisolated struct GlobeShape: Identifiable, Sendable, Equatable {
@@ -23,7 +24,12 @@ nonisolated struct GlobeShape: Identifiable, Sendable, Equatable {
     let code: Int
     /// 外周と穴(度数)。even-odd で塗り・判定する。
     let rings: [[CGPoint]]
-    /// pole of inaccessibility(度数)。可視判定と `centering` の錨。
+    /// パイプラインが探した内部点(度数)。可視判定と `centering` の錨。
+    /// tools/build_world_map_data.py は pole of inaccessibility を出すが、
+    /// ロシアだけはステージ枠の都合でウラル以西から探した点 — 全土の
+    /// 最深点ではない。生成時に「自形の内部」を検証してから丸めるため、テストで
+    /// 固定するのは「自形の度数 bbox 内」まで(平面側 `flatCentroid` と
+    /// 同じ流儀の正直な保証)。
     let centroid: CGPoint
 
     var id: Int { code }

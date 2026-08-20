@@ -168,7 +168,7 @@ struct AtlasTests {
     /// (データの食い違いでステージが遊べなくなる壊れ方だけはしない。)
     @Test func 区間から漏れたステージは見出しなしで末尾に残る() {
         let stray = Stage(index: 99, name: "はぐれ", kanjiName: "逸れ", codes: [1])
-        let atlas = Atlas(mapData: .empty, stages: Stage.all + [stray],
+        let atlas = Atlas(mapData: .empty, globe: nil, stages: Stage.all + [stray],
                           sections: [AtlasSection(title: "テスト", stageIndexes: 0..<7)],
                           cards: .empty, drawPolicy: .random, saveKey: "test",
                           regionNoun: .prefecture, cardNoun: .specialtyCards)
@@ -393,6 +393,19 @@ struct AtlasTests {
         #expect(vocabulary.contains("あめりか"))
         #expect(vocabulary.contains("アメリカ合衆国"))
         #expect(vocabulary.allSatisfy { !$0.isEmpty })
+    }
+
+    // MARK: - 地球儀データ(P7 Task 2 — View は本ではなくこの値の有無で分岐)
+
+    /// 地球儀は世界だけが運ぶ。日本と、空へ倒れた世界は nil — View は
+    /// 「globe の有無」を見るだけで japan/world を知らない(インセット判定と
+    /// 同じ規律)。
+    @Test func 地球儀データは世界だけが運ぶ() throws {
+        #expect(japanAtlas.globe == nil)
+        let world = try worldAtlas()
+        #expect(world.globe?.shapes.count == 167)
+        let missing = URL(fileURLWithPath: "/nonexistent/WorldShapes.json")
+        #expect(Atlas.loadWorld(contentsOf: missing).globe == nil)
     }
 
     // MARK: - 抽選方針(設計 §5: 日本との差分は抽選だけ、データが運ぶ)

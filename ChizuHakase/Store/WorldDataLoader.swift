@@ -60,6 +60,19 @@ nonisolated struct WorldInset: Sendable, Equatable {
     let frame: CGRect
 }
 
+/// 地球儀モードが使う度数座標の束(計画 2026-08-20 Task 2)。
+/// 平面と別に持つのは、lon/lat が投影で消えると球へ戻せないため。
+/// 中身は `GlobeShape` の規約どおり実位置・実縮尺のみ — インセットの
+/// 拡大・移設(平面専用)はここには届かない。
+nonisolated struct GlobeData: Sendable, Equatable {
+    /// 収録国。`WorldMapData.recordedCountries` とコード昇順で 1:1 に並ぶ。
+    let shapes: [GlobeShape]
+    /// 収録外の海岸線(コード無し)。地球儀の裏側にだけ大陸が消える嘘を
+    /// 作らないために度数のまま持つ。要素 1 つ = 背景 1 形状ぶんのリング —
+    /// 穴の even-odd を保つため、形状単位の入れ子は崩さない。
+    let backgroundRings: [[[CGPoint]]]
+}
+
 /// WorldShapes.json をデコード・投影し終えた全体。
 nonisolated struct WorldMapData: Sendable {
     /// コード昇順。出題・カードの対象になる 167 カ国。
@@ -68,17 +81,21 @@ nonisolated struct WorldMapData: Sendable {
     let stages: [WorldStage]
     let background: [WorldBackgroundShape]
     let insets: [WorldInset]
+    /// 同じ検証済みリングの度数版(地球儀モード用)。
+    let globe: GlobeData
 
     private let byCode: [Int: WorldCountry]
 
     init(recordedCountries: [WorldCountry],
          stages: [WorldStage],
          background: [WorldBackgroundShape],
-         insets: [WorldInset]) {
+         insets: [WorldInset],
+         globe: GlobeData) {
         self.recordedCountries = recordedCountries
         self.stages = stages
         self.background = background
         self.insets = insets
+        self.globe = globe
         // コードの一意性はローダが検証済みだが、init は公開されているので
         // 重複でクラッシュ(uniqueKeysWithValues は trap)しない側を選ぶ。
         self.byCode = Dictionary(recordedCountries.map { ($0.code, $0) },
@@ -226,16 +243,19 @@ nonisolated enum WorldDataLoader {
                 throw WorldDataError.malformedInset(code: inset.code)
             }
         }
-        let countries = try file.countries.map {
+        let converted = try file.countries.map {
             try makeCountry($0, projection: projection, inset: insetByCode[$0.code])
         }
         return WorldMapData(
-            recordedCountries: countries,
-            stages: makeStages(from: countries),
+            recordedCountries: converted.map(\.flat),
+            stages: makeStages(from: converted.map(\.flat)),
             background: file.background.map {
                 WorldBackgroundShape(flatRings: projectRings($0.rings, with: projection))
             },
-            insets: insets)
+            insets: insets,
+            globe: GlobeData(
+                shapes: converted.map(\.globe),
+                backgroundRings: file.background.map { degreeRings($0.rings) }))
     }
 
     // MARK: 変換
@@ -264,9 +284,12 @@ nonisolated enum WorldDataLoader {
         return projection
     }
 
+    /// 1 国ぶんの検証と変換。平面(投影 + インセット移設)と地球儀(度数の
+    /// まま)は **同じ検証を 1 回だけ通したリング**から同時に導く — 出口を
+    /// 分けて別々に検証すると、二重検証か片側だけ通る隙間のどちらかが生まれる。
     private static func makeCountry(_ country: WorldFile.Country,
                                     projection: WorldProjection,
-                                    inset: WorldInset?) throws -> WorldCountry {
+                                    inset: WorldInset?) throws -> (flat: WorldCountry, globe: GlobeShape) {
         // 国のリングは投影の前に生データのまま厳格に検証する。日本版は
         // 1 県落として続行するが、世界版は生成データの破損として全体を
         // 失敗させる方針(ファイル冒頭)。点が欠けた形を黙って繕うと、
@@ -288,7 +311,7 @@ nonisolated enum WorldDataLoader {
         // 一部になる。投影はアフィンだから、拡大後の形・重心・bbox の整合は
         // そのまま保たれ、タップ判定も枠の中で普通に成立する(沖縄と同じ)。
         let place = inset.map { relocation(for: $0, originalBbox: flatBbox) } ?? .identity
-        return WorldCountry(
+        let flat = WorldCountry(
             code: country.code,
             nameJa: country.nameJa,
             kana: country.kana,
@@ -301,6 +324,15 @@ nonisolated enum WorldDataLoader {
             flatBbox: flatBbox.applying(place),
             isInset: inset != nil,
             europeBbox: country.europeBbox.flatMap { rect(fromWire: $0, with: projection) })
+        // 地球儀は度数の素通し。インセットの `place` を掛けないのが仕様 —
+        // 球の上では実位置・実縮尺で描く(`GlobeShape` の規約)。
+        let globe = GlobeShape(
+            code: country.code,
+            rings: country.rings.map { ring in
+                ring.map { CGPoint(x: $0[0], y: $0[1]) }
+            },
+            centroid: CGPoint(x: country.centroid[0], y: country.centroid[1]))
+        return (flat, globe)
     }
 
     /// 実位置の形を `scale` 倍し、拡大後の中心が破線枠の中心に重なるよう
@@ -343,6 +375,17 @@ nonisolated enum WorldDataLoader {
         rings.compactMap { ring -> [CGPoint]? in
             let points = ring.compactMap { pair -> CGPoint? in
                 pair.count >= 2 ? projection.point(lon: pair[0], lat: pair[1]) : nil
+            }
+            return points.count >= 3 ? points : nil
+        }
+    }
+
+    /// 背景の度数版。`projectRings` と同じ寛容な規律で **同じ点を落とす** —
+    /// 規律が割れると、平面と地球儀で背景の形が食い違う。
+    private static func degreeRings(_ rings: [[[Double]]]) -> [[CGPoint]] {
+        rings.compactMap { ring -> [CGPoint]? in
+            let points = ring.compactMap { pair -> CGPoint? in
+                pair.count >= 2 ? CGPoint(x: pair[0], y: pair[1]) : nil
             }
             return points.count >= 3 ? points : nil
         }
