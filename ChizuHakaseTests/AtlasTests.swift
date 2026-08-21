@@ -615,6 +615,55 @@ struct AtlasTests {
         #expect(try worldAtlas().stage(at: 19) == nil)
     }
 
+    // MARK: - 平面ズーム上限(P9: 世界チャレンジの平面地図)
+
+    /// 上限は手置きではなくデータから導く(沖縄インセットの空き海域走査と
+    /// 同じ流儀)。ここでも同じ比 — チャレンジ枠と各地方ステージ枠の
+    /// `max(cw/w, ch/h)` — を独立に計算して、運ばれた値と突き合わせる。
+    @Test func 世界チャレンジの平面ズーム上限は最大のステージ枠比() throws {
+        let atlas = try worldAtlas()
+        let challenge = try #require(atlas.stages.first { $0.isChallenge })
+        let bboxes = Dictionary(uniqueKeysWithValues:
+            atlas.mapData.prefectures.map { ($0.code, $0.bbox) })
+        let challengeBox = atlas.mapData.prefectures.map(\.bbox)
+            .reduce(CGRect.null) { $0.union($1) }
+        let ratios = atlas.stages.filter { !$0.isChallenge }.map { stage in
+            let box = stage.codes.compactMap { bboxes[$0] }
+                .reduce(CGRect.null) { $0.union($1) }
+            return max(challengeBox.width / box.width,
+                       challengeBox.height / box.height)
+        }
+        let expected = try #require(ratios.max())
+        #expect(expected > GameRules.mapMaxZoom)
+        #expect(abs(challenge.flatMaxZoom - expected) < 0.001)
+    }
+
+    /// 実データの釘打ち: 最大比は stage 11 みなみアフリカの ≈ 16.9。
+    /// 導出はコードなのでデータが変われば追従するが、桁が動いたら
+    /// (投影や bbox の退行で)ここで気づく。
+    @Test func 世界チャレンジの上限はおよそ17() throws {
+        let challenge = try #require(try worldAtlas().stages.first { $0.isChallenge })
+        #expect(challenge.flatMaxZoom > 16.4)
+        #expect(challenge.flatMaxZoom < 17.4)
+    }
+
+    /// 広がるのは世界チャレンジだけ。地方ステージはその地方が枠いっぱいに
+    /// 描かれていて、4 を超える拡大は形を背後のディテールより大きくする
+    /// (ZoomPan の既定の美観判断のまま)。
+    @Test func 世界の地方ステージの平面ズーム上限は既定のまま() throws {
+        for stage in try worldAtlas().stages where !stage.isChallenge {
+            #expect(stage.flatMaxZoom == GameRules.mapMaxZoom)
+        }
+    }
+
+    /// 日本は全国チャレンジ含め全ステージ既定 — 今日の挙動から 1 ピクセルも
+    /// 動かさない。
+    @Test func 日本の全ステージの平面ズーム上限は既定のまま() {
+        for stage in Stage.all {
+            #expect(stage.flatMaxZoom == GameRules.mapMaxZoom)
+        }
+    }
+
     // MARK: - 読み込み失敗(CLAUDE.md §11: 握って初期状態へ)
 
     @Test func 世界データが無ければ空のアトラスに倒れる() {

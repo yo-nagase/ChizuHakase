@@ -271,4 +271,32 @@ struct ZoomPanTests {
         #expect(ZoomPan.liftHold >= 0.25)
         #expect(ZoomPan.liftHold <= 0.5)
     }
+
+    // MARK: - Per-map ceiling
+
+    /// The world challenge's flat map passes a wider ceiling so its smallest
+    /// countries can be pinched up to a regional stage's size; every other map
+    /// omits the argument and must keep the shared default.
+    @Test func aWiderCeilingLetsThePinchPastTheDefault() {
+        #expect(ZoomPan.clamp(scale: 10, max: 17) == 10)
+    }
+
+    @Test func theWiderCeilingStillCaps() {
+        #expect(ZoomPan.clamp(scale: 50, max: 17) == 17)
+        #expect(ZoomPan.clamp(scale: .infinity, max: 17) == 17)
+    }
+
+    /// The floor is about never losing the map inside its own frame, not about
+    /// detail — no ceiling argument may open it.
+    @Test func theFloorIgnoresTheCeiling() {
+        #expect(ZoomPan.clamp(scale: 0.2, max: 17) == ZoomPan.minScale)
+    }
+
+    /// The hold-and-slide zoom stops where the pinch stops — one finger and
+    /// two must share the same per-map ceiling, or the map's limit depends on
+    /// which hand the child had free.
+    @Test func slidingObeysTheWiderCeiling() {
+        #expect(ZoomPan.scale(1, liftedBy: 5_000, max: 17) == 17)
+        #expect(ZoomPan.scale(1, liftedBy: 5_000) == ZoomPan.maxScale)
+    }
 }

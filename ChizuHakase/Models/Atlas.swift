@@ -273,11 +273,26 @@ nonisolated struct Atlas: Sendable {
         // 1 面に束ね、isChallenge はこの 1 行だけが明示的に名乗る。codes は
         // 全 167 だが 1 回の出題は 47 問 — どの国が入るかは questionCount では
         // なく抽選(GameRules.challengeSelection)の仕事。
+        //
+        // 平面ズーム上限だけはチャレンジが広く運ぶ(P9): 枠が全世界に及ぶ
+        // この面だけ、既定 4 では小国が地方ステージの大きさまで寄れない。
+        // 値は各地方ステージ枠との比から導く — データが変われば追従し、
+        // 手置きの数字がデータと食い違う余地を残さない(沖縄インセットと
+        // 同じ流儀)。地方ステージは既定のまま(Stage.flatMaxZoom の道標)。
+        let bboxByCode = Dictionary(uniqueKeysWithValues:
+            prefectures.map { ($0.code, $0.bbox) })
+        let stageSpans = regionalStages.map { stage in
+            stage.codes.compactMap { bboxByCode[$0] }
+                .reduce(CGRect.null) { $0.union($1) }.size
+        }
         let challenge = Stage(index: WorldStage.challengeIndex,
                               name: WorldStage.challengeName,
                               kanjiName: WorldStage.challengeKanjiName,
                               codes: prefectures.map(\.code),
-                              isChallenge: true)
+                              isChallenge: true,
+                              flatMaxZoom: GameRules.challengeFlatZoom(
+                                  challengeSpan: bounds.size,
+                                  stageSpans: stageSpans))
         // 国旗カードが銀になるまでオリジナルを配らないゲート(設計 §5)。
         return Atlas(mapData: mapData, globe: world.globe,
                      stages: regionalStages + [challenge],

@@ -20,14 +20,24 @@ nonisolated struct Stage: Identifiable, Sendable, Equatable {
     /// world's challenge spans 167 countries, and 47 of its ISO codes belong
     /// to other countries entirely — no count can tell a challenge apart.
     let isChallenge: Bool
+    /// How far this stage's flat map may be pinched. Almost every stage keeps
+    /// `GameRules.mapMaxZoom`: a regional map already draws its region as big
+    /// as the frame allows, so 4× is where shapes outgrow the detail behind
+    /// them. The world challenge is the exception — its frame spans the whole
+    /// globe, and at 4× the small countries stay untappable — so its atlas
+    /// derives a wider ceiling from the stage frames
+    /// (`GameRules.challengeFlatZoom`) and carries it here as a value, keeping
+    /// the view free of any japan/world branch.
+    let flatMaxZoom: CGFloat
 
     init(index: Int, name: String, kanjiName: String, codes: [Int],
-         isChallenge: Bool = false) {
+         isChallenge: Bool = false, flatMaxZoom: CGFloat = GameRules.mapMaxZoom) {
         self.index = index
         self.name = name
         self.kanjiName = kanjiName
         self.codes = codes
         self.isChallenge = isChallenge
+        self.flatMaxZoom = flatMaxZoom
     }
 
     var id: Int { index }

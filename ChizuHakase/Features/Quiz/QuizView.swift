@@ -383,7 +383,8 @@ struct QuizView: View {
                     of: atlas.mapData.prefectures(in: stage.codes)), contentMode: .fit)
             }
         }
-        .zoomPan(scale: $zoom, offset: $pan, oneFingerZoom: true)
+        .zoomPan(scale: $zoom, offset: $pan, oneFingerZoom: true,
+                 maxScale: stage.flatMaxZoom)
     }
 
     /// Codes a tap on either map may resolve to. Empty in 「なまえを あてる」:

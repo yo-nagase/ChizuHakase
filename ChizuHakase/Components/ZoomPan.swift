@@ -8,10 +8,18 @@ import SwiftUI
 nonisolated enum ZoomPan {
     /// 1 is the whole country. Below that the map would shrink away inside its
     /// own frame; above 4 the shapes are bigger than the detail behind them.
+    /// The number itself lives in `GameRules` (the home of the constants), so
+    /// the stages that carry a per-map ceiling share one definition with the
+    /// gesture that enforces it.
     static let minScale: CGFloat = 1
-    static let maxScale: CGFloat = 4
+    static let maxScale: CGFloat = GameRules.mapMaxZoom
 
-    static func clamp(scale: CGFloat) -> CGFloat {
+    /// `max` is per map: the world challenge's flat map spans the whole globe,
+    /// where 4× still leaves the small countries untappable, so its stage
+    /// carries a wider ceiling (`Stage.flatMaxZoom`). Everyone else omits it
+    /// and keeps the default. The floor never moves — losing the map inside
+    /// its own frame is the failure the clamp exists for.
+    static func clamp(scale: CGFloat, max maxScale: CGFloat = ZoomPan.maxScale) -> CGFloat {
         min(max(scale, minScale), maxScale)
     }
 
@@ -48,8 +56,9 @@ nonisolated enum ZoomPan {
     /// Exponential, so the same movement doubles the map wherever it starts. A
     /// linear ramp crawls near 1× and lurches near 4×, which reads as the map
     /// fighting the finger.
-    static func scale(_ scale: CGFloat, liftedBy dy: CGFloat) -> CGFloat {
-        clamp(scale: scale * pow(2, dy / liftDoubling))
+    static func scale(_ scale: CGFloat, liftedBy dy: CGFloat,
+                      max maxScale: CGFloat = ZoomPan.maxScale) -> CGFloat {
+        clamp(scale: scale * pow(2, dy / liftDoubling), max: maxScale)
     }
 
     /// The scale and offset that frame `region` — a rect in the view's
@@ -141,6 +150,10 @@ struct ZoomPanModifier: ViewModifier {
     /// the enlarged card turns under one, and a hold-then-turn has to stay a
     /// turn.
     var oneFingerZoom = false
+    /// This map's zoom ceiling. Every clamp in the modifier goes through it —
+    /// a single site left on the bare default would stop that one gesture at
+    /// 4× while the others sail past, which reads as the map sticking.
+    var maxScale = ZoomPan.maxScale
 
     /// Magnification and the point it is happening around, updated together
     /// because the offset correction needs both.
@@ -163,9 +176,9 @@ struct ZoomPanModifier: ViewModifier {
     @GestureState private var lift = Lift()
 
     private var liveScale: CGFloat {
-        let pinched = ZoomPan.clamp(scale: scale * pinch.magnification)
+        let pinched = ZoomPan.clamp(scale: scale * pinch.magnification, max: maxScale)
         guard lift.isActive else { return pinched }
-        return ZoomPan.scale(pinched, liftedBy: lift.travel)
+        return ZoomPan.scale(pinched, liftedBy: lift.travel, max: maxScale)
     }
 
     private var liveOffset: CGSize {
@@ -210,7 +223,7 @@ struct ZoomPanModifier: ViewModifier {
                 state = Pinch(magnification: value.magnification, anchor: value.startAnchor)
             }
             .onEnded { value in
-                let ended = ZoomPan.clamp(scale: scale * value.magnification)
+                let ended = ZoomPan.clamp(scale: scale * value.magnification, max: maxScale)
                 let anchored = ZoomPan.offset(offset, keeping: value.startAnchor, in: size,
                                               from: scale, to: ended)
                 scale = ended
@@ -268,7 +281,8 @@ struct ZoomPanModifier: ViewModifier {
             }
             .onEnded { value in
                 guard case .second(true, let slide?) = value else { return }
-                let ended = ZoomPan.scale(scale, liftedBy: -slide.translation.height)
+                let ended = ZoomPan.scale(scale, liftedBy: -slide.translation.height,
+                                          max: maxScale)
                 let anchored = ZoomPan.offset(offset, keeping: unitPoint(slide.startLocation),
                                               in: size, from: scale, to: ended)
                 scale = ended
@@ -287,9 +301,11 @@ struct ZoomPanModifier: ViewModifier {
 
 extension View {
     func zoomPan(scale: Binding<CGFloat>, offset: Binding<CGSize>,
-                 oneFingerZoom: Bool = false) -> some View {
+                 oneFingerZoom: Bool = false,
+                 maxScale: CGFloat = ZoomPan.maxScale) -> some View {
         modifier(ZoomPanModifier(scale: scale, offset: offset,
-                                 oneFingerZoom: oneFingerZoom))
+                                 oneFingerZoom: oneFingerZoom,
+                                 maxScale: maxScale))
     }
 }
 

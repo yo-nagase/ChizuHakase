@@ -177,6 +177,39 @@ nonisolated enum GameRules {
     static let mapPaddingRatio: CGFloat = 0.045
     static let mapPaddingPoints: CGFloat = 6
 
+    /// How far every flat map lets a pinch go by default. Above 4 the shapes
+    /// grow bigger than the detail behind them, so 4 is an aesthetic ceiling,
+    /// not a mechanical one. This is the single home of the number:
+    /// `ZoomPan.maxScale` and `Stage.flatMaxZoom`'s default both read it, so
+    /// the shared ceiling cannot drift apart between the gesture and the data.
+    static let mapMaxZoom: CGFloat = 4
+
+    /// The zoom ceiling for a challenge stage's flat map, derived from the
+    /// data rather than hand-placed (the same discipline as the Okinawa
+    /// inset's sea scan): the largest frame ratio `max(cw/w, ch/h)` between
+    /// the challenge's span and each regional stage's span.
+    ///
+    /// Why that ratio is enough on any device: aspect-fitting spans into a
+    /// W×H frame gives the stage a drawn scale of `min(W/w, H/h)` and the
+    /// challenge `min(W/cw, H/ch)`, and their quotient never exceeds
+    /// `max(cw/w, ch/h)` whatever W and H are. So a ceiling of the largest
+    /// such ratio lets every recorded country be pinched up to at least the
+    /// size its own regional stage draws it — which is what makes the small
+    /// islands of the world challenge findable at all. It never goes below
+    /// `mapMaxZoom`: a book whose stages need less keeps today's ceiling,
+    /// which is why 全国チャレンジ is untouched by construction.
+    ///
+    /// Degenerate spans (a stage with no resolvable bbox) are skipped rather
+    /// than divided by — a data hole must not become an infinite zoom.
+    static func challengeFlatZoom(challengeSpan: CGSize,
+                                  stageSpans: [CGSize]) -> CGFloat {
+        let ratios = stageSpans
+            .filter { $0.width > 0 && $0.height > 0 }
+            .map { max(challengeSpan.width / $0.width,
+                       challengeSpan.height / $0.height) }
+        return max(mapMaxZoom, ratios.max() ?? mapMaxZoom)
+    }
+
     /// Screen-space slack for taps that miss every prefecture (CLAUDE.md §3).
     static let tapTolerancePoints: CGFloat = 22
     /// Head start the prefecture being asked about gets when a tap falls
