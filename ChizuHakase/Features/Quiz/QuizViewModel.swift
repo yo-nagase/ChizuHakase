@@ -69,7 +69,7 @@ final class QuizViewModel {
     /// `askedInChallenge` is the unasked-first memory of a sampling challenge
     /// (world design §8): the codes this mode's challenge has already asked,
     /// off the played book's save slice. It has no default on purpose, the
-    /// same reasoning that is removing `drawPolicy`'s: a call site that forgot
+    /// same reasoning that removed `drawPolicy`'s: a call site that forgot
     /// it would still compile, and the challenge would quietly lose its
     /// coverage guarantee — every sitting a fresh uniform draw — with every
     /// test still green. For stages that never sample (all of japan's, the
@@ -80,7 +80,7 @@ final class QuizViewModel {
          mapData: MapData,
          catalog: CardCatalog,
          ownedCards: [String: Int] = [:],
-         drawPolicy: GameRules.DrawPolicy = .random,
+         drawPolicy: GameRules.DrawPolicy,
          askedInChallenge: Set<Int>,
          generator: AnyRandomNumberGenerator = AnyRandomNumberGenerator()) {
         self.stage = stage

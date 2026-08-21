@@ -338,6 +338,10 @@ final class WorldQuizUITests: XCTestCase {
         // roughly (110°W, 20°N), where メキシコ sits near dead centre — far
         // enough from the limb to survive the synthesiser under-delivering
         // the first stretch of the drag.
+        // Device-geometry assumption: these offsets are tuned for the CI
+        // iPhone, where the disk spans the page. On an iPad, pageColumn's
+        // margins put dx 0.88 on album paper outside the panel — run this
+        // test on an iPhone (the globe itself works fine on iPad).
         let start = app.coordinate(withNormalizedOffset: CGVector(dx: 0.88, dy: 0.43))
         let end = app.coordinate(withNormalizedOffset: CGVector(dx: 0.06, dy: 0.38))
         start.press(forDuration: 0.05, thenDragTo: end)

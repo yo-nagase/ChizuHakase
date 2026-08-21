@@ -218,6 +218,10 @@ nonisolated extension TextMode {
     // ★ユーザーサインオフ待ちの仮文言(計画 2026-08-20 P7)。
     var toGlobe: String { isKids ? "🌍 ちきゅうぎ" : "🌍 地球儀" }
     var toFlatMap: String { isKids ? "🗺️ ちず" : "🗺️ 地図" }
+    /// VoiceOver だけが聞く調整つまみのラベル(GlobeMapView.rotateStepper)。
+    /// ドラッグで回せない利用者が裏側の国へ届く唯一の口なので、
+    /// 動詞で「何が起きるか」を名乗る。
+    var rotateGlobe: String { isKids ? "ちきゅうぎを まわす" : "地球儀を回す" }
     /// How the one-finger zoom is discovered: press and hold, then slide up
     /// or down. Pinch works too, but nobody needs a label to find a pinch.
     var zoomHint: String { isKids ? "ながおしして うえしたで おおきく できるよ"

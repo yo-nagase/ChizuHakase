@@ -13,6 +13,9 @@ struct QuizModeTests {
                       mode: mode,
                       mapData: MapDataTests.map,
                       catalog: MapDataTests.catalog,
+                      // Japan's policy, spelled out — the parameter carries no
+                      // default (see the init's doc comment).
+                      drawPolicy: .random,
                       askedInChallenge: [],
                       generator: AnyRandomNumberGenerator(SeededGenerator(seed: seed)))
     }

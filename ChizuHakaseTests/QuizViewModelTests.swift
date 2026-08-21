@@ -15,6 +15,10 @@ struct QuizViewModelTests {
                       mapData: MapDataTests.map,
                       catalog: MapDataTests.catalog,
                       ownedCards: owned,
+                      // Japan's policy, spelled out: the parameter lost its
+                      // `.random` default so a world call site can never fall
+                      // silently onto japan's draw (P6 final review).
+                      drawPolicy: .random,
                       askedInChallenge: asked,
                       generator: AnyRandomNumberGenerator(SeededGenerator(seed: seed)))
     }

@@ -280,8 +280,10 @@ struct RootView: View {
         // Atlas-aware like `-grantCards`: the session book's first stage, so
         // `-atlas world -learnFirstStage` colours the world's own countries
         // (the my-map globe screenshots need mastery somewhere on the sphere).
-        // Launched without `-atlas` it still reads japan's shelf, which is
-        // what its original UI test (StageSelectUITests) launches with.
+        // Launched without `-atlas` it reads japan's shelf when `-resetSave`
+        // rides along (the reset rewinds the remembered page; without it the
+        // flag stages whichever book the previous run left open) — which is
+        // exactly the pair its original UI test (StageSelectUITests) launches.
         // Each launch applies one clean visit, so repeated launches walk the
         // mastery ladder the same way repeated plays do.
         if arguments.contains("-learnFirstStage"), let stage = atlas.stage(at: 0) {

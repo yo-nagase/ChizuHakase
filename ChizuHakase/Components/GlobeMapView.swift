@@ -44,9 +44,14 @@ nonisolated struct GlobeCenter: Sendable, Equatable {
 /// この部品はデータ盲目で、`GlobeShape` が運ぶのは形とコードだけ。名前
 /// (VoiceOver のかな)は `accessibilityName` で親が渡す。
 ///
-/// 平面版との構造差はひとつ — 拡大が `scaleEffect` ではなく **半径**に入る。
+/// 平面版との構造差はふたつ。**拡大は `scaleEffect` ではなく半径**に入る —
 /// 線の太さ・タップ許容・スタンプはガラス座標のまま描かれるので、平面版に
-/// 散っている `/ max(zoom, 1)` の補正はここには存在しない。
+/// 散っている `/ max(zoom, 1)` の補正はここには存在しない。そして
+/// **回転ドラッグは highPriorityGesture** — どのズーム倍率でも、囲む
+/// ScrollView や先祖のジェスチャに勝って縦横のドラッグを取り切る(平面版が
+/// ズーム中だけスクロールを奪うのと違い、地球儀はいつでも回る物だから)。
+/// ホストはページを送る余地をこのパネルの**外**に残すこと。タップだけは
+/// 生き残る — ドラッグの minimumDistance 10pt が手を付けないので。
 struct GlobeMapView: View {
     let globe: GlobeData
     /// コード → 塗り。`MasteryStyle.appearance` も `PrefectureAppearance` の
@@ -77,6 +82,7 @@ struct GlobeMapView: View {
     var onTap: ((Int?, CGPoint) -> Void)?
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.textMode) private var textMode
     @GestureState private var pinch: CGFloat = 1
 
     var body: some View {
@@ -103,6 +109,30 @@ struct GlobeMapView: View {
                 // 現れることもあるので、onAppear でも同じ判定を通す。
                 .onChange(of: hintCode) { _, code in rotate(toHint: code) }
                 .onAppear { rotate(toHint: hintCode) }
+                .overlay(alignment: .bottom) { rotateStepper }
+        }
+    }
+
+    /// VoiceOver はドラッグで地球儀を回せない — そして裏側の国は読み上げ
+    /// 一覧にも出ない(重心可視の選別)ので、回す口が無ければ永遠に届かない。
+    /// この見えない調整要素(accessibilityAdjustableAction)が経度を
+    /// `GameRules.globeRotateStepDegrees` ずつ回す: 上スワイプで東へ、
+    /// 下スワイプで西へ。値は正面いちばん近くの国の読み — 一歩ごとに
+    /// 「いまどこを見ているか」が聞こえる。Reduce Motion は見ない: 利用者
+    /// 自身が起こした移動で、素の代入に切るべき補間がそもそも無い。
+    @ViewBuilder private var rotateStepper: some View {
+        if let accessibilityName {
+            Color.clear
+                .frame(width: 44, height: 44)
+                .allowsHitTesting(false)
+                .accessibilityElement()
+                .accessibilityLabel(textMode.rotateGlobe)
+                .accessibilityValue(
+                    Self.frontmostCode(shapes: globe.shapes, center: center)
+                        .map(accessibilityName) ?? "")
+                .accessibilityAdjustableAction { direction in
+                    center = Self.stepped(center, east: direction == .increment)
+                }
         }
     }
 
@@ -158,6 +188,38 @@ struct GlobeMapView: View {
                                             lat: Double(shape.centroid.y)) < comfort
         else { return nil }
         return current.facing(GlobeGeometry.centering(on: shape))
+    }
+
+    /// VoiceOver の 1 ステップぶん回した到達値(`rotateStepper`)。緯度は
+    /// 触らない — 収録国の重心は 39°S〜66°N に収まり、初期位置
+    /// (`GlobeCenter.home`、36°N)からなら経度の一周だけで全国がいつか
+    /// 正面半球に入る。ドラッグしない利用者の緯度をよそで動かすのは
+    /// なまえを あてる の出題回転だけで、あちらには平面トグルという代替
+    /// 経路が立っている。二軸のつまみは「いまどこか」を耳で追う相手には
+    /// 迷路になる。経度は wrap — 一周して同じ場所へ帰る、球の事実そのまま。
+    nonisolated static func stepped(_ center: GlobeCenter, east: Bool) -> GlobeCenter {
+        let step = GameRules.globeRotateStepDegrees
+        return GlobeCenter(
+            longitude: GlobeProjection.wrappedLongitude(
+                center.longitude + (east ? step : -step)),
+            latitude: center.latitude)
+    }
+
+    /// 正面(中心)にいちばん近い重心の国 — `rotateStepper` の読み上げ値。
+    /// 中心が大洋の真ん中でも「いちばん近い国」を返すのは意図: 何も言わない
+    /// つまみは、回した結果が届いたのかどうかを聞き手に教えない。
+    nonisolated static func frontmostCode(shapes: [GlobeShape],
+                                          center: GlobeCenter) -> Int? {
+        // 角距離の比較だけなので投影の半径・スクリーンは仮値でよい
+        // (hintRotation と同じ理屈)。
+        let probe = GlobeProjection(centerLongitude: center.longitude,
+                                    centerLatitude: center.latitude,
+                                    radius: 1, screenCenter: .zero)
+        func closeness(_ shape: GlobeShape) -> Double {
+            probe.cosineOfAngularDistance(lon: Double(shape.centroid.x),
+                                          lat: Double(shape.centroid.y))
+        }
+        return shapes.max { closeness($0) < closeness($1) }?.code
     }
 
     /// 重なり順(平面版 `PrefectureMapView.zIndex` の球面鏡 — 理由も同じ:

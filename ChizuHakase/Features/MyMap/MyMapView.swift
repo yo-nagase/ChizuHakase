@@ -112,11 +112,7 @@ struct MyMapView: View {
             }
             // No ZoomHintChip: the chip teaches ZoomPan's press-and-slide,
             // a gesture the globe does not run — there, a drag rotates.
-            .accessibilityZoomAction { action in
-                globeZoom = ZoomPan.clamp(
-                    scale: action.direction == .zoomIn ? globeZoom * 1.5
-                                                       : globeZoom / 1.5)
-            }
+            .accessibilityZoomAction { globeZoom = zoomedForAccessibility(globeZoom, $0) }
     }
 
     /// Pinchable, and draggable once pinched. The zoom lives on the map itself
@@ -170,11 +166,18 @@ struct MyMapView: View {
         }
         .overlay(alignment: .bottom) { ZoomHintChip(zoom: zoom).padding(.bottom, 12) }
         .accessibilityZoomAction { action in
-            // VoiceOver cannot pinch, so it gets the same range through the
-            // rotor-driven zoom action.
-            zoom = ZoomPan.clamp(scale: action.direction == .zoomIn ? zoom * 1.5 : zoom / 1.5)
+            zoom = zoomedForAccessibility(zoom, action)
             if !ZoomPan.isZoomed(zoom) { pan = .zero }
         }
+    }
+
+    /// VoiceOver cannot pinch, so each camera gets the same 1...4 range
+    /// through the rotor-driven zoom action instead, stepping by half again
+    /// per gesture. One function for both panels — the flat map additionally
+    /// re-centres its pan on the way out (a globe has no pan to re-centre).
+    private func zoomedForAccessibility(_ zoom: CGFloat,
+                                        _ action: AccessibilityZoomGestureAction) -> CGFloat {
+        ZoomPan.clamp(scale: action.direction == .zoomIn ? zoom * 1.5 : zoom / 1.5)
     }
 
     /// The way back out — shared by both cameras (the flat map's zoom+pan,

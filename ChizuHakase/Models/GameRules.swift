@@ -46,6 +46,11 @@ nonisolated enum GameRules {
     /// いる答えを回さないのは従来どおり — 見えている答えを回すと、点滅を
     /// 見つけかけた子から地図が逃げる。
     static let globeHintComfortDegrees: Double = 65
+    /// VoiceOver の調整つまみ(GlobeMapView.rotateStepper)が 1 スワイプで
+    /// 回す経度(度)。ドラッグできない利用者には裏側へ届く唯一の口。
+    /// 45° = 8 歩で一周 — 一歩ごとに正面の顔ぶれが確かに入れ替わり、
+    /// かつ大陸を丸ごと飛び越さない幅。
+    static let globeRotateStepDegrees: Double = 45
     /// Wrong attempts on the current question before the answer starts blinking.
     ///
     /// Three, not two: two came up often enough that a child who was thinking

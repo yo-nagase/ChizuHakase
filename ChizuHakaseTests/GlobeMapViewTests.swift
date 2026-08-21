@@ -129,6 +129,47 @@ struct GlobeMapViewLogicTests {
                                           from: GlobeCenter()) == nil)
     }
 
+    // MARK: - VoiceOver の調整つまみ(P7 Task 8)
+
+    @Test func つまみは経度だけを一歩ぶん回す() {
+        // wrap の掛からない出発点で素の一歩を見る(wrap は次のテスト)。
+        let start = GlobeCenter(longitude: 10, latitude: 36)
+        let east = GlobeMapView.stepped(start, east: true)
+        #expect(east.longitude == 10 + GameRules.globeRotateStepDegrees)
+        #expect(east.latitude == 36, "経度のつまみが緯度を動かしている")
+        let west = GlobeMapView.stepped(start, east: false)
+        #expect(west.longitude == 10 - GameRules.globeRotateStepDegrees)
+    }
+
+    @Test func つまみの経度は日付変更線で畳まれる() {
+        // 170° + 45° = 215° → (−180, 180] へ wrap して −145°。畳まないと
+        // スワイプを重ねた値が際限なく育つ(GlobeProjection.wrappedLongitude
+        // の註)。
+        let moved = GlobeMapView.stepped(
+            GlobeCenter(longitude: 170, latitude: 20), east: true)
+        #expect(moved.longitude == -145)
+        #expect(moved.latitude == 20)
+    }
+
+    @Test func つまみを一周ぶん回すと同じ場所へ帰る() {
+        // 45° × 8 歩 = 360°。球の上で迷子にならないことの保証そのもの。
+        var center = GlobeCenter.home
+        for _ in 0..<8 { center = GlobeMapView.stepped(center, east: true) }
+        #expect(center == GlobeCenter.home)
+    }
+
+    @Test func 読み上げ値は正面いちばん近くの国() {
+        let near = shape(code: 1, centroid: CGPoint(x: 10, y: 5))
+        let far = shape(code: 2, centroid: CGPoint(x: 120, y: 0))
+        #expect(GlobeMapView.frontmostCode(shapes: [far, near],
+                                           center: GlobeCenter()) == 1)
+        // 回した先では顔ぶれが入れ替わる — 一歩ごとの聞こえ方の根拠。
+        #expect(GlobeMapView.frontmostCode(
+            shapes: [far, near],
+            center: GlobeCenter(longitude: 130, latitude: 0)) == 2)
+        #expect(GlobeMapView.frontmostCode(shapes: [], center: GlobeCenter()) == nil)
+    }
+
     @Test func ヒント回転も最短の弧を通る() {
         // 現在 170°・答えの重心 −80°(角距離 110° — 裏側)。等価な経度の
         // うち現在地に近い 280° へ向かうこと(−80° へ直行すると 250° 逆回り)。
