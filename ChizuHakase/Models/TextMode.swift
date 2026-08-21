@@ -60,6 +60,15 @@ nonisolated extension AtlasNoun {
     /// 先に選んだもの — 動機の表がずかんの空きマスを「せかいのカード」と
     /// 呼んでいる(docs/plans/2026-08-16-world-atlas-design.md:22)。
     static let worldCards = AtlasNoun(kids: "せかいの カード", adult: "世界のカード")
+    /// 世界: 国旗がシルバーに達したとき解放される 2 枚目の札の呼称。
+    /// `Atlas.unlockGoalNoun(for:)` が返し、「あと◯かいで」の silver 段の
+    /// 名前に差し替わる — シルバー到達 = 解放が同じ出来事なので、予告は
+    /// 段位ではなくもらえる物を名乗る。
+    /// ★仮文言(ユーザーサインオフ待ち — 「おりじなるカード」等の代案あり)。
+    /// カタカナは両表記共通: シルバー・ゴールドと同じ扱いで、札の種別名は
+    /// 子どもがそのまま使う語。
+    static let originalCard = AtlasNoun(kids: "オリジナルカード",
+                                        adult: "オリジナルカード")
 
     /// The nationwide map's one-press zooms — the japan atlas carries these on
     /// its `RegionZoom`s. 「にほん」 spelt out rather than 「にし」「なか」
@@ -151,10 +160,18 @@ nonisolated extension TextMode {
     /// The 「あと◯」 line under a card (CLAUDE.md §5). It only ever counts
     /// toward the next thing — a streak that broke is not mentioned, because
     /// naming the loss is the loss (CLAUDE.md §12).
-    func nextGoalLabel(_ goal: GameRules.NextGoal) -> String {
+    ///
+    /// `unlock` renames the *silver* rung only: on the world's flag cards,
+    /// reaching silver and unlocking the country's second card are the same
+    /// event (`GameRules.DrawPolicy.flagFirstSilverGate`), so the line promises
+    /// the thing the child gets rather than the tier. Gold, streak and done are
+    /// untouched — the unlock happens once, at silver, and there is nothing to
+    /// promise above it. `NextGoal.fraction` stays as it is: the rung's end
+    /// point is the same silver either way, only its name changes.
+    func nextGoalLabel(_ goal: GameRules.NextGoal, unlock: AtlasNoun? = nil) -> String {
         switch goal {
         case .wins(let n, let tier):
-            let name = tier == .gold ? "ゴールド" : "シルバー"
+            let name = tier == .gold ? "ゴールド" : unlock?.label(self) ?? "シルバー"
             return isKids ? "あと \(n)かいで \(name)!" : "あと\(n)回で\(name)"
         case .streak(let n):
             return isKids ? "あと \(n)れんぞくで にじいろ!" : "あと\(n)連続でにじいろ"

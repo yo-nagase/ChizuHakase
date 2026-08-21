@@ -534,6 +534,44 @@ struct AtlasTests {
         #expect(Atlas.loadWorld(contentsOf: missing).drawPolicy == .flagFirstSilverGate)
     }
 
+    // MARK: - 解放予告(P8 Task 2 — 札 → 解放される物の名詞)
+
+    /// 国旗がシルバーに達するとオリジナル札が解放される(flagFirstSilverGate)
+    /// ので、その国旗の「あと◯」はシルバーではなく解放される物を名乗る。
+    /// 予告は嘘をつかない(P8 裁定 3): 名詞が返るのは 2 枚目が目録に実在する
+    /// 国の国旗だけ。
+    @Test func 世界の国旗札はオリジナル解放を予告する() throws {
+        let atlas = try worldAtlas()
+        for code in [156, 158, 392, 408, 410, 496] {
+            let flag = try #require(atlas.cards["\(code)-1"])
+            #expect(atlas.unlockGoalNoun(for: flag) == .originalCard, "code \(code)")
+        }
+    }
+
+    /// 解放される側の札に予告する物は無い — シルバーの先はただのゴールド。
+    @Test func オリジナル札そのものは解放を予告しない() throws {
+        let atlas = try worldAtlas()
+        let original = try #require(atlas.cards["156-2"])
+        #expect(atlas.unlockGoalNoun(for: original) == nil)
+    }
+
+    /// 2 枚目がまだ目録に無い国(パイロット外)の国旗は従来の「シルバー」の
+    /// まま — 実在しない札を約束しない。
+    @Test func 二枚目の無い国の国旗は解放を予告しない() throws {
+        let atlas = try worldAtlas()
+        let flag = try #require(atlas.cards["4-1"]) // アフガニスタン(国旗のみ)
+        #expect(atlas.cards.cards(for: 4).count == 1, "前提が崩れた: 4 に 2 枚目がある")
+        #expect(atlas.unlockGoalNoun(for: flag) == nil)
+    }
+
+    /// 日本の抽選は .random でゲートが無い — どの札も解放を予告しない。
+    @Test func 日本の札は解放を予告しない() {
+        let atlas = japanAtlas
+        for card in atlas.cards.all {
+            #expect(atlas.unlockGoalNoun(for: card) == nil, "\(card.id)")
+        }
+    }
+
     // MARK: - 語彙(名詞もアトラスが運ぶ — view に japan/world 分岐を作らない)
 
     /// 結果画面の「✨ おぼえた ◯!」やなまえあての問いに入る名詞(P6 Task 6)。

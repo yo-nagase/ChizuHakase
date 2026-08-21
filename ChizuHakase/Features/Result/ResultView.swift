@@ -147,7 +147,8 @@ struct ResultView: View {
                            prefecture: atlas.mapData[won.card.prefectureCode],
                            stars: won.stars,
                            rainbow: won.rainbow,
-                           streak: save.streak(of: won.card.prefectureCode))
+                           streak: save.streak(of: won.card.prefectureCode),
+                           unlock: atlas.unlockGoalNoun(for: won.card))
                 .environment(\.textMode, mode)
                 .presentationBackground(.clear)
         }
@@ -279,9 +280,12 @@ struct ResultView: View {
                                      rainbow: won.rainbow,
                                      onOpen: { open(won) })
                         // 「あと◯」 — the reason to play this stage once more,
-                        // said while the card is still in front of them.
+                        // said while the card is still in front of them. On a
+                        // world flag the silver rung is named by what it
+                        // unlocks; the atlas decides, this view just passes it.
                         if let goal = nextGoal(for: won) {
-                            Text(mode.nextGoalLabel(goal))
+                            Text(mode.nextGoalLabel(
+                                goal, unlock: atlas.unlockGoalNoun(for: won.card)))
                                 .font(AppFont.rounded(11, relativeTo: .caption2))
                                 .foregroundStyle(Palette.ink.opacity(0.55))
                                 .lineLimit(1)

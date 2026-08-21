@@ -104,6 +104,23 @@ nonisolated struct Atlas: Sendable {
         stages.first { $0.index == index }
     }
 
+    /// この札がシルバーに達したとき解放される物の名詞。無ければ nil(P8)。
+    ///
+    /// 国旗先行ゲート(`flagFirstSilverGate`)の本では「シルバー到達」と
+    /// 「2 枚目の解放」が同じ出来事なので、国旗の「あと◯かいで」は段位では
+    /// なく解放される物を予告する。予告は嘘をつかない(P8 裁定 3): 名詞が
+    /// 返るのは 2 枚目が目録に実在する国の先頭札だけで、判定はデータから引く。
+    /// 「先頭 = 国旗」は id の解析ではなく目録順の契約(`CardCatalog.init` の
+    /// 道標)から受け取る — ゲート本体と同じ拠り所。
+    /// View は返った名詞を `TextMode.nextGoalLabel(_:unlock:)` へ渡すだけで、
+    /// どの本かでは分岐しない(regionNoun らと同じ規律)。
+    func unlockGoalNoun(for card: SpecialtyCard) -> AtlasNoun? {
+        guard drawPolicy == .flagFirstSilverGate else { return nil }
+        let siblings = cards.cards(for: card.prefectureCode)
+        guard siblings.count > 1, siblings.first?.id == card.id else { return nil }
+        return .originalCard
+    }
+
     /// ステージ選択の棚 1 段: 見出し(なければ nil)とその下のステージ。
     nonisolated struct StageShelf: Sendable, Equatable, Identifiable {
         let title: String?
