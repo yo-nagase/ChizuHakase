@@ -620,15 +620,19 @@ struct AtlasTests {
     /// 上限は手置きではなくデータから導く(沖縄インセットの空き海域走査と
     /// 同じ流儀)。ここでも同じ比 — チャレンジ枠と各地方ステージ枠の
     /// `max(cw/w, ch/h)` — を独立に計算して、運ばれた値と突き合わせる。
+    /// 枠は描画のフィットと同じ `frameBbox ?? bbox`(ロシアはヨーロッパ側の
+    /// 枠だけがフィットに効き、シベリアは景色としてあふれる)— 生の bbox で
+    /// 測ると frameBbox 持ちステージの比を過小評価する。
     @Test func 世界チャレンジの平面ズーム上限は最大のステージ枠比() throws {
         let atlas = try worldAtlas()
         let challenge = try #require(atlas.stages.first { $0.isChallenge })
-        let bboxes = Dictionary(uniqueKeysWithValues:
-            atlas.mapData.prefectures.map { ($0.code, $0.bbox) })
-        let challengeBox = atlas.mapData.prefectures.map(\.bbox)
-            .reduce(CGRect.null) { $0.union($1) }
+        var frames: [Int: CGRect] = [:]
+        for prefecture in atlas.mapData.prefectures {
+            frames[prefecture.code] = prefecture.frameBbox ?? prefecture.bbox
+        }
+        let challengeBox = frames.values.reduce(CGRect.null) { $0.union($1) }
         let ratios = atlas.stages.filter { !$0.isChallenge }.map { stage in
-            let box = stage.codes.compactMap { bboxes[$0] }
+            let box = stage.codes.compactMap { frames[$0] }
                 .reduce(CGRect.null) { $0.union($1) }
             return max(challengeBox.width / box.width,
                        challengeBox.height / box.height)
@@ -638,13 +642,13 @@ struct AtlasTests {
         #expect(abs(challenge.flatMaxZoom - expected) < 0.001)
     }
 
-    /// 実データの釘打ち: 最大比は stage 11 みなみアフリカの ≈ 16.9。
+    /// 実データの釘打ち: 最大比は stage 11 みなみアフリカの ≈ 16.4。
     /// 導出はコードなのでデータが変われば追従するが、桁が動いたら
     /// (投影や bbox の退行で)ここで気づく。
-    @Test func 世界チャレンジの上限はおよそ17() throws {
+    @Test func 世界チャレンジの上限はおよそ16() throws {
         let challenge = try #require(try worldAtlas().stages.first { $0.isChallenge })
-        #expect(challenge.flatMaxZoom > 16.4)
-        #expect(challenge.flatMaxZoom < 17.4)
+        #expect(challenge.flatMaxZoom > 16.0)
+        #expect(challenge.flatMaxZoom < 17.0)
     }
 
     /// 広がるのは世界チャレンジだけ。地方ステージはその地方が枠いっぱいに

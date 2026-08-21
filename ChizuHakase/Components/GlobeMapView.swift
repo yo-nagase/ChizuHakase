@@ -72,7 +72,7 @@ struct GlobeMapView: View {
     /// `center = center.facing(GlobeGeometry.centering(on: shape))` を
     /// `withAnimation` で包む(Reduce Motion では素の代入でジャンプ)。
     @Binding var center: GlobeCenter
-    /// 半径の倍率。`ZoomPan.clamp(scale:)` と同じ 1...4。Binding なのは
+    /// 半径の倍率。`ZoomPan.clamp(scale:)` の既定範囲に畳む。Binding なのは
     /// リセットボタンを親が置くため(平面版の zoom と同じ役割分担)。
     /// パンは無い — 見たい場所へは回して寄る。
     @Binding var zoom: CGFloat

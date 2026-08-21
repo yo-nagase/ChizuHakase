@@ -688,7 +688,7 @@ struct GameRulesTests {
     /// 上限は「チャレンジ枠と各ステージ枠の比」の最大値。比は軸ごとにとり、
     /// 大きい方を採る — 細長いステージは細い軸の側でしか追いつけない。
     @Test func 平面ズーム上限は最大のステージ枠比を選ぶ() {
-        let zoom = GameRules.challengeFlatZoom(
+        let zoom = GameRules.challengeFlatMaxZoom(
             challengeSpan: CGSize(width: 100, height: 80),
             stageSpans: [CGSize(width: 50, height: 40),   // max(2, 2)  = 2
                          CGSize(width: 10, height: 40),   // max(10, 2) = 10
@@ -699,7 +699,7 @@ struct GameRulesTests {
     /// どのステージも既定の 4 で足りるなら広げない — 日本の全国チャレンジが
     /// この枝で、挙動が 1 ピクセルも変わらないことの根拠。
     @Test func 枠比が既定を下回るなら既定のまま() {
-        let zoom = GameRules.challengeFlatZoom(
+        let zoom = GameRules.challengeFlatMaxZoom(
             challengeSpan: CGSize(width: 100, height: 80),
             stageSpans: [CGSize(width: 100, height: 80),
                          CGSize(width: 50, height: 40)])
@@ -708,9 +708,9 @@ struct GameRulesTests {
 
     /// 空・退化した枠は無限大や NaN ではなく既定へ倒れる。
     @Test func 退化した枠は上限を壊さない() {
-        #expect(GameRules.challengeFlatZoom(challengeSpan: CGSize(width: 100, height: 80),
+        #expect(GameRules.challengeFlatMaxZoom(challengeSpan: CGSize(width: 100, height: 80),
                                             stageSpans: []) == GameRules.mapMaxZoom)
-        #expect(GameRules.challengeFlatZoom(
+        #expect(GameRules.challengeFlatMaxZoom(
             challengeSpan: CGSize(width: 100, height: 80),
             stageSpans: [.zero, CGSize(width: 50, height: 40)]) == GameRules.mapMaxZoom)
     }

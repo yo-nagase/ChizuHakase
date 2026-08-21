@@ -279,10 +279,19 @@ nonisolated struct Atlas: Sendable {
         // 値は各地方ステージ枠との比から導く — データが変われば追従し、
         // 手置きの数字がデータと食い違う余地を残さない(沖縄インセットと
         // 同じ流儀)。地方ステージは既定のまま(Stage.flatMaxZoom の道標)。
-        let bboxByCode = Dictionary(uniqueKeysWithValues:
-            prefectures.map { ($0.code, $0.bbox) })
+        //
+        // 枠はチャレンジ側・ステージ側とも描画のフィットと同じ
+        // `frameBbox ?? bbox` で測る(PrefectureGeometry.boundingBox が
+        // 従う宣言 — ロシアはヨーロッパ側の枠だけがフィットに効き、
+        // シベリアは景色としてあふれる)。生の bbox で測ると frameBbox
+        // 持ちのステージだけ実際より広い枠で割ることになり、そのステージが
+        // 最大比になったとき上限が「同じ大きさまで寄れる」約束を下回る。
+        let challengeSpan = prefectures
+            .map { $0.frameBbox ?? $0.bbox }
+            .reduce(CGRect.null) { $0.union($1) }.size
         let stageSpans = regionalStages.map { stage in
-            stage.codes.compactMap { bboxByCode[$0] }
+            mapData.prefectures(in: stage.codes)
+                .map { $0.frameBbox ?? $0.bbox }
                 .reduce(CGRect.null) { $0.union($1) }.size
         }
         let challenge = Stage(index: WorldStage.challengeIndex,
@@ -290,8 +299,8 @@ nonisolated struct Atlas: Sendable {
                               kanjiName: WorldStage.challengeKanjiName,
                               codes: prefectures.map(\.code),
                               isChallenge: true,
-                              flatMaxZoom: GameRules.challengeFlatZoom(
-                                  challengeSpan: bounds.size,
+                              flatMaxZoom: GameRules.challengeFlatMaxZoom(
+                                  challengeSpan: challengeSpan,
                                   stageSpans: stageSpans))
         // 国旗カードが銀になるまでオリジナルを配らないゲート(設計 §5)。
         return Atlas(mapData: mapData, globe: world.globe,

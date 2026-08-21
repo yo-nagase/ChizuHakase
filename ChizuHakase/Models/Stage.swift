@@ -26,7 +26,7 @@ nonisolated struct Stage: Identifiable, Sendable, Equatable {
     /// them. The world challenge is the exception — its frame spans the whole
     /// globe, and at 4× the small countries stay untappable — so its atlas
     /// derives a wider ceiling from the stage frames
-    /// (`GameRules.challengeFlatZoom`) and carries it here as a value, keeping
+    /// (`GameRules.challengeFlatMaxZoom`) and carries it here as a value, keeping
     /// the view free of any japan/world branch.
     let flatMaxZoom: CGFloat
 

@@ -201,8 +201,8 @@ nonisolated enum GameRules {
     ///
     /// Degenerate spans (a stage with no resolvable bbox) are skipped rather
     /// than divided by — a data hole must not become an infinite zoom.
-    static func challengeFlatZoom(challengeSpan: CGSize,
-                                  stageSpans: [CGSize]) -> CGFloat {
+    static func challengeFlatMaxZoom(challengeSpan: CGSize,
+                                     stageSpans: [CGSize]) -> CGFloat {
         let ratios = stageSpans
             .filter { $0.width > 0 && $0.height > 0 }
             .map { max(challengeSpan.width / $0.width,
