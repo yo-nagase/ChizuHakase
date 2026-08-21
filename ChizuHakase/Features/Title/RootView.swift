@@ -277,17 +277,20 @@ struct RootView: View {
         // state the stage list's 「おぼえた ◯ / ◯」 has to show as full. Its own
         // flag rather than a rider on -grantCards: that one is about the book,
         // and a test asking about progress should say so.
-        // Japan-only by design, even though it sits after the `-atlas` parse:
-        // its one UI test (StageSelectUITests) launches without `-atlas` and
-        // reads japan's shelf. Make it atlas-aware like `-grantCards` the day
-        // a world test needs the same fixture.
-        if arguments.contains("-learnFirstStage"), let stage = Stage.all.first {
+        // Atlas-aware like `-grantCards`: the session book's first stage, so
+        // `-atlas world -learnFirstStage` colours the world's own countries
+        // (the my-map globe screenshots need mastery somewhere on the sphere).
+        // Launched without `-atlas` it still reads japan's shelf, which is
+        // what its original UI test (StageSelectUITests) launches with.
+        // Each launch applies one clean visit, so repeated launches walk the
+        // mastery ladder the same way repeated plays do.
+        if arguments.contains("-learnFirstStage"), let stage = atlas.stage(at: 0) {
             app.save.applyStageResult(StageResult(
                 mode: .findOnMap, stageIndex: stage.index, score: 0, stars: 3,
                 firstTryByPrefecture: Dictionary(uniqueKeysWithValues:
                     stage.codes.map { ($0, true) }),
                 cardDraws: []),
-                catalog: app.cards, atlas: SaveData.japanAtlas)
+                catalog: atlas.cards, atlas: atlas.saveKey)
         }
         guard let index = arguments.firstIndex(of: "-startAt"),
               index + 1 < arguments.count else { return }

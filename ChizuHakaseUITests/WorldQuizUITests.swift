@@ -289,17 +289,63 @@ final class WorldQuizUITests: XCTestCase {
         }
     }
 
-    /// The world my-map: the world's own countries, the world's own tally.
-    func testWorldMyMapShowsTheWorldBook() {
+    /// The world my-map: a globe of the world's own countries, the world's
+    /// own tally, and a tap that opens the same detail sheet japan's flat
+    /// map opens.
+    func testWorldMyMapShowsAGlobeOfTheWorldBook() {
         app.launchArguments = ["-resetSave", "-atlas", "world", "-startAt", "myMap"]
         app.launch()
         // A fresh save has learned none of the 167 countries.
         XCTAssertTrue(app.staticTexts["0 / 167"].waitForExistence(timeout: 10),
                       "the learned tally is not counting the world's countries")
-        XCTAssertTrue(app.buttons["オーストラリア"].waitForExistence(timeout: 5),
-                      "no tappable country on the world my-map")
+        // The globe labels countries by their reading (the flat panel used the
+        // written オーストラリア) — this is what pins which panel is up.
+        let australia = app.buttons["おーすとらりあ"]
+        XCTAssertTrue(australia.waitForExistence(timeout: 5),
+                      "no kana-labelled country on the world my-map globe")
         XCTAssertFalse(app.buttons["北海道"].exists,
                        "japan's prefectures leaked onto the world my-map")
+        // Home faces japan; a country on the far side must not be exposed
+        // (drawn, labelled) until the globe is turned.
+        XCTAssertFalse(app.buttons["ぶらじる"].exists,
+                       "a far-side country is labelled without turning the globe")
+
+        australia.tap()
+        XCTAssertTrue(app.staticTexts["おーすとらりあ"].waitForExistence(timeout: 3),
+                      "tapping a country did not open its detail sheet")
+        XCTAssertTrue(app.staticTexts["オーストラリア"].exists,
+                      "the detail sheet lost the written name")
+    }
+
+    /// Dragging the globe turns it. This runs inside the my-map's scrolling
+    /// column, where a drag without priority would scroll the page instead —
+    /// and turning is the only road to the far side, so both are pinned by
+    /// one gesture: after a westward drag メキシコ must have come around, and
+    /// the column must not have scrolled out from under the finger.
+    func testDraggingTheWorldMyMapGlobeTurnsItInsteadOfScrolling() {
+        app.launchArguments = ["-resetSave", "-atlas", "world", "-startAt", "myMap"]
+        app.launch()
+        XCTAssertTrue(app.buttons["おーすとらりあ"].waitForExistence(timeout: 10),
+                      "the globe never appeared")
+        XCTAssertFalse(app.buttons["めきしこ"].exists)
+        let erase = app.buttons["きろくを ぜんぶ けす"]
+        XCTAssertTrue(erase.waitForExistence(timeout: 3))
+        XCTAssertTrue(erase.isHittable, "the whole column should fit on screen")
+
+        // A long westward drag across the disk, with a deliberate vertical
+        // component: the vertical axis is exactly what a ScrollView would
+        // steal from an unprioritised drag. The distance aims the camera at
+        // roughly (110°W, 20°N), where メキシコ sits near dead centre — far
+        // enough from the limb to survive the synthesiser under-delivering
+        // the first stretch of the drag.
+        let start = app.coordinate(withNormalizedOffset: CGVector(dx: 0.88, dy: 0.43))
+        let end = app.coordinate(withNormalizedOffset: CGVector(dx: 0.06, dy: 0.38))
+        start.press(forDuration: 0.05, thenDragTo: end)
+
+        XCTAssertTrue(app.buttons["めきしこ"].waitForExistence(timeout: 5),
+                      "dragging westward did not bring the americas around")
+        XCTAssertTrue(erase.isHittable,
+                      "the drag scrolled the column instead of turning the globe")
     }
 
     /// The eraser under the world map erases the whole app, and the second

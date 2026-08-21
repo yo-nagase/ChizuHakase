@@ -20,6 +20,11 @@ struct MyMapView: View {
     @State private var pan: CGSize = .zero
     /// The map's frame, for dropping taps the zoom pushed off the glass.
     @State private var mapSize: CGSize = .zero
+    /// The globe's camera, when this book carries one. Opens facing
+    /// `GlobeCenter.home`; the zoom is a separate axis from the flat map's
+    /// `zoom` because it lives in the disk's radius, not in a scaleEffect.
+    @State private var globeCenter = GlobeCenter.home
+    @State private var globeZoom: CGFloat = 1
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -38,9 +43,13 @@ struct MyMapView: View {
             .padding(16)
             .pageColumn()
         }
-        // While zoomed the map owns dragging, or the column would scroll away
-        // underneath a child trying to move around Kyushu. The reset button is
-        // always on screen, so the way back to scrolling is one tap.
+        // While zoomed the flat map owns dragging, or the column would scroll
+        // away underneath a child trying to move around Kyushu. The reset
+        // button is always on screen, so the way back to scrolling is one tap.
+        // The globe never trips this (`zoom` is the flat map's camera): it
+        // rotates at *every* zoom, so instead of a scroll switch its drag is
+        // a high-priority gesture (see `GlobeSurface`) — the page scrolls
+        // from the legend, the tallies and the margins, never off the planet.
         .scrollDisabled(ZoomPan.isZoomed(zoom))
         .background(AlbumPage())
         .navigationTitle(mode.myMap)
@@ -48,11 +57,73 @@ struct MyMapView: View {
         .sheet(item: $selected) { PrefectureDetailSheet(atlas: atlas, prefecture: $0) }
     }
 
+    /// Which panel the book gets is decided by data, never by which book it
+    /// is: a book that carries globe rings is shown as a globe (design doc §7 —
+    /// turning the sphere to find your own green is itself the reward), and
+    /// japan, which carries none, keeps the flat map it has always had.
+    @ViewBuilder private var map: some View {
+        if let globe = atlas.globe {
+            globePanel(globe)
+        } else {
+            flatMap
+        }
+    }
+
+    /// The world coloured by mastery, as a sphere the child can turn.
+    ///
+    /// Square, unlike the flat panel's derived ratio: the disk is sized by the
+    /// panel's short side, so any extra width or height is only ever empty
+    /// corner — a square wastes the least page on a round earth. Tap targets,
+    /// hints and effects are quiz furniture; here a tap just opens the same
+    /// detail sheet the flat map opens.
+    private func globePanel(_ globe: GlobeData) -> some View {
+        GlobeMapView(
+            globe: globe,
+            // The same function the legend and the flat map read (§5), so a
+            // country can only wear a colour the swatches explain.
+            appearance: { MasteryStyle.appearance(for: $0, save: save) },
+            interactiveCodes: Set(globe.shapes.map(\.code)),
+            center: $globeCenter,
+            zoom: $globeZoom,
+            // The reading, not the written name — same reasoning as the quiz
+            // globe: kanji country names are exactly where VoiceOver guesses
+            // wrong, and the reading is the form being taught.
+            accessibilityName: { atlas.mapData[$0]?.kana ?? "" },
+            onTap: { code, _ in
+                // No visibility gate (unlike the flat map's): the globe's
+                // magnification lives in its radius, so the touch region
+                // never outgrows the clipped panel the child sees.
+                if let code { selected = atlas.mapData[code] }
+            })
+            .aspectRatio(1.0, contentMode: .fit)
+            .clipShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
+            // The globe carries its own sea inside the disk; more sea around
+            // a sea-rimmed planet would swallow its edge (same call as the
+            // quiz panel), so behind it the panel stays album paper.
+            .background(Palette.background)
+            .stickerCard(fill: .clear, cornerRadius: 26)
+            // Zoom needs the same visible way back as the flat map. Rotation
+            // does not: no orientation is "lost" on a sphere that always
+            // shows half of itself, and home is one drag away.
+            .overlay(alignment: .topTrailing) {
+                resetZoomButton(isZoomed: ZoomPan.isZoomed(globeZoom)) {
+                    globeZoom = 1
+                }
+            }
+            // No ZoomHintChip: the chip teaches ZoomPan's press-and-slide,
+            // a gesture the globe does not run — there, a drag rotates.
+            .accessibilityZoomAction { action in
+                globeZoom = ZoomPan.clamp(
+                    scale: action.direction == .zoomIn ? globeZoom * 1.5
+                                                       : globeZoom / 1.5)
+            }
+    }
+
     /// Pinchable, and draggable once pinched. The zoom lives on the map itself
     /// rather than on the whole screen so the legend and the counts stay put —
     /// they are the key to what the colours mean, and scaling them away while
     /// looking closely at a prefecture would be backwards.
-    private var map: some View {
+    private var flatMap: some View {
         PrefectureMapView(
             mapData: atlas.mapData,
             codes: atlas.mapData.prefectures.map(\.code),
@@ -91,7 +162,12 @@ struct MyMapView: View {
         .clipShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
         .background(Palette.seaGradient)
         .stickerCard(fill: .clear, cornerRadius: 26)
-        .overlay(alignment: .topTrailing) { resetZoomButton }
+        .overlay(alignment: .topTrailing) {
+            resetZoomButton(isZoomed: ZoomPan.isZoomed(zoom)) {
+                zoom = 1
+                pan = .zero
+            }
+        }
         .overlay(alignment: .bottom) { ZoomHintChip(zoom: zoom).padding(.bottom, 12) }
         .accessibilityZoomAction { action in
             // VoiceOver cannot pinch, so it gets the same range through the
@@ -101,16 +177,18 @@ struct MyMapView: View {
         }
     }
 
-    /// The way back out.
+    /// The way back out — shared by both cameras (the flat map's zoom+pan,
+    /// the globe's radius), because a child who learns the escape hatch on
+    /// one panel must find it in the same corner of the other.
     ///
     /// A visible button rather than a double-tap: double tap would have to be
     /// disambiguated from the single tap that opens a prefecture, delaying
     /// every selection, and a five-year-old who has pinched into a corner
     /// needs an escape hatch they can see rather than one they must know about.
-    @ViewBuilder private var resetZoomButton: some View {
-        if ZoomPan.isZoomed(zoom) {
+    @ViewBuilder private func resetZoomButton(isZoomed: Bool,
+                                              reset: @escaping () -> Void) -> some View {
+        if isZoomed {
             Button(mode.resetZoom) {
-                let reset = { zoom = 1; pan = .zero }
                 if reduceMotion { reset() } else { withAnimation(.spring(duration: 0.3), reset) }
             }
             .font(AppFont.rounded(13, relativeTo: .caption))

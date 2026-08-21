@@ -278,7 +278,13 @@ private struct GlobeSurface: View, Animatable {
                                                among: candidates, projection: projection)
             onTap(hit?.code, location)
         }
-        .gesture(rotation(projection: projection))
+        // High priority so the drag beats an enclosing ScrollView (the
+        // my-map column). The flat map only steals scrolling while zoomed;
+        // the globe rotates at *every* zoom, so a vertical drag that
+        // scrolled the page instead would make latitude unreachable. The
+        // page still scrolls from anywhere off the panel, and taps survive:
+        // the drag's 10pt minimum distance leaves them unclaimed.
+        .highPriorityGesture(rotation(projection: projection))
         .overlay(alignment: .topLeading) { comboLabel(projection: projection) }
     }
 
