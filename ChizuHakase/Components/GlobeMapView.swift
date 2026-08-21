@@ -76,7 +76,9 @@ struct GlobeMapView: View {
     /// リセットボタンを親が置くため(平面版の zoom と同じ役割分担)。
     /// パンは無い — 見たい場所へは回して寄る。
     @Binding var zoom: CGFloat
-    /// 可視国の VoiceOver ラベル(かな名)。nil ならラベルを付けない。
+    /// 可視国の VoiceOver ラベル(かな名)。nil なら国ラベルだけでなく
+    /// 回転つまみ(`rotateStepper`)も消える — 読み上げる名前の無い地球儀を
+    /// 回せても、着いた先を伝えられない。
     var accessibilityName: ((Int) -> String)?
     /// 何に当たったか(海なら nil)と、指が落ちた点(この View の座標)。
     var onTap: ((Int?, CGPoint) -> Void)?
@@ -193,10 +195,14 @@ struct GlobeMapView: View {
     /// VoiceOver の 1 ステップぶん回した到達値(`rotateStepper`)。緯度は
     /// 触らない — 収録国の重心は 39°S〜66°N に収まり、初期位置
     /// (`GlobeCenter.home`、36°N)からなら経度の一周だけで全国がいつか
-    /// 正面半球に入る。ドラッグしない利用者の緯度をよそで動かすのは
-    /// なまえを あてる の出題回転だけで、あちらには平面トグルという代替
-    /// 経路が立っている。二軸のつまみは「いまどこか」を耳で追う相手には
-    /// 迷路になる。経度は wrap — 一周して同じ場所へ帰る、球の事実そのまま。
+    /// 正面半球に入る(実データのピン: GlobeMapViewTests)。ドラッグしない
+    /// 利用者の緯度をよそで動かすのは、なまえを あてる の出題回転と、
+    /// 両モードで発火する 3 ミスのヒント回転(`rotate(toHint:)`)。ヒントが
+    /// 高緯度(アイスランド ~66°N)へ寄せた後は南端の国が全経度で 90° の
+    /// 外に出るが、その国が答えになった回はまさに同じヒント回転が正面へ
+    /// 連れて行く — 崩した張本人が救済を兼ねる。二軸のつまみは「いまどこか」
+    /// を耳で追う相手には迷路になる。経度は wrap — 一周して同じ場所へ帰る、
+    /// 球の事実そのまま。
     nonisolated static func stepped(_ center: GlobeCenter, east: Bool) -> GlobeCenter {
         let step = GameRules.globeRotateStepDegrees
         return GlobeCenter(

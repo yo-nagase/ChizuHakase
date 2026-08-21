@@ -158,6 +158,31 @@ struct GlobeMapViewLogicTests {
         #expect(center == GlobeCenter.home)
     }
 
+    /// つまみの一軸設計の前提を実データで釘に: どの収録国も、home の緯度の
+    /// まま経度を一歩ずつ回すだけで(一周 = 8 歩)いつか正面半球に入る。
+    /// P8 のデータ更新・home の移動・歩幅の変更がこの前提を破った瞬間に落ちる
+    /// (stepped の doc コメント「39°S〜66°N」を主張から不変条件へ)。
+    @Test func つまみの一周でどの国も正面半球に入る() throws {
+        let world = try WorldDataLoader.load(
+            contentsOf: TestResources.require("WorldShapes"))
+        let steps = Int((360 / GameRules.globeRotateStepDegrees).rounded(.up))
+        for shape in world.globe.shapes {
+            var center = GlobeCenter.home
+            var reachable = false
+            for _ in 0..<steps where !reachable {
+                let probe = GlobeProjection(centerLongitude: center.longitude,
+                                            centerLatitude: center.latitude,
+                                            radius: 1, screenCenter: .zero)
+                reachable = probe.cosineOfAngularDistance(
+                    lon: Double(shape.centroid.x),
+                    lat: Double(shape.centroid.y)) > 0
+                center = GlobeMapView.stepped(center, east: true)
+            }
+            #expect(reachable,
+                    "code \(shape.code) はつまみの一周で正面半球に入らない")
+        }
+    }
+
     @Test func 読み上げ値は正面いちばん近くの国() {
         let near = shape(code: 1, centroid: CGPoint(x: 10, y: 5))
         let far = shape(code: 2, centroid: CGPoint(x: 120, y: 0))
