@@ -237,12 +237,14 @@ struct AtlasTests {
 
     // MARK: - 世界のカード目録(WorldCards.json)
 
-    /// 1 国 1 枚の国旗カード。オリジナル札(-2)は P6 の手描きが揃ってから。
-    @Test func 世界の目録は167カ国ぶんの国旗カード() throws {
+    /// 国旗 167 枚 + オリジナル 6 枚(P8 パイロット: ひがしアジア)。
+    /// オリジナルは絵文字先行(P8 裁定 1)— 絵は後続バッチが持ってくる。
+    @Test func 世界の目録は国旗167枚とオリジナル6枚() throws {
         let atlas = try worldAtlas()
-        #expect(atlas.cards.count == 167)
-        for card in atlas.cards.all {
-            #expect(card.category == .flag, "\(card.id) is not a flag card")
+        #expect(atlas.cards.count == 173)
+        let flags = atlas.cards.all.filter { $0.category == .flag }
+        #expect(flags.count == 167)
+        for card in flags {
             #expect(card.art == nil, "\(card.id): 絵文字が国旗そのもの、絵は持たない")
         }
     }
@@ -268,16 +270,60 @@ struct AtlasTests {
             #expect(!cards.isEmpty, "code \(pref.code) has no cards")
             #expect(cards.first?.id == "\(pref.code)-1",
                     "code \(pref.code): first card is \(cards.first?.id ?? "nil")")
+            #expect(cards.first?.category == .flag,
+                    "code \(pref.code): 先頭札が国旗を名乗っていない")
+        }
+    }
+
+    /// オリジナル札(P8): id は "{code}-2" で、国旗の直後 = その国の 2 枚目に
+    /// 立つ。国旗は -1 の持ち場なので、-2 が flag を名乗ったら生成器の誤り。
+    @Test func オリジナル札は国旗の直後に立ち国旗を名乗らない() throws {
+        let atlas = try worldAtlas()
+        let originals = atlas.cards.all.filter { $0.category != .flag }
+        #expect(!originals.isEmpty, "オリジナル札がまだ目録に無い")
+        for card in originals {
+            #expect(card.id == "\(card.prefectureCode)-2", "id \(card.id)")
+            let siblings = atlas.cards.cards(for: card.prefectureCode)
+            #expect(siblings.count == 2, "code \(card.prefectureCode)")
+            #expect(siblings.last == card,
+                    "code \(card.prefectureCode): -2 が 2 枚目に居ない")
+        }
+    }
+
+    /// ひがしアジアのパイロット 6 カ国(P8 Task 1)。題材の選び方と文言の調子は
+    /// ここで確立してユーザーサインオフを得る — 残り 161 カ国はその後のバッチ。
+    @Test func パイロット6カ国はオリジナル札を持つ() throws {
+        let atlas = try worldAtlas()
+        for code in [156, 158, 392, 408, 410, 496] {
+            #expect(atlas.cards.cards(for: code).count == 2, "code \(code)")
+        }
+    }
+
+    /// 説明文はこども表記: ひらがな・カタカナ・語間スペース・長音だけ。
+    /// 漢字が混ざったら生成器の検査漏れ(読めない子に届かない札になる)。
+    @Test func 全札の説明はかなとスペースだけでできている() throws {
+        for card in try worldAtlas().cards.all {
+            for scalar in card.description.unicodeScalars {
+                let value = scalar.value
+                let allowed = value == 0x20 || value == 0x30FC
+                    || (0x3041...0x3096).contains(value)
+                    || (0x30A1...0x30FA).contains(value)
+                #expect(allowed, "\(card.id): \(card.description) に \(scalar)")
+            }
         }
     }
 
     /// 国旗の絵文字は地域指標記号 2 文字(端末フォントが描く実物の国旗)。
+    /// オリジナル札は題材の絵文字で、国旗絵文字は使わない — 国旗は -1 の
+    /// 持ち場で、二重に配ると札種の違いが絵から消える。
     @Test func 国旗カードの絵文字は地域指標記号() throws {
         let indicators: ClosedRange<UInt32> = 0x1F1E6...0x1F1FF
         for card in try worldAtlas().cards.all {
             let scalars = card.emoji.unicodeScalars
-            #expect(scalars.count == 2 && scalars.allSatisfy { indicators.contains($0.value) },
-                    "\(card.id): \(card.emoji) is not a flag emoji")
+            let isFlagEmoji = scalars.count == 2
+                && scalars.allSatisfy { indicators.contains($0.value) }
+            #expect(isFlagEmoji == (card.category == .flag),
+                    "\(card.id): \(card.emoji)")
         }
     }
 
@@ -314,7 +360,7 @@ struct AtlasTests {
     /// (上のテストはテスト用 URL 経由なので、リソースがアプリターゲットに
     /// 入り忘れてもすり抜ける。)
     @Test func バンドルからの読み込みもカードを運ぶ() {
-        #expect(Atlas.loadWorld().cards.count == 167)
+        #expect(Atlas.loadWorld().cards.count == 173)
     }
 
     /// 引き継ぎ 2 の罠を実データで固定する: カード ID は 2 冊の間で文字列

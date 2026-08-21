@@ -280,6 +280,15 @@
       "description": "ちゅうごくの こっきだよ"
     },
     {
+      "id": "156-2",
+      "prefectureCode": 156,
+      "emoji": "🧱",
+      "nameKana": "ばんりのちょうじょう",
+      "nameKanji": "万里の長城",
+      "category": "landmark",
+      "description": "やまに そって ながく つづく かべだよ"
+    },
+    {
       "id": "158-1",
       "prefectureCode": 158,
       "emoji": "🇹🇼",
@@ -287,6 +296,15 @@
       "nameKanji": "国旗",
       "category": "flag",
       "description": "たいわんの こっきだよ"
+    },
+    {
+      "id": "158-2",
+      "prefectureCode": 158,
+      "emoji": "🧋",
+      "nameKana": "たぴおかみるくてぃー",
+      "nameKanji": "タピオカミルクティー",
+      "category": "food",
+      "description": "もちもちの つぶが はいった おちゃだよ"
     },
     {
       "id": "170-1",
@@ -685,6 +703,15 @@
       "description": "にほんの こっきだよ"
     },
     {
+      "id": "392-2",
+      "prefectureCode": 392,
+      "emoji": "🗻",
+      "nameKana": "ふじさん",
+      "nameKanji": "富士山",
+      "category": "nature",
+      "description": "くにで いちばん たかい やまだよ"
+    },
+    {
       "id": "398-1",
       "prefectureCode": 398,
       "emoji": "🇰🇿",
@@ -721,6 +748,15 @@
       "description": "きたちょうせんの こっきだよ"
     },
     {
+      "id": "408-2",
+      "prefectureCode": 408,
+      "emoji": "🍜",
+      "nameKana": "れいめん",
+      "nameKanji": "冷麺",
+      "category": "food",
+      "description": "つめたい スープの つるつる めんだよ"
+    },
+    {
       "id": "410-1",
       "prefectureCode": 410,
       "emoji": "🇰🇷",
@@ -728,6 +764,15 @@
       "nameKanji": "国旗",
       "category": "flag",
       "description": "かんこくの こっきだよ"
+    },
+    {
+      "id": "410-2",
+      "prefectureCode": 410,
+      "emoji": "🥬",
+      "nameKana": "きむち",
+      "nameKanji": "キムチ",
+      "category": "food",
+      "description": "はくさいを からく つけた おかずだよ"
     },
     {
       "id": "414-1",
@@ -899,6 +944,15 @@
       "nameKanji": "国旗",
       "category": "flag",
       "description": "もんごるの こっきだよ"
+    },
+    {
+      "id": "496-2",
+      "prefectureCode": 496,
+      "emoji": "⛺",
+      "nameKana": "げる",
+      "nameKanji": "ゲル",
+      "category": "craft",
+      "description": "はこんで たてられる まるい いえだよ"
     },
     {
       "id": "498-1",
