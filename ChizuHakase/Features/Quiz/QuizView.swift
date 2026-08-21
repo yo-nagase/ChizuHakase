@@ -42,10 +42,10 @@ struct QuizView: View {
     /// initial value, so the default — open on the globe when there is one —
     /// lives in the computed `mapDisplay` instead.
     @State private var mapDisplayOverride: MapDisplay?
-    /// The globe's rotation. Opens facing home — the one place on the sphere
-    /// a five-year-old already knows, so the world starts from somewhere
-    /// rather than from open ocean.
-    @State private var globeCenter = GlobeCenter(longitude: 138, latitude: 36)
+    /// The globe's rotation. Opens facing `GlobeCenter.home` — that constant
+    /// carries the why (japan front, the one place on the sphere the child
+    /// already knows).
+    @State private var globeCenter = GlobeCenter.home
     /// The globe's radius multiplier — a separate camera from the flat map's
     /// `zoom` (same 1...4 range, different coordinate system; see
     /// `toggleMapDisplay`).
@@ -386,6 +386,17 @@ struct QuizView: View {
         .zoomPan(scale: $zoom, offset: $pan, oneFingerZoom: true)
     }
 
+    /// Codes a tap on either map may resolve to. Empty in 「なまえを あてる」:
+    /// there the four name buttons are the answer surface, and a map that
+    /// still answered taps would let a child bypass the mode's whole point —
+    /// reading — by poking shapes until one popped.
+    private func tappableCodes(_ quiz: QuizViewModel) -> Set<Int> {
+        quiz.mode == .nameIt ? [] : quiz.interactiveCodes
+    }
+
+    /// One performance note: on the world challenge this draws 167
+    /// `PrefectureLayer`s where 全国チャレンジ drew 47. If the flat world map
+    /// ever stutters on old hardware, this stack is the first place to look.
     private func mapView(_ quiz: QuizViewModel) -> some View {
         PrefectureMapView(
             mapData: atlas.mapData,
@@ -394,9 +405,13 @@ struct QuizView: View {
             // sitting's sample leaves 120 country-shaped holes in the sea
             // (the globe never had this hole: it draws every shape). On every
             // non-sampling stage the two lists name the same shapes.
-            codes: stage.isChallenge ? stage.codes : quiz.order,
+            // Regional stages used to pass `quiz.order` here instead — the
+            // same countries (the map deduplicates), just in question order —
+            // so one list now serves every stage, and the drawn stack and
+            // VoiceOver's reading order stop reshuffling with every sitting.
+            codes: stage.codes,
             appearance: { appearance(for: $0, quiz: quiz) },
-            interactiveCodes: quiz.mode == .nameIt ? [] : quiz.interactiveCodes,
+            interactiveCodes: tappableCodes(quiz),
             targetCode: quiz.target?.code,
             hintCode: quiz.hintCode,
             effect: quiz.effect,
@@ -424,7 +439,7 @@ struct QuizView: View {
                 atlas.mapData[code].map { appearance(for: $0, quiz: quiz) }
                     ?? .slot(for: code)
             },
-            interactiveCodes: quiz.mode == .nameIt ? [] : quiz.interactiveCodes,
+            interactiveCodes: tappableCodes(quiz),
             targetCode: quiz.target?.code,
             hintCode: quiz.hintCode,
             effect: quiz.effect,

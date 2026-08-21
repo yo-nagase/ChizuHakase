@@ -16,6 +16,13 @@ nonisolated struct GlobeCenter: Sendable, Equatable {
         self.latitude = latitude
     }
 
+    /// この本の子の家 — 日本が正面に来る回転。クイズもマイマップも、地球儀は
+    /// まずここから開く: 球上で 5 歳がすでに知っている唯一の場所から始まれば、
+    /// 世界は大海原ではなく「どこか」から広がる。値は日本本土の中心あたり
+    /// (138°E, 36°N)で、緯度を少し北に取るのは正射図法の正面が最も歪みなく
+    /// 見える帯に日本列島全体を寝かせるため。
+    static let home = GlobeCenter(longitude: 138, latitude: 36)
+
     /// `GlobeGeometry.centering` の到達値へ「最短の弧」で向かうための代入値。
     ///
     /// SwiftUI のアニメーションは数値を直線補間するので、170° → −170° を
@@ -527,7 +534,7 @@ private struct GlobeMapPreview: View {
     @State private var zoom: CGFloat
     private let atlas = Atlas.loadWorld()
 
-    init(center: GlobeCenter = GlobeCenter(longitude: 138, latitude: 36),
+    init(center: GlobeCenter = .home,
          zoom: CGFloat = 1) {
         _center = State(initialValue: center)
         _zoom = State(initialValue: zoom)
