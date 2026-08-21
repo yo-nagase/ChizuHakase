@@ -55,7 +55,8 @@ lon/lat は現在ロード時に投影されて消えるため、`WorldDataLoade
   (リム)へ写す。ポリゴンを閉じたまま保つための標準手法で、
   リング全点が不可視の国は描かない(設計 §7「90° 超の国は描かない」)
 - 経度は sin/cos に食わせるだけなので **+360 正規化済みの値がそのまま通る**
-  (フィジー 189.75°E も三角関数上は等価。球には日付変更線問題が無い)
+  (フィジー 180.18°E・ロシア 189.76°E も三角関数上は等価。
+  球には日付変更線問題が無い)
 - 回転: ドラッグ delta(pt)→ 中心の移動量(度)。`Δlon = −Δx / R · (180/π)
   / max(cos(lat0), ε)` は高緯度で暴れるので **`Δlon = −Δx / R · (180/π)` の
   単純形で良い**(地球儀の掴み心地は厳密性より安定を優先)。
@@ -146,6 +147,21 @@ lon/lat は現在ロード時に投影されて消えるため、`WorldDataLoade
 
 ### Task 5: ワールドチャレンジ(47 問・未出題優先・askedInChallenge)
 
+> **Task 4 レビューからの ride-along(2026-08-20・最初のコミットでやる):**
+> - QuizViewModel の `repeats:` 行に道標コメント(challengeQuestionCount を
+>   超える challenge は challengeSelection で抽選するまで存在してはならない)+
+>   両アトラス全ステージで `QuizViewModel.questionCount == stage.questionCount`
+>   の突き合わせテスト(未配線の >47 チャレンジが VM に届いた瞬間に落ちる。
+>   逆方向 — 19 面目が isChallenge:false で通る 334/334 自己整合 — は
+>   捕まえないとテストコメントに明記し、Task 5 本体のピンで塞ぐ)
+> - RegionZoom.id = label.kids の一意性をピンか一行コメントで
+> - QuizView:245-252/276-282 の「全国チャレンジ」コメント 2 件を isChallenge
+>   世代に言い直す(ZoomHintChip が世界チャレンジ平面に出るのは意図どおり —
+>   そう書く)
+> - AtlasNoun の型ドキュメントに「アトラスが運ぶ こども/おとな 語彙対」への
+>   役割拡大を一句(地域ラベルは共有文への差し込みでも本の間の差でもない)
+> - Stage.questionCount の `* 2` を `asksEachTwice` 経由に戻すか相互参照を明記
+
 **Files:**
 
 - Modify: `ChizuHakase/Models/WorldStage.swift`(19 面目 + 専用 AtlasSection)/
@@ -174,6 +190,21 @@ lon/lat は現在ロード時に投影されて消えるため、`WorldDataLoade
 
 ### Task 6: クイズ統合 — 地球儀 ⇄ 平面トグル
 
+> **Task 3 レビューからの ride-along(2026-08-20):**
+> - **冒頭でやる**: ヒント回転の閾値を「重心が前面半球」から「快適に見える角距離」
+>   へ(`GameRules.globeHintComfortDegrees` ≈ 60–70°、`GlobeProjection` に
+>   角距離の口を追加)。nameIt の事前回転も同じ述語を使う — 88° の縁で
+>   つぶれた輪郭が点滅しても 3 回ミスした子は見つけられない
+> - GlobeSurface のドラッグ基準点を startLocation キーに(GlobeMapView:188/281 —
+>   システムキャンセルで lastDrag が残ると次ドラッグの初回デルタが跳ぶ。
+>   直すと 10pt スロップぶんの初回ジャンプも同時に消える。@GestureState は
+>   updating/onChanged の順序が未定義なので使わない)
+> - 赤リング幅 3.5 の 2 ファイル重複を共有定数へ(GlobeMapView:404 /
+>   PrefectureMapView:397 — コメントで結ばれた越境不変条件)
+> - 任意: hairlineWidth をトップレベル関数から名前空間 enum の static へ/
+>   リムのコメント「インセット枠と同じ」の言い過ぎ修正(0.22/1.5 vs 0.35/1.6)/
+>   ちょうど 90° の重心でヒント回転が起きるピン
+
 **Files:**
 
 - Modify: `ChizuHakase/Features/Quiz/QuizView.swift`
@@ -195,6 +226,22 @@ lon/lat は現在ロード時に投影されて消えるため、`WorldDataLoade
 
 ### Task 7: 世界マイマップの地球儀 + タイトルのミニ地球儀
 
+> **裁定(2026-08-21)**: タイトルのミニ地球儀は**見送り** — 並行セッションが
+> TitleView.swift + TitleLogoWorld.imageset を編集中(未コミット)で、
+> 同ファイルへの合流は巻き込み事故(da0cd8b の前例)のリスクが利益を上回る。
+> ツリーが落ち着いてから小タスクとして単独で判断する。Task 7 は MyMapView 限定。
+>
+> **Task 6 レビューからの ride-along:**
+> - QuizView:394 の `codes:` 三項演算子 — 地方側がなぜ quiz.order のままかを
+>   一句(または stage.codes に統一して削除。集合としては同値、変わるのは
+>   地方の描画/a11y 反復順のみ)
+> - `interactiveCodes: quiz.mode == .nameIt ? [] : quiz.interactiveCodes` の
+>   verbatim 重複(QuizView:397/427)を computed ヘルパーに
+> - `GlobeCenter(138, 36)` のマジックナンバーを `GlobeCenter.home` 等の
+>   名前付き定数へ(§11)
+> - mapView コメントに平面世界チャレンジ = 167 PrefectureLayer の負荷プロファイル
+>   注記(旧 47。古い機種でカクつくならここ)
+
 **Files:**
 
 - Modify: `ChizuHakase/Features/MyMap/MyMapView.swift` /
@@ -214,11 +261,35 @@ lon/lat は現在ロード時に投影されて消えるため、`WorldDataLoade
 
 - `QuizViewModel.init` の `drawPolicy: = .random` 既定引数を外す
   (P6 最終レビュー指摘。生産は明示済み・テストだけ直す)
+- **Task 7 レビューからの ride-along**:
+  - GlobeMapView のヘッダに回転ドラッグの highPriority 契約を 1 文
+    (「平面版との構造差はひとつ」は今や過少申告 — 将来のホスト作者が読む場所に)
+  - ドラッグ UI テストに端末形状依存の一言(0.88/0.06 は CI iPhone 調整値。
+    iPad の pageColumn 余白では 0.88 が盤外)
+  - RootView:284 の -learnFirstStage コメントに「-resetSave 併用時」の限定を
+  - MyMapView の accessibilityZoomAction 重複 2 カ所を共有ヘルパーか
+    コメント引き継ぎで
+  - **VoiceOver は地球儀を回せない** — マイマップの裏側の国の詳細に届かない。
+    accessibilityAdjustableAction(経度ステップ)等が安ければ入れる、
+    高ければ申し送りに記録(クイズ側は平面トグルが代替経路)
 - Reduce Motion / Dynamic Type / iPad 4 方向を地球儀画面で一巡
 - 全ユニット + 全 UI スイート通し。日本フロー不変の最終確認
 - 完了記録をこの文書に追記
 
 ---
+
+## 完了記録
+
+| Task | コミット | レビュー |
+| --- | --- | --- |
+| 1 投影純関数 | `a21a6b4` `b44bd29` | 仕様✅(数学を独立再導出)/ 品質✅(ユニット 382 緑。screenCentroid 継ぎ目と可視式の緯度項ピンを追補 — 後者はミューテーションで有効性実証) |
+| 2 度数リング保持 | `9f32e46` | 仕様✅(平面側の bit 同一性を文字単位確認)/ 品質✅(ユニット 390 緑。実データ計測: 国 5,721 点+背景 645 点 — 地球儀の毎フレーム再投影は余裕、間引き基盤は作らない) |
+| 3 GlobeMapView | `ca5b953` | 仕様✅(平面側 stampAnchor 切り出しが verbatim)/ 品質✅(ユニット 406 緑。Binding+Animatable 構成・ズームは半径に入れて補正ゼロ。持ち越しは Task 6 ride-along に記載) |
+| 4 旗の再定義 | `2a7ab43` | 仕様✅(日本の文言・コード・ゲートをバイト単位確認、UI テスト再実行)/ 品質✅(ユニット 410 緑。前方ガードは Task 5 冒頭の ride-along に記載) |
+| 5 せかいチャレンジ | `1f4f61d` `5d7f26f` `0594c4d` | 仕様✅(§8 の抽選・一巡リセットを手検証)/ 品質✅(ユニット 427 緑。asked は既定値なしの必須引数、一巡分母は目録由来で専用テストにピン。UI スモークの隣国直撃 4 カ国フレークを実測から修正) |
+| 6 クイズ統合 | `256fa4b` `da0cd8b` `f9fbea2` | 仕様✅ / 品質✅(ユニット 434 緑単体検証。世界チャレンジは地球儀で開き、トグルは表示のみ。道中で Task 5 の取りこぼし — 平面チャレンジが抽選 47 カ国しか描かない — を修正。da0cd8b が並行セッションのずかんテスト hunk を巻き込み → f9fbea2 で外科的に未コミットへ返した) |
+| 7 マイマップ地球儀 | `6ef336a` `42ef574` | 仕様✅(単体 434 緑・UI 単体ビルド緑)/ 品質✅(回転ドラッグは highPriorityGesture — 意味論として正の判定。タイトルミニ地球儀は衝突回避で見送り。ドキュメント修正 3 件は Task 8 送り) |
+| 8 仕上げ | `56bec75` `bd8b52e` | 仕様✅(単体 438 緑再検証)/ 品質✅(共有ツリー 442 緑・UI 全クラス緑。drawPolicy 既定削除、VoiceOver 回転つまみ(±45°・正面国を読み上げ)、RM 穴なし、DT/iPad 4 方向実タップ確認。全国到達の不変条件を実データでピン) |
 
 ## ユーザーサインオフ待ち(実装は仮文言で進める)
 
@@ -229,4 +300,12 @@ lon/lat は現在ロード時に投影されて消えるため、`WorldDataLoade
 ## P8(別計画)
 
 - オリジナルカード 167 枚(制作パイプライン + シルバー解放文言)
-- リリース前: Natural Earth 出典表記、実機発音確認、中国/韓国別名(P6 申し送り)
+- リリース前: Natural Earth 出典表記、実機発音確認、中国/韓国別名(P6 申し送り)、
+  **VoiceOver 実機確認**(地球儀の回転つまみ — 値の読み・increment の向き・
+  要素の発見性。XCUITest では adjustable action を駆動できないため実機のみ)
+
+## ツリーが静かになったらやる小タスク(並行セッションとの衝突回避で見送った分)
+
+- タイトル世界ページのミニ地球儀(Task 7 裁定で見送り。TitleView が空いたら)
+- `MasteryStyle` を TitleView.swift から `Components/`(Palette/StickerStyle の隣)へ
+  移設(3 機能が使う共有品になった。Task 7 時点では TitleView が並行編集中で不可)
