@@ -751,40 +751,10 @@ footer p {
   background: linear-gradient(145deg, #ffd7df, #ffe8a2 35%, #bcecdf 67%, #b7dff7);
 }
 
-/* 世界編: スクリーンショットが揃うまでは絵文字の地球儀と国旗で見せる。
-   .feature-visual を重ねるのはモバイル用パディング(下の media query)より
-   詳細度を上げるため */
-.feature-visual.feature-visual--world {
-  padding: 0;
-  place-items: center;
+/* 世界編。海の色を日本編の水色より深くして、めくった先の 2 冊目だと分かるように */
+.feature-visual--world {
   background: linear-gradient(145deg, #d8f4ff, #6fc9e8 62%, #4fb4d6);
 }
-
-.world-visual {
-  position: relative;
-  display: grid;
-  place-items: center;
-}
-
-.world-visual__globe {
-  font-size: clamp(8rem, 24vw, 11rem);
-  line-height: 1;
-  filter: drop-shadow(0 22px 34px rgba(76, 41, 66, 0.28));
-}
-
-.world-visual__flag {
-  position: absolute;
-  font-size: clamp(1.7rem, 5vw, 2.3rem);
-  line-height: 1;
-  filter: drop-shadow(0 6px 12px rgba(76, 41, 66, 0.2));
-}
-
-.world-visual__flag--1 { top: -3.4rem; left: -2rem; transform: rotate(-12deg); }
-.world-visual__flag--2 { top: -4rem; right: -1.2rem; transform: rotate(9deg); }
-.world-visual__flag--3 { top: 32%; right: -4.2rem; transform: rotate(14deg); }
-.world-visual__flag--4 { bottom: -2.8rem; right: -1.6rem; transform: rotate(-8deg); }
-.world-visual__flag--5 { bottom: -3.5rem; left: -0.8rem; transform: rotate(11deg); }
-.world-visual__flag--6 { top: 34%; left: -4.4rem; transform: rotate(-15deg); }
 
 .story-section {
   position: relative;
@@ -935,7 +905,9 @@ footer p {
 
 .screens-gallery {
   display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
+  /* 10 枚 = 5 列 2 段。列を増やすほど 1 枚が細くなるので、端末の画面が
+     読める大きさを優先して段を足す */
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: clamp(0.7rem, 2vw, 1.25rem);
 }
 
@@ -981,6 +953,11 @@ footer p {
 
 .screen-frame--tan {
   background: linear-gradient(145deg, #f9edca, #ddb271);
+}
+
+/* せかいの ちず の 3 枚。特徴セクションの海と同じ深めの水色 */
+.screen-frame--sky {
+  background: linear-gradient(145deg, #d8f4ff, #5cbfe0);
 }
 
 .screens-gallery figcaption {
