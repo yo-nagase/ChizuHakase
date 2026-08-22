@@ -1,3 +1,4 @@
+import CoreGraphics
 import Foundation
 import Testing
 
@@ -172,6 +173,111 @@ struct GameRulesTests {
         #expect(GameRules.stars(missedPrefectures: 0, prefectureCount: 0) == 3)
     }
 
+    // MARK: - Challenge stage
+
+    /// The P7 redefinition (stored `isChallenge` instead of `codes.count == 47`)
+    /// must not move japan an inch: stage 6 is the one challenge, still 47
+    /// single-pass questions, and stages 0–5 still ask each prefecture twice.
+    @Test func japansChallengeFlagAndLengthsAreUnchanged() {
+        for stage in Stage.all {
+            #expect(stage.isChallenge == (stage.index == 6), "stage \(stage.index)")
+        }
+        let challenge = Stage.all[6]
+        #expect(!challenge.asksEachTwice)
+        #expect(challenge.questionCount == 47)
+        for stage in Stage.all where !stage.isChallenge {
+            #expect(stage.asksEachTwice, "stage \(stage.index)")
+            #expect(stage.questionCount == stage.codes.count * 2,
+                    "stage \(stage.index)")
+        }
+    }
+
+    /// The cap in both directions, on synthetic stages: a challenge over more
+    /// codes than one sitting is cut to `challengeQuestionCount`, and one with
+    /// fewer asks each code once. The world's 167-country challenge (a later
+    /// task) is built on exactly this min.
+    @Test func aChallengeSessionIsCappedAtTheChallengeQuestionCount() {
+        #expect(GameRules.challengeQuestionCount == 47)
+        let world = Stage(index: 99, name: "せかい", kanjiName: "世界",
+                          codes: Array(1...167), isChallenge: true)
+        #expect(!world.asksEachTwice)
+        #expect(world.questionCount == GameRules.challengeQuestionCount)
+        let small = Stage(index: 98, name: "ちいさい", kanjiName: "小さい",
+                          codes: Array(1...10), isChallenge: true)
+        #expect(!small.asksEachTwice)
+        #expect(small.questionCount == 10)
+    }
+
+    // MARK: - Challenge draw (世界チャレンジの未出題優先 — 設計 §8)
+
+    private func seededRNG(_ seed: UInt64 = 1) -> AnyRandomNumberGenerator {
+        AnyRandomNumberGenerator(SeededGenerator(seed: seed))
+    }
+
+    /// 網羅を先に、ランダムはその中で: 未出題が 1 回ぶんに足りるあいだは
+    /// 出題済みが 1 国も混ざらない。
+    @Test func 未出題が足りるなら出題済みは選ばれない() {
+        var rng = seededRNG()
+        let asked = Set(1...100)
+        let picked = GameRules.challengeSelection(
+            codes: Array(1...167), asked: asked, count: 47, using: &rng)
+        #expect(picked.count == 47)
+        #expect(Set(picked).count == 47, "a code was drawn twice")
+        #expect(Set(picked).isDisjoint(with: asked),
+                "an already-asked code slipped into a full unasked pool")
+    }
+
+    /// 残りが 1 回ぶんに満たなくなったら、その残り全部が必ず入る —
+    /// 一巡の最後の国が抽選運に取り残されない。不足分だけ出題済みで埋める。
+    @Test func 未出題が足りないときは全未出題が必ず入る() {
+        var rng = seededRNG()
+        let asked = Set(1...140)
+        let unasked = Set(141...167)
+        let picked = GameRules.challengeSelection(
+            codes: Array(1...167), asked: asked, count: 47, using: &rng)
+        #expect(picked.count == 47)
+        #expect(Set(picked).count == 47)
+        #expect(unasked.isSubset(of: Set(picked)),
+                "an unasked country was left behind: \(unasked.subtracting(picked).sorted())")
+        #expect(Set(picked).subtracting(unasked).isSubset(of: asked))
+    }
+
+    /// 収録数が 1 回ぶんに満たない本では全収録を 1 回ずつ — min の側の釘。
+    @Test func 収録がcountに満たなければ全部を1回ずつ() {
+        var rng = seededRNG()
+        let picked = GameRules.challengeSelection(
+            codes: Array(1...10), asked: [3, 4], count: 47, using: &rng)
+        #expect(Set(picked) == Set(1...10))
+        #expect(picked.count == 10)
+    }
+
+    /// もう本に居ない国の履歴(将来の収録変更・手で触られたセーブ)は
+    /// 静かに無視される — 歩くのは codes の上だけ。
+    @Test func 本に無いコードの履歴は無視される() {
+        var rng = seededRNG()
+        let picked = GameRules.challengeSelection(
+            codes: Array(1...5), asked: [3, 99, 100], count: 5, using: &rng)
+        #expect(Set(picked) == Set(1...5))
+    }
+
+    /// シードが同じなら選抜も並びも同じ — テストと再現の土台。
+    /// 継ぎ目消しの最終シャッフルもここで釘打つ: 未出題 27 + 補充 20 の回で、
+    /// 先頭 27 が未出題そのものなら「未出題→補充」の境目が並びに残っている
+    /// (両プールが個別にシャッフル済みでも起きる壊れ方なので、
+    /// 「昇順のままでない」程度の釘では捕まらない)。
+    @Test func 抽選はシードに対して決定的() {
+        var a = seededRNG(42)
+        var b = seededRNG(42)
+        let first = GameRules.challengeSelection(
+            codes: Array(1...167), asked: Set(1...140), count: 47, using: &a)
+        let second = GameRules.challengeSelection(
+            codes: Array(1...167), asked: Set(1...140), count: 47, using: &b)
+        #expect(first == second)
+        #expect(first != first.sorted(), "the sitting is not shuffled")
+        #expect(Set(first.prefix(27)) != Set(141...167),
+                "the pool seam survived into the asking order")
+    }
+
     // MARK: - Mastery
 
     @Test func masteryRisesOnlyOnFirstTryCorrect() {
@@ -208,14 +314,16 @@ struct GameRulesTests {
     @Test func unownedCardsAreDrawnFirst() {
         var rng = SeededGenerator(seed: 42)
         let owned = ["01-1": 1, "01-2": 1]
-        let draw = GameRules.drawCard(from: Self.sample, owned: owned, using: &rng)
+        let draw = GameRules.drawCard(from: Self.sample, owned: owned, policy: .random,
+                                      using: &rng)
         #expect(draw == .new(Self.sample[2]), "should have drawn the only unowned card")
     }
 
     @Test func aCompleteSetStartsAddingStars() {
         var rng = SeededGenerator(seed: 7)
         let owned = ["01-1": 1, "01-2": 1, "01-3": 1]
-        let draw = GameRules.drawCard(from: Self.sample, owned: owned, using: &rng)
+        let draw = GameRules.drawCard(from: Self.sample, owned: owned, policy: .random,
+                                      using: &rng)
         guard case .star(_, let stars) = draw else {
             Issue.record("expected a star, got \(String(describing: draw))")
             return
@@ -231,7 +339,8 @@ struct GameRulesTests {
         let owned = ["01-1": GameRules.maxCardStars, "01-2": GameRules.maxCardStars,
                      "01-3": 2]
         for _ in 0..<20 {
-            let draw = GameRules.drawCard(from: Self.sample, owned: owned, using: &rng)
+            let draw = GameRules.drawCard(from: Self.sample, owned: owned,
+                                          policy: .random, using: &rng)
             #expect(draw?.card.id == "01-3", "a full card was drawn while one was unfinished")
         }
     }
@@ -240,7 +349,8 @@ struct GameRulesTests {
         var rng = SeededGenerator(seed: 7)
         let owned = Dictionary(uniqueKeysWithValues:
             Self.sample.map { ($0.id, GameRules.maxCardStars) })
-        let draw = GameRules.drawCard(from: Self.sample, owned: owned, using: &rng)
+        let draw = GameRules.drawCard(from: Self.sample, owned: owned, policy: .random,
+                                      using: &rng)
         if case .duplicate = draw {} else {
             Issue.record("expected a duplicate, got \(String(describing: draw))")
         }
@@ -405,14 +515,15 @@ struct GameRulesTests {
 
     @Test func drawingFromNoCardsIsNilNotACrash() {
         var rng = SeededGenerator(seed: 1)
-        #expect(GameRules.drawCard(from: [], owned: [:], using: &rng) == nil)
+        #expect(GameRules.drawCard(from: [], owned: [:], policy: .random, using: &rng) == nil)
     }
 
     @Test func repeatedDrawsEventuallyCompleteTheSet() {
         var rng = SeededGenerator(seed: 99)
         var owned: [String: Int] = [:]
         for _ in 0..<80 {
-            guard let draw = GameRules.drawCard(from: Self.sample, owned: owned, using: &rng)
+            guard let draw = GameRules.drawCard(from: Self.sample, owned: owned,
+                                                policy: .random, using: &rng)
             else { break }
             owned = GameRules.applyDraw(draw, to: owned)
         }
@@ -425,11 +536,135 @@ struct GameRulesTests {
         var rng = SeededGenerator(seed: 3)
         var owned: [String: Int] = [:]
         for _ in 0..<100 {
-            guard let draw = GameRules.drawCard(from: Self.sample, owned: owned, using: &rng)
+            guard let draw = GameRules.drawCard(from: Self.sample, owned: owned,
+                                                policy: .random, using: &rng)
             else { break }
             owned = GameRules.applyDraw(draw, to: owned)
             #expect(owned.values.allSatisfy { $0 <= GameRules.maxCardStars })
         }
+    }
+
+    // MARK: - 世界版の抽選(国旗先行・シルバー解放、設計 §5)
+
+    /// 世界版の 1 国ぶん: 2 枚で、目録は国旗を先頭に置く。
+    /// この並びが WorldCards.json の契約(Task 8)— ゲートは id を解析しない。
+    private static let worldPair = [
+        SpecialtyCard(id: "392-1", prefectureCode: 392, emoji: "🇯🇵",
+                      nameKana: "にほんの こっき", nameKanji: "日本の国旗",
+                      category: .landmark, description: "ひのまる"),
+        SpecialtyCard(id: "392-2", prefectureCode: 392, emoji: "🗻",
+                      nameKana: "ふじさん", nameKanji: "富士山",
+                      category: .nature, description: "たかい やま"),
+    ]
+
+    /// 最初の 1 枚は必ず国旗。乱数がどう転んでもオリジナルから始まらない。
+    @Test func 世界版は未所持なら国旗から渡す() {
+        for seed in UInt64(1)...20 {
+            var rng = SeededGenerator(seed: seed)
+            let draw = GameRules.drawCard(from: Self.worldPair, owned: [:],
+                                          policy: .flagFirstSilverGate, using: &rng)
+            #expect(draw == .new(Self.worldPair[0]), "seed \(seed)")
+        }
+    }
+
+    /// 国旗がシルバー未満のあいだ、正解はすべて国旗の星になる。
+    /// オリジナルは「未所持優先」の対象にすら入らない。
+    @Test func 世界版は国旗がシルバー未満のあいだオリジナルを出さない() {
+        for stars in 1..<GameRules.silverStars {
+            for seed in UInt64(1)...10 {
+                var rng = SeededGenerator(seed: seed)
+                let draw = GameRules.drawCard(from: Self.worldPair,
+                                              owned: ["392-1": stars],
+                                              policy: .flagFirstSilverGate, using: &rng)
+                #expect(draw == .star(Self.worldPair[0], stars: stars + 1),
+                        "国旗★\(stars) seed \(seed)")
+            }
+        }
+    }
+
+    /// 国旗が ★5 に触れた次の正解でオリジナル ★1(解放後は未所持優先が働く)。
+    @Test func 世界版は国旗がシルバーに触れた次の正解でオリジナルが渡る() {
+        for seed in UInt64(1)...10 {
+            var rng = SeededGenerator(seed: seed)
+            let draw = GameRules.drawCard(from: Self.worldPair,
+                                          owned: ["392-1": GameRules.silverStars],
+                                          policy: .flagFirstSilverGate, using: &rng)
+            #expect(draw == .new(Self.worldPair[1]), "seed \(seed)")
+        }
+    }
+
+    /// 両方を持った後は日本版と同じ「★10 未満からランダム」。
+    /// シードを散らして、抽選が両方の札に実際に散ることまで確かめる。
+    @Test func 世界版は両方持てば星10未満からランダムに積む() {
+        var drawnIDs: Set<String> = []
+        for seed in UInt64(1)...40 {
+            var rng = SeededGenerator(seed: seed)
+            let draw = GameRules.drawCard(from: Self.worldPair,
+                                          owned: ["392-1": 6, "392-2": 1],
+                                          policy: .flagFirstSilverGate, using: &rng)
+            guard case .star(let card, _) = draw else {
+                Issue.record("seed \(seed): expected a star, got \(String(describing: draw))")
+                continue
+            }
+            drawnIDs.insert(card.id)
+        }
+        #expect(drawnIDs == ["392-1", "392-2"], "抽選が片方に固定されている: \(drawnIDs)")
+    }
+
+    /// 金の国旗はもう星を取れないので、未完成のオリジナルに積まれる
+    /// (日本版の「★10 未満から引く」がそのまま働くこと)。
+    @Test func 世界版は金の国旗を避けて未完成のオリジナルに星を積む() {
+        for seed in UInt64(1)...10 {
+            var rng = SeededGenerator(seed: seed)
+            let draw = GameRules.drawCard(
+                from: Self.worldPair,
+                owned: ["392-1": GameRules.maxCardStars, "392-2": 7],
+                policy: .flagFirstSilverGate, using: &rng)
+            #expect(draw == .star(Self.worldPair[1], stars: 8), "seed \(seed)")
+        }
+    }
+
+    @Test func 世界版も全部金ならもっているカードだね() {
+        var rng = SeededGenerator(seed: 7)
+        let owned = Dictionary(uniqueKeysWithValues:
+            Self.worldPair.map { ($0.id, GameRules.maxCardStars) })
+        let draw = GameRules.drawCard(from: Self.worldPair, owned: owned,
+                                      policy: .flagFirstSilverGate, using: &rng)
+        if case .duplicate = draw {} else {
+            Issue.record("expected a duplicate, got \(String(describing: draw))")
+        }
+    }
+
+    /// 通し: 何十回引いても、国旗が銀になる前にオリジナルが出た瞬間は無く、
+    /// 最後は両方が星の上限に届く(解放が完成を妨げない)。
+    @Test func 世界版の繰り返し抽選は銀の解放を守って両方を完成させる() {
+        var rng = SeededGenerator(seed: 21)
+        var owned: [String: Int] = [:]
+        for _ in 0..<60 {
+            guard let draw = GameRules.drawCard(from: Self.worldPair, owned: owned,
+                                                policy: .flagFirstSilverGate, using: &rng)
+            else { break }
+            if draw.card.id == "392-2" {
+                #expect((owned["392-1"] ?? 0) >= GameRules.silverStars,
+                        "国旗★\(owned["392-1"] ?? 0) でオリジナルが出た")
+            }
+            owned = GameRules.applyDraw(draw, to: owned)
+        }
+        #expect(owned["392-1"] == GameRules.maxCardStars)
+        #expect(owned["392-2"] == GameRules.maxCardStars)
+    }
+
+    // 「方針の既定値は .random と同一」という回帰テストはここにあったが、
+    // 既定引数そのものを外した(P6 Task 6・引き継ぎ 7)ので前提ごと消えた:
+    // 全呼び出しが方針を明示し、渡し忘れはコンパイルエラーが捕まえる。
+
+    /// Task 8 が頼る契約の錨: 目録は 1 国のカードを収載順のまま返す。
+    /// 世界のゲートは「先頭 = 国旗」というこの並びに乗り、id は解析しない。
+    /// 3 枚の日本の県と 2 枚の世界の国が同じ目録機構で共存できることも兼ねる。
+    @Test func 目録は国のカードを収載順のまま返す() {
+        let catalog = CardCatalog(cards: Self.worldPair + Self.sample)
+        #expect(catalog.cards(for: 392) == Self.worldPair)
+        #expect(catalog.cards(for: 1) == Self.sample)
     }
 
     // MARK: - Records
@@ -446,6 +681,84 @@ struct GameRulesTests {
     @Test func firstRecordIsTakenAsIs() {
         let new = StageRecord(stars: 2, score: 120)
         #expect(GameRules.bestRecord(existing: nil, new: new) == new)
+    }
+
+    // MARK: - Challenge flat zoom (世界チャレンジの平面ズーム上限)
+
+    /// 上限は「チャレンジ枠と各ステージ枠の比」の最大値。比は軸ごとにとり、
+    /// 大きい方を採る — 細長いステージは細い軸の側でしか追いつけない。
+    @Test func 平面ズーム上限は最大のステージ枠比を選ぶ() {
+        let zoom = GameRules.challengeFlatMaxZoom(
+            challengeSpan: CGSize(width: 100, height: 80),
+            stageSpans: [CGSize(width: 50, height: 40),   // max(2, 2)  = 2
+                         CGSize(width: 10, height: 40),   // max(10, 2) = 10
+                         CGSize(width: 100, height: 5)])  // max(1, 16) = 16
+        #expect(abs(zoom - 16) < 0.001)
+    }
+
+    /// どのステージも既定の 4 で足りるなら広げない — 日本の全国チャレンジが
+    /// この枝で、挙動が 1 ピクセルも変わらないことの根拠。
+    @Test func 枠比が既定を下回るなら既定のまま() {
+        let zoom = GameRules.challengeFlatMaxZoom(
+            challengeSpan: CGSize(width: 100, height: 80),
+            stageSpans: [CGSize(width: 100, height: 80),
+                         CGSize(width: 50, height: 40)])
+        #expect(zoom == GameRules.mapMaxZoom)
+    }
+
+    /// 空・退化した枠は無限大や NaN ではなく既定へ倒れる。
+    @Test func 退化した枠は上限を壊さない() {
+        #expect(GameRules.challengeFlatMaxZoom(challengeSpan: CGSize(width: 100, height: 80),
+                                            stageSpans: []) == GameRules.mapMaxZoom)
+        #expect(GameRules.challengeFlatMaxZoom(
+            challengeSpan: CGSize(width: 100, height: 80),
+            stageSpans: [.zero, CGSize(width: 50, height: 40)]) == GameRules.mapMaxZoom)
+    }
+
+    // MARK: - Regional flat zoom floor (世界の地方ステージの縮小)
+
+    /// 床は「ステージ枠 / 全体枠」の軸ごとの比の小さい方。細長いステージは
+    /// 細い軸の側まで引かないと全体が枠に入らない — 上限が大きい方の比を
+    /// 採るのと鏡合わせ。
+    @Test func 縮小の床は小さい方の枠比を選ぶ() {
+        let floor = GameRules.regionalFlatMinZoom(
+            bookSpan: CGSize(width: 100, height: 80),
+            stageSpan: CGSize(width: 10, height: 40))
+        #expect(abs(floor - 0.1) < 0.001)
+    }
+
+    /// 床まで引けばどのフレーム比でも全体が入る — 上限と同じ「フレームを
+    /// 知らないままデバイス非依存で保証する」比であることの確認。
+    @Test func 床まで引けばどのフレームでも全体が入る() {
+        let book = CGSize(width: 100, height: 80)
+        let stage = CGSize(width: 10, height: 40)
+        let floor = GameRules.regionalFlatMinZoom(bookSpan: book, stageSpan: stage)
+        for frame in [CGSize(width: 300, height: 300),
+                      CGSize(width: 200, height: 600),
+                      CGSize(width: 800, height: 250)] {
+            let stageFit = min(frame.width / stage.width,
+                               frame.height / stage.height)
+            // 床の縮小率で描いたとき、フレームが覗ける地図上の範囲。
+            let visible = CGSize(width: frame.width / (stageFit * floor),
+                                 height: frame.height / (stageFit * floor))
+            #expect(visible.width >= book.width - 0.001)
+            #expect(visible.height >= book.height - 0.001)
+        }
+    }
+
+    /// 本と同じ大きさのステージに引く先は無い — 床が 1 を超えることはない。
+    @Test func 全体と同じ枠のステージは床1() {
+        #expect(GameRules.regionalFlatMinZoom(
+            bookSpan: CGSize(width: 100, height: 80),
+            stageSpan: CGSize(width: 100, height: 80)) == 1)
+    }
+
+    /// 空・退化した枠は 0 や NaN ではなく 1(縮小なし)へ倒れる。
+    @Test func 退化した枠は床を壊さない() {
+        #expect(GameRules.regionalFlatMinZoom(
+            bookSpan: .zero, stageSpan: CGSize(width: 10, height: 10)) == 1)
+        #expect(GameRules.regionalFlatMinZoom(
+            bookSpan: CGSize(width: 100, height: 80), stageSpan: .zero) == 1)
     }
 }
 

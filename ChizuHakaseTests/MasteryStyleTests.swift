@@ -28,9 +28,13 @@ struct MasteryStyleTests {
 
     /// The map reads its fill through `appearance`, the legend calls `fill`
     /// directly. If those ever disagree the legend is lying again.
+    ///
+    /// `appearance` takes one atlas's slice (`AtlasSave`), never the whole
+    /// save — the SaveData overload that silently meant "japan's slice" was
+    /// retired when the world screens arrived, so these build the slice.
     @Test func theMapAndTheLegendAgreeAtEveryLevel() {
         for level in 0...GameRules.maxMastery {
-            var save = SaveData()
+            var save = AtlasSave()
             save.mastery[1] = level
             let onTheMap = MasteryStyle.appearance(for: 1, save: save).fill
             #expect(rgba(onTheMap) == rgba(MasteryStyle.fill(level: level)),
@@ -42,7 +46,7 @@ struct MasteryStyleTests {
     /// same level must look identical — this is what stopped being true when
     /// the fill was keyed on the prefecture code.
     @Test func twoPrefecturesAtTheSameLevelLookTheSame() {
-        var save = SaveData()
+        var save = AtlasSave()
         save.mastery[1] = 2      // 1 % 8 and 13 % 8 differ, which used to matter
         save.mastery[13] = 2
         #expect(rgba(MasteryStyle.appearance(for: 1, save: save).fill)
@@ -73,7 +77,7 @@ struct MasteryStyleTests {
     /// or a half-learned prefecture would shimmer as if it were finished.
     @Test func onlyTheTopLevelSparkles() {
         for level in 0...GameRules.maxMastery {
-            var save = SaveData()
+            var save = AtlasSave()
             save.mastery[1] = level
             #expect(MasteryStyle.appearance(for: 1, save: save).isSparkling
                     == (level >= GameRules.maxMastery))
@@ -84,7 +88,7 @@ struct MasteryStyleTests {
     /// the same printed edge at every level so the country reads as one map.
     @Test func noLevelGetsTheDieCutEdge() {
         for level in 0...GameRules.maxMastery {
-            var save = SaveData()
+            var save = AtlasSave()
             save.mastery[1] = level
             #expect(!MasteryStyle.appearance(for: 1, save: save).isStuck)
         }

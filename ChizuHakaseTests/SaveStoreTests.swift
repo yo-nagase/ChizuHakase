@@ -38,7 +38,7 @@ struct SaveStoreTests {
         let store = SaveStore(directory: dir)
         store.applyStageResult(StageResult(mode: .findOnMap, stageIndex: 0, score: 730, stars: 3,
             firstTryByPrefecture: [1: true, 2: true, 3: false],
-            cardDraws: []), catalog: .empty)
+            cardDraws: []), catalog: .empty, atlas: SaveData.japanAtlas)
 
         let reloaded = SaveStore(directory: dir)
         #expect(reloaded.data.masteryLevel(of: 1) == 1)
@@ -52,9 +52,9 @@ struct SaveStoreTests {
 
         let store = SaveStore(directory: dir)
         store.applyStageResult(StageResult(mode: .findOnMap, stageIndex: 1, score: 800, stars: 3,
-                                           firstTryByPrefecture: [:], cardDraws: []), catalog: .empty)
+                                           firstTryByPrefecture: [:], cardDraws: []), catalog: .empty, atlas: SaveData.japanAtlas)
         store.applyStageResult(StageResult(mode: .findOnMap, stageIndex: 1, score: 100, stars: 1,
-                                           firstTryByPrefecture: [:], cardDraws: []), catalog: .empty)
+                                           firstTryByPrefecture: [:], cardDraws: []), catalog: .empty, atlas: SaveData.japanAtlas)
 
         #expect(store.data.record(forStage: 1, mode: .findOnMap) == StageRecord(stars: 3, score: 800))
     }
@@ -67,7 +67,7 @@ struct SaveStoreTests {
         for _ in 0..<(GameRules.maxMastery + 2) {
             store.applyStageResult(StageResult(mode: .findOnMap, stageIndex: 0, score: 100, stars: 3,
                                                firstTryByPrefecture: [1: true],
-                                               cardDraws: []), catalog: .empty)
+                                               cardDraws: []), catalog: .empty, atlas: SaveData.japanAtlas)
         }
         #expect(store.data.masteryLevel(of: 1) == GameRules.maxMastery)
     }
@@ -82,7 +82,7 @@ struct SaveStoreTests {
             announcements.append(store.applyStageResult(
                 StageResult(mode: .findOnMap, stageIndex: 0, score: 100, stars: 3,
                             firstTryByPrefecture: [5: true], cardDraws: []),
-                catalog: .empty).sparklingPrefectures)
+                catalog: .empty, atlas: SaveData.japanAtlas).sparklingPrefectures)
         }
         // Climbs quietly, announced once on reaching the top, then nothing.
         #expect(announcements == [[], [], [], [], [5], []])
@@ -94,9 +94,9 @@ struct SaveStoreTests {
 
         let store = SaveStore(directory: dir)
         store.applyStageResult(StageResult(mode: .findOnMap, stageIndex: 0, score: 100, stars: 3,
-                                           firstTryByPrefecture: [7: true], cardDraws: []), catalog: .empty)
+                                           firstTryByPrefecture: [7: true], cardDraws: []), catalog: .empty, atlas: SaveData.japanAtlas)
         store.applyStageResult(StageResult(mode: .findOnMap, stageIndex: 0, score: 50, stars: 1,
-                                           firstTryByPrefecture: [7: false], cardDraws: []), catalog: .empty)
+                                           firstTryByPrefecture: [7: false], cardDraws: []), catalog: .empty, atlas: SaveData.japanAtlas)
         #expect(store.data.masteryLevel(of: 7) == 1)
     }
 
@@ -110,7 +110,7 @@ struct SaveStoreTests {
         let store = SaveStore(directory: dir)
         store.applyStageResult(StageResult(mode: .findOnMap, stageIndex: 0, score: 0, stars: 3,
                                            firstTryByPrefecture: [:],
-                                           cardDraws: [.new(card)]), catalog: .empty)
+                                           cardDraws: [.new(card)]), catalog: .empty, atlas: SaveData.japanAtlas)
         #expect(store.data.stars(of: "01-1") == 1)
         #expect(store.data.owns("01-1"))
         #expect(store.data.tier(of: "01-1") == .plain)
@@ -118,14 +118,14 @@ struct SaveStoreTests {
         store.applyStageResult(StageResult(mode: .findOnMap, stageIndex: 0, score: 0, stars: 3,
                                            firstTryByPrefecture: [:],
                                            cardDraws: [.star(card, stars: GameRules.silverStars)]),
-                               catalog: .empty)
+                               catalog: .empty, atlas: SaveData.japanAtlas)
         #expect(store.data.tier(of: "01-1") == .silver)
 
         store.applyStageResult(StageResult(mode: .findOnMap, stageIndex: 0, score: 0, stars: 3,
                                            firstTryByPrefecture: [:],
                                            cardDraws: [.star(card, stars: GameRules.maxCardStars),
                                                        .duplicate(card)]),
-                               catalog: .empty)
+                               catalog: .empty, atlas: SaveData.japanAtlas)
         #expect(store.data.stars(of: "01-1") == GameRules.maxCardStars)
         #expect(store.data.tier(of: "01-1") == .gold)
     }
@@ -147,6 +147,43 @@ struct SaveStoreTests {
 
         SaveStore(directory: dir).updateSettings { $0.musicEnabled = false }
         #expect(SaveStore(directory: dir).data.settings.musicEnabled == false)
+    }
+
+    /// A fresh save opens the japan page: the world is something the child
+    /// turns to, never something they wake up lost in.
+    @Test func lastAtlasDefaultsToJapan() {
+        #expect(Settings().lastAtlas == SaveData.japanAtlas)
+    }
+
+    /// The title writes this on every page turn; the next launch reads it back
+    /// (design doc §2: 前回開いていたページを記憶).
+    @Test func lastAtlasSurvivesARelaunch() throws {
+        let dir = try makeScratch()
+        defer { try? FileManager.default.removeItem(at: dir) }
+
+        SaveStore(directory: dir).updateSettings { $0.lastAtlas = SaveData.worldAtlas }
+        #expect(SaveStore(directory: dir).data.settings.lastAtlas == SaveData.worldAtlas)
+    }
+
+    /// A page this build does not know (a future book, a hand-edited file)
+    /// folds to japan — the selection must always name a page that exists.
+    @Test func unknownLastAtlasFallsBackToJapan() throws {
+        let dir = try makeScratch()
+        defer { try? FileManager.default.removeItem(at: dir) }
+
+        try Data(#"{"version":7,"settings":{"lastAtlas":"mars"}}"#.utf8)
+            .write(to: dir.appendingPathComponent("savedata.json"))
+        #expect(SaveStore(directory: dir).data.settings.lastAtlas == SaveData.japanAtlas)
+    }
+
+    /// Saves from before the world existed have no opinion; they open on japan.
+    @Test func missingLastAtlasDefaultsToJapan() throws {
+        let dir = try makeScratch()
+        defer { try? FileManager.default.removeItem(at: dir) }
+
+        try Data(#"{"version":7,"settings":{"soundEnabled":false}}"#.utf8)
+            .write(to: dir.appendingPathComponent("savedata.json"))
+        #expect(SaveStore(directory: dir).data.settings.lastAtlas == SaveData.japanAtlas)
     }
 
     /// A truncated or hand-edited file must not take the app down on launch.
@@ -185,7 +222,7 @@ struct SaveStoreTests {
         let store = SaveStore(directory: dir)
         store.applyStageResult(StageResult(mode: .findOnMap, stageIndex: 0, score: 500, stars: 3,
                                            firstTryByPrefecture: [1: true, 2: true],
-                                           cardDraws: []), catalog: .empty)
+                                           cardDraws: []), catalog: .empty, atlas: SaveData.japanAtlas)
         store.eraseAll()
 
         #expect(store.data.mastery.isEmpty)
@@ -203,7 +240,7 @@ struct SaveStoreTests {
             cardDraws: [
                 .new(card("01-1")), .new(card("01-2")),
                 .star(card("02-1"), stars: GameRules.silverStars),
-            ]), catalog: .empty)
+            ]), catalog: .empty, atlas: SaveData.japanAtlas)
 
         #expect(store.data.totalOwnedCards == 3)
         #expect(store.data.specialCardCount == 1)
@@ -228,6 +265,29 @@ struct SaveStoreTests {
         #expect(data.goldCardCount == 2)
     }
 
+    /// The tallies the title's two pages draw come off each page's own slice —
+    /// a world card must never inflate japan's numbers, nor the reverse.
+    @Test func perAtlasTalliesReadOnlyTheirOwnBook() {
+        var data = SaveData()
+        var world = AtlasSave()
+        world.cards = ["840-1": 1, "392-1": GameRules.silverStars]
+        world.mastery = [840: GameRules.maxMastery, 392: 1]
+        data.atlases[SaveData.worldAtlas] = world
+        data.cards = ["01-1": GameRules.maxCardStars]
+        data.mastery = [13: GameRules.maxMastery]
+
+        let worldSlice = data.atlas(SaveData.worldAtlas)
+        #expect(worldSlice.totalOwnedCards == 2)
+        #expect(worldSlice.cardCount(ofTier: .silver) == 1)
+        #expect(worldSlice.cardCount(ofTier: .gold) == 0)
+        #expect(worldSlice.sparklingRegionCount == 1)
+
+        // The japan-facing reads delegate to japan's slice and see none of it.
+        #expect(data.totalOwnedCards == 1)
+        #expect(data.cardCount(ofTier: .gold) == 1)
+        #expect(data.sparklingPrefectureCount == 1)
+    }
+
     // MARK: - Streaks and rainbow
 
     private func result(outcomes: [Int: [Bool]],
@@ -242,10 +302,10 @@ struct SaveStoreTests {
         defer { try? FileManager.default.removeItem(at: dir) }
 
         let store = SaveStore(directory: dir)
-        store.applyStageResult(result(outcomes: [1: [true, true]]), catalog: .empty)
+        store.applyStageResult(result(outcomes: [1: [true, true]]), catalog: .empty, atlas: SaveData.japanAtlas)
         #expect(store.data.streak(of: 1) == 2)
 
-        store.applyStageResult(result(outcomes: [1: [true]]), catalog: .empty)
+        store.applyStageResult(result(outcomes: [1: [true]]), catalog: .empty, atlas: SaveData.japanAtlas)
         #expect(store.data.streak(of: 1) == 3)
         #expect(SaveStore(directory: dir).data.streak(of: 1) == 3,
                 "the streak must survive a reload")
@@ -259,8 +319,8 @@ struct SaveStoreTests {
 
         let store = SaveStore(directory: dir)
         store.applyStageResult(result(outcomes: [1: [true, true]],
-                                      draws: [.new(card("01-1"))]), catalog: .empty)
-        store.applyStageResult(result(outcomes: [1: [false, true]]), catalog: .empty)
+                                      draws: [.new(card("01-1"))]), catalog: .empty, atlas: SaveData.japanAtlas)
+        store.applyStageResult(result(outcomes: [1: [false, true]]), catalog: .empty, atlas: SaveData.japanAtlas)
 
         #expect(store.data.streak(of: 1) == 1)
         #expect(store.data.stars(of: "01-1") == 1, "stars stand through a broken streak")
@@ -276,7 +336,7 @@ struct SaveStoreTests {
         store.applyStageResult(
             result(outcomes: [1: [true]],
                    draws: [.star(card("01-1"), stars: GameRules.maxCardStars)]),
-            catalog: catalog)
+            catalog: catalog, atlas: SaveData.japanAtlas)
         #expect(store.data.tier(of: "01-1") == .gold)
         #expect(store.data.streak(of: 1) == 0,
                 "the promoting answer must not start the run")
@@ -285,11 +345,11 @@ struct SaveStoreTests {
         store.applyStageResult(
             result(outcomes: [1: Array(repeating: true,
                                        count: GameRules.rainbowStreak - 1)]),
-            catalog: catalog)
+            catalog: catalog, atlas: SaveData.japanAtlas)
         #expect(store.data.rainbow.isEmpty)
 
         // …the seventh latches it.
-        store.applyStageResult(result(outcomes: [1: [true]]), catalog: catalog)
+        store.applyStageResult(result(outcomes: [1: [true]]), catalog: catalog, atlas: SaveData.japanAtlas)
         #expect(store.data.tier(of: "01-1") == .rainbow)
         #expect(store.data.tier(of: "01-2") == .none,
                 "a card that is not gold has nothing to latch")
@@ -305,11 +365,11 @@ struct SaveStoreTests {
 
         let store = SaveStore(directory: dir)
         store.applyStageResult(
-            result(outcomes: [1: Array(repeating: true, count: 16)]), catalog: catalog)
+            result(outcomes: [1: Array(repeating: true, count: 16)]), catalog: catalog, atlas: SaveData.japanAtlas)
         store.applyStageResult(
             result(outcomes: [1: [true]],
                    draws: [.star(card("01-1"), stars: GameRules.maxCardStars)]),
-            catalog: catalog)
+            catalog: catalog, atlas: SaveData.japanAtlas)
         #expect(store.data.tier(of: "01-1") == .gold)
         #expect(store.data.rainbow.isEmpty)
         #expect(store.data.streak(of: 1) == 0, "the promotion spends the run")
@@ -332,13 +392,13 @@ struct SaveStoreTests {
             result(outcomes: [1: [true, true]],
                    draws: [.star(card("01-1"), stars: GameRules.maxCardStars),
                            .star(card("01-2"), stars: GameRules.maxCardStars)]),
-            catalog: catalog)
+            catalog: catalog, atlas: SaveData.japanAtlas)
         store.applyStageResult(
             result(outcomes: [1: Array(repeating: true,
                                        count: GameRules.rainbowStreak - 1)]),
-            catalog: catalog)
+            catalog: catalog, atlas: SaveData.japanAtlas)
 
-        let gains = store.applyStageResult(result(outcomes: [1: [true]]), catalog: catalog)
+        let gains = store.applyStageResult(result(outcomes: [1: [true]]), catalog: catalog, atlas: SaveData.japanAtlas)
         #expect(gains.rainbowCards == ["01-1", "01-2"],
                 "the latch caught cards the stage never drew and did not name them")
         #expect(store.data.tier(of: "01-3") == .none)
@@ -357,10 +417,10 @@ struct SaveStoreTests {
             result(outcomes: [1: Array(repeating: true,
                                        count: GameRules.rainbowStreak + 1)],
                    draws: [.star(card("01-1"), stars: GameRules.maxCardStars)]),
-            catalog: catalog)
+            catalog: catalog, atlas: SaveData.japanAtlas)
         #expect(earning.rainbowCards == ["01-1"])
 
-        let after = store.applyStageResult(result(outcomes: [1: [true]]), catalog: catalog)
+        let after = store.applyStageResult(result(outcomes: [1: [true]]), catalog: catalog, atlas: SaveData.japanAtlas)
         #expect(after.rainbowCards.isEmpty, "the same rainbow was announced twice")
         #expect(store.data.tier(of: "01-1") == .rainbow)
     }
@@ -377,18 +437,252 @@ struct SaveStoreTests {
             result(outcomes: [1: Array(repeating: true,
                                        count: GameRules.rainbowStreak + 1)],
                    draws: [.star(card("01-1"), stars: GameRules.maxCardStars)]),
-            catalog: catalog)
+            catalog: catalog, atlas: SaveData.japanAtlas)
         #expect(store.data.tier(of: "01-1") == .rainbow)
 
-        store.applyStageResult(result(outcomes: [1: [false]]), catalog: catalog)
+        store.applyStageResult(result(outcomes: [1: [false]]), catalog: catalog, atlas: SaveData.japanAtlas)
         #expect(store.data.streak(of: 1) == 0)
         #expect(store.data.tier(of: "01-1") == .rainbow)
+    }
+
+    // MARK: - Atlas namespaces (world write path)
+
+    /// The same integers mean different places in different books (44 is
+    /// 大分県 and バハマ; stage 3 is きんき and きたヨーロッパ), so a world
+    /// result must land in `atlases["world"]` and nowhere else.
+    @Test func aWorldStageResultLandsOnlyInTheWorldAtlas() throws {
+        let dir = try makeScratch()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let flag = SpecialtyCard(id: "392-1", prefectureCode: 392, emoji: "🇯🇵",
+                                 nameKana: "こっき", nameKanji: "国旗",
+                                 category: .flag, description: "にほんの こっきだよ")
+
+        let store = SaveStore(directory: dir)
+        store.applyStageResult(
+            StageResult(mode: .findOnMap, stageIndex: 15, score: 640, stars: 3,
+                        firstTryByPrefecture: [392: true, 156: true],
+                        cardDraws: [.new(flag)],
+                        outcomesByPrefecture: [392: [true, true]]),
+            catalog: CardCatalog(cards: [flag]),
+            atlas: SaveData.worldAtlas)
+
+        let world = store.data.atlas(SaveData.worldAtlas)
+        #expect(world.mastery == [392: 1, 156: 1])
+        #expect(world.cards == ["392-1": 1])
+        #expect(world.cardAcquisitionOrder == ["392-1"])
+        #expect(world.streaks == [392: 2])
+        #expect(world.record(forStage: 15, mode: .findOnMap) == StageRecord(stars: 3, score: 640))
+        // Japan stays exactly untouched — absent, not merely empty.
+        #expect(store.data.atlases[SaveData.japanAtlas] == nil)
+        #expect(store.data.mastery.isEmpty)
+        #expect(store.data.records.isEmpty)
+        // And the write survives a reload in its namespace.
+        #expect(SaveStore(directory: dir).data.atlas(SaveData.worldAtlas).mastery[392] == 1)
+    }
+
+    /// The other direction: the default (japan) call sites must not leak into
+    /// the world, and colliding codes stay independent per book.
+    @Test func japanAndWorldWritesDoNotCross() throws {
+        let dir = try makeScratch()
+        defer { try? FileManager.default.removeItem(at: dir) }
+
+        let store = SaveStore(directory: dir)
+        // 44 is 大分県 in one book and バハマ in the other.
+        store.applyStageResult(StageResult(mode: .findOnMap, stageIndex: 5, score: 100, stars: 1,
+                                           firstTryByPrefecture: [44: true],
+                                           cardDraws: []), catalog: .empty, atlas: SaveData.japanAtlas)
+        store.applyStageResult(StageResult(mode: .findOnMap, stageIndex: 5, score: 900, stars: 3,
+                                           firstTryByPrefecture: [44: true],
+                                           cardDraws: []), catalog: .empty,
+                               atlas: SaveData.worldAtlas)
+        store.applyStageResult(StageResult(mode: .findOnMap, stageIndex: 5, score: 900, stars: 3,
+                                           firstTryByPrefecture: [44: true],
+                                           cardDraws: []), catalog: .empty,
+                               atlas: SaveData.worldAtlas)
+
+        #expect(store.data.masteryLevel(of: 44) == 1, "japan's 大分県 gained a world answer")
+        #expect(store.data.atlas(SaveData.worldAtlas).masteryLevel(of: 44) == 2)
+        #expect(store.data.record(forStage: 5, mode: .findOnMap) == StageRecord(stars: 1, score: 100),
+                "japan's best record took the world's score")
+        #expect(store.data.atlas(SaveData.worldAtlas)
+            .record(forStage: 5, mode: .findOnMap) == StageRecord(stars: 3, score: 900))
+    }
+
+    /// Owned cards read per atlas: the quiz seeds its draw from the book it
+    /// is playing, and "1-1"-shaped world ids must not shadow japan's "01-1".
+    @Test func ownedCardsAreReadPerAtlas() throws {
+        let dir = try makeScratch()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let flag = SpecialtyCard(id: "44-1", prefectureCode: 44, emoji: "🇧🇸",
+                                 nameKana: "こっき", nameKanji: "国旗",
+                                 category: .flag, description: "ばはまの こっきだよ")
+
+        let store = SaveStore(directory: dir)
+        store.applyStageResult(StageResult(mode: .findOnMap, stageIndex: 0, score: 0, stars: 3,
+                                           firstTryByPrefecture: [:],
+                                           cardDraws: [.new(card("44-1"))]), catalog: .empty, atlas: SaveData.japanAtlas)
+        store.applyStageResult(StageResult(mode: .findOnMap, stageIndex: 1, score: 0, stars: 3,
+                                           firstTryByPrefecture: [:],
+                                           cardDraws: [.star(flag, stars: GameRules.silverStars)]),
+                               catalog: .empty, atlas: SaveData.worldAtlas)
+
+        #expect(store.data.atlas(SaveData.japanAtlas).cards == ["44-1": 1])
+        #expect(store.data.atlas(SaveData.worldAtlas).cards == ["44-1": GameRules.silverStars])
+        #expect(store.data.atlas(SaveData.worldAtlas).stars(of: "44-1") == GameRules.silverStars)
+        #expect(store.data.stars(of: "44-1") == 1, "the japan-facing read moved")
+    }
+
+    @Test func cardAcquisitionOrderRecordsOnlyTheFirstCopyInDrawOrder() throws {
+        let dir = try makeScratch()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let first = card("01-1")
+        let second = card("02-1")
+        let catalog = CardCatalog(cards: [first, second])
+        let store = SaveStore(directory: dir)
+
+        store.applyStageResult(
+            StageResult(mode: .findOnMap, stageIndex: 0, score: 0, stars: 1,
+                        firstTryByPrefecture: [:],
+                        cardDraws: [.new(second), .new(first), .star(second, stars: 2)]),
+            catalog: catalog, atlas: SaveData.worldAtlas)
+        store.applyStageResult(
+            StageResult(mode: .findOnMap, stageIndex: 0, score: 0, stars: 1,
+                        firstTryByPrefecture: [:], cardDraws: [.star(first, stars: 2)]),
+            catalog: catalog, atlas: SaveData.worldAtlas)
+
+        let world = store.data.atlas(SaveData.worldAtlas)
+        #expect(world.cardAcquisitionOrder == [second.id, first.id])
+        #expect(world.ownedCardsInAcquisitionOrder(from: catalog).map(\.id)
+                == [second.id, first.id])
+        #expect(SaveStore(directory: dir).data.atlas(SaveData.worldAtlas)
+            .cardAcquisitionOrder == [second.id, first.id])
+    }
+
+    @Test func oldOwnedCardsWithoutAnOrderFallBackToCatalogOrder() throws {
+        let first = card("01-1")
+        let second = card("02-1")
+        let catalog = CardCatalog(cards: [first, second])
+        let json = #"{"version":7,"atlases":{"world":{"cards":{"02-1":1,"01-1":1}}}}"#
+        let data = try JSONDecoder().decode(SaveData.self, from: Data(json.utf8))
+
+        #expect(data.atlas(SaveData.worldAtlas)
+            .ownedCardsInAcquisitionOrder(from: catalog).map(\.id) == [first.id, second.id])
     }
 
     private func card(_ id: String) -> SpecialtyCard {
         SpecialtyCard(id: id, prefectureCode: Int(id.prefix(2)) ?? 1, emoji: "🍎",
                       nameKana: "てすと", nameKanji: "試験",
                       category: .food, description: "てすと")
+    }
+
+    // MARK: - チャレンジの出題履歴(設計 §8: 未出題優先の記憶)
+
+    /// 抽選チャレンジの結果だけが運ぶ askedCodes(星・スコアは従来どおり)。
+    private func challengeResult(mode: QuizMode = .findOnMap,
+                                 asked: Set<Int>) -> StageResult {
+        StageResult(mode: mode, stageIndex: 18, score: 100, stars: 1,
+                    firstTryByPrefecture: [:], cardDraws: [], askedCodes: asked)
+    }
+
+    /// 一巡判定の分母になる「全収録国」— applyStageResult は目録から引くので、
+    /// テストの世界も国コードごとに 1 枚の札を持つ目録として与える。
+    private func universeCatalog(_ codes: some Sequence<Int>) -> CardCatalog {
+        CardCatalog(cards: codes.map {
+            SpecialtyCard(id: "\($0)-1", prefectureCode: $0, emoji: "🚩",
+                          nameKana: "こっき", nameKanji: "国旗",
+                          category: .flag, description: "てすと")
+        })
+    }
+
+    /// 履歴はプレイをまたいで合流し、モードごとに別々の回転を持つ
+    /// (records と同じ分け方 — 別の回だから)。
+    @Test func チャレンジの出題履歴はモードごとに合流していく() throws {
+        let dir = try makeScratch()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let catalog = universeCatalog(1...200)
+
+        let store = SaveStore(directory: dir)
+        store.applyStageResult(challengeResult(asked: [1, 2, 3]),
+                               catalog: catalog, atlas: SaveData.worldAtlas)
+        store.applyStageResult(challengeResult(asked: [3, 4]),
+                               catalog: catalog, atlas: SaveData.worldAtlas)
+        store.applyStageResult(challengeResult(mode: .nameIt, asked: [9]),
+                               catalog: catalog, atlas: SaveData.worldAtlas)
+
+        let world = store.data.atlas(SaveData.worldAtlas)
+        #expect(world.askedInChallenge[QuizMode.findOnMap.rawValue] == [1, 2, 3, 4])
+        #expect(world.askedInChallenge[QuizMode.nameIt.rawValue] == [9])
+        #expect(SaveStore(directory: dir).data.atlas(SaveData.worldAtlas)
+            .askedInChallenge[QuizMode.findOnMap.rawValue] == [1, 2, 3, 4],
+                "the history must survive a reload")
+    }
+
+    /// 実寸の一巡: 47 問 × 4 プレイで 167 カ国を覆い、覆った瞬間に履歴が
+    /// 空へ戻る(§8 の 2 周目)。星・スコアは従来の records[mode][18] に載る。
+    @Test func 全収録国を覆ったら履歴は空に戻る() throws {
+        let dir = try makeScratch()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let universe = Array(1...167)
+        let catalog = universeCatalog(universe)
+
+        let store = SaveStore(directory: dir)
+        // 未出題優先の抽選が現実に組む形: 3 回で 141、4 回目は残り 26 +
+        // 出題済みからの補充 21。
+        let sittings: [Set<Int>] = [
+            Set(universe[0..<47]),
+            Set(universe[47..<94]),
+            Set(universe[94..<141]),
+            Set(universe[141..<167]).union(universe[0..<21]),
+        ]
+        for (index, sitting) in sittings.enumerated() {
+            store.applyStageResult(challengeResult(asked: sitting),
+                                   catalog: catalog, atlas: SaveData.worldAtlas)
+            let stored = store.data.atlas(SaveData.worldAtlas)
+                .askedInChallenge[QuizMode.findOnMap.rawValue] ?? []
+            if index < sittings.count - 1 {
+                #expect(stored.count == 47 * (index + 1),
+                        "play \(index + 1): history = \(stored.count)")
+            } else {
+                #expect(stored.isEmpty, "full coverage must reset the lap")
+            }
+        }
+        #expect(store.data.atlas(SaveData.worldAtlas)
+            .record(forStage: 18, mode: .findOnMap) == StageRecord(stars: 1, score: 100),
+                "the challenge's record rides the ordinary records path")
+    }
+
+    /// 空の目録は分母を知らないので一巡判定はしない — 履歴は立ったまま。
+    /// (目録が空へ倒れた本ではカード自体が配れず、回転が止まらないことは
+    /// その障害のいちばん無害な症状に留める、というガードの凍結。)
+    @Test func 目録が空なら一巡判定はしない() throws {
+        let dir = try makeScratch()
+        defer { try? FileManager.default.removeItem(at: dir) }
+
+        let store = SaveStore(directory: dir)
+        store.applyStageResult(challengeResult(asked: Set(1...167)),
+                               catalog: .empty, atlas: SaveData.worldAtlas)
+        #expect(store.data.atlas(SaveData.worldAtlas)
+            .askedInChallenge[QuizMode.findOnMap.rawValue] == Set(1...167))
+    }
+
+    /// 日本のチャレンジ結果は askedCodes が空(VM が抽選を使わないため)で、
+    /// 履歴には何も書かない — 計画の不変条件「日本の askedInChallenge が
+    /// 空のまま」の SaveStore 側の釘。記録は従来どおり載る。
+    @Test func 日本のチャレンジ結果は出題履歴を書かない() throws {
+        let dir = try makeScratch()
+        defer { try? FileManager.default.removeItem(at: dir) }
+
+        let store = SaveStore(directory: dir)
+        store.applyStageResult(
+            StageResult(mode: .findOnMap, stageIndex: 6, score: 4700, stars: 3,
+                        firstTryByPrefecture: Dictionary(uniqueKeysWithValues:
+                            (1...47).map { ($0, true) }),
+                        cardDraws: []),
+            catalog: .empty, atlas: SaveData.japanAtlas)
+
+        #expect(store.data.atlas(SaveData.japanAtlas).askedInChallenge.isEmpty)
+        #expect(store.data.record(forStage: 6, mode: .findOnMap)
+                == StageRecord(stars: 3, score: 4700))
     }
 }
 
@@ -606,5 +900,174 @@ struct SaveMigrationTests {
         let data = try load(#"{"version":5,"settings":{"soundEnabled":false}}"#)
         #expect(data.settings.musicEnabled)
         #expect(data.settings.soundEnabled == false)
+    }
+
+    // MARK: - Version 7: the atlas namespace
+
+    /// 6 → 7 moves the five per-atlas fields under `atlases["japan"]`.
+    /// Everything a version 6 file recorded was earned on the Japan map, so
+    /// that is where all of it lands — values untouched, world not invented.
+    @Test func aVersionSixFileLandsIntactInTheJapanAtlas() throws {
+        let data = try load("""
+        {"version":6,
+         "mastery":{"1":5,"13":2},
+         "cards":{"01-1":10,"13-2":3},
+         "rainbow":["01-1"],
+         "streaks":{"1":4},
+         "records":{"findOnMap":{"0":{"stars":3,"score":730}},
+                    "nameIt":{"3":{"stars":2,"score":400}}},
+         "settings":{"soundEnabled":false}}
+        """)
+        #expect(data.version == SaveData.currentVersion)
+        let japan = try #require(data.atlases[SaveData.japanAtlas])
+        #expect(japan.mastery == [1: 5, 13: 2])
+        #expect(japan.cards == ["01-1": 10, "13-2": 3])
+        #expect(japan.rainbow == ["01-1"])
+        #expect(japan.streaks == [1: 4])
+        #expect(japan.records[QuizMode.findOnMap.rawValue]?[0] == StageRecord(stars: 3, score: 730))
+        #expect(japan.records[QuizMode.nameIt.rawValue]?[3] == StageRecord(stars: 2, score: 400))
+        #expect(japan.askedInChallenge.isEmpty,
+                "a challenge history cannot predate the world atlas")
+        #expect(data.atlases[SaveData.worldAtlas] == nil,
+                "a world nobody has visited is absent, not fabricated")
+        #expect(data.settings.soundEnabled == false)
+    }
+
+    /// Chain integrity: a version 1 file must still walk every lift — キラ to
+    /// gold, flat stages to map-mode records, mastery to the stretched ladder —
+    /// and the result of that walk is what lands in the japan namespace.
+    @Test func aVersionOneFileWalksTheWholeChainIntoTheJapanAtlas() throws {
+        let data = try load("""
+        {"version":1,"mastery":{"1":3},"cards":{"01-1":2},
+         "stages":{"0":{"stars":3,"score":730}}}
+        """)
+        let japan = try #require(data.atlases[SaveData.japanAtlas])
+        #expect(japan.mastery[1] == GameRules.maxMastery)
+        #expect(japan.cards["01-1"] == GameRules.maxCardStars)
+        #expect(japan.records[QuizMode.findOnMap.rawValue]?[0] == StageRecord(stars: 3, score: 730))
+        #expect(data.version == SaveData.currentVersion)
+    }
+
+    /// A version 8 file is already the current shape: encode → decode must be
+    /// the identity, including the world's card order and challenge history.
+    @Test func aVersionEightFileRoundTripsIdentically() throws {
+        var data = SaveData()
+        data.mastery = [1: 3]
+        data.cards = ["01-1": 5]
+        var world = AtlasSave()
+        world.mastery = [840: 2]
+        world.cards = ["840-1": 1]
+        world.cardAcquisitionOrder = ["840-1"]
+        world.askedInChallenge = [QuizMode.findOnMap.rawValue: [840, 392]]
+        data.atlases[SaveData.worldAtlas] = world
+
+        let reloaded = try JSONDecoder().decode(
+            SaveData.self, from: JSONEncoder().encode(data))
+        #expect(reloaded == data)
+        #expect(reloaded.atlases[SaveData.worldAtlas]?
+            .askedInChallenge[QuizMode.findOnMap.rawValue] == [840, 392])
+    }
+
+    /// A file from a future build keeps its own number and its own content —
+    /// this build must not relabel it or invent anything into it.
+    @Test func aFutureFileKeepsItsNumberAndItsContent() throws {
+        let data = try load("""
+        {"version":99,
+         "atlases":{"japan":{"mastery":{"1":5}},
+                    "world":{"cards":{"840-1":1}}},
+         "settings":{"soundEnabled":false}}
+        """)
+        #expect(data.version == 99)
+        #expect(data.atlases[SaveData.japanAtlas]?.mastery == [1: 5])
+        #expect(data.atlases[SaveData.worldAtlas]?.cards == ["840-1": 1])
+
+        let reloaded = try JSONDecoder().decode(
+            SaveData.self, from: JSONEncoder().encode(data))
+        #expect(reloaded.version == 99, "writing it back must not lower the number")
+        #expect(reloaded.atlases[SaveData.worldAtlas]?.cards == ["840-1": 1])
+    }
+
+    /// A shipped version 6 build that opened a version 7 file keeps the number
+    /// (that rule shipped with it) but writes its own flat shape under it. What
+    /// it recorded there is real play, so a later read folds it into japan
+    /// rather than ignoring keys the current shape no longer writes.
+    @Test func aLegacyShapeWrittenUnderAFutureNumberStillLandsInJapan() throws {
+        let data = try load(#"{"version":7,"mastery":{"1":5},"cards":{"01-1":10}}"#)
+        #expect(data.atlases[SaveData.japanAtlas]?.mastery == [1: 5])
+        #expect(data.atlases[SaveData.japanAtlas]?.cards == ["01-1": 10])
+    }
+
+    /// A file carrying both shapes — a populated japan namespace AND stale
+    /// flat fields — keeps the namespaced value wherever the two collide, and
+    /// still rescues entries only the flat shape knows. This pins the merge
+    /// direction of every fold: flipping any `{ current, _ in current }` to
+    /// last-wins would pass the rest of the suite while walking a child's
+    /// namespaced progress backwards.
+    @Test func namespacedValuesBeatStaleFlatFieldsOnEveryFold() throws {
+        let data = try load("""
+        {"version":7,
+         "atlases":{"japan":{
+            "mastery":{"1":5},
+            "cards":{"01-1":10},
+            "rainbow":["01-1"],
+            "streaks":{"1":6},
+            "records":{"findOnMap":{"0":{"stars":3,"score":900}}}}},
+         "mastery":{"1":2,"13":4},
+         "cards":{"01-1":3,"13-2":1},
+         "rainbow":["13-2"],
+         "streaks":{"1":1,"13":2},
+         "records":{"findOnMap":{"0":{"stars":1,"score":100},
+                                 "1":{"stars":2,"score":400}}}}
+        """)
+        let japan = try #require(data.atlases[SaveData.japanAtlas])
+        #expect(japan.mastery == [1: 5, 13: 4])
+        #expect(japan.cards == ["01-1": 10, "13-2": 1])
+        #expect(japan.rainbow == ["01-1", "13-2"],
+                "rainbow is a one-way latch: a union, so both survive")
+        #expect(japan.streaks == [1: 6, 13: 2])
+        #expect(japan.records[QuizMode.findOnMap.rawValue]?[0] == StageRecord(stars: 3, score: 900),
+                "a colliding record keeps the namespaced best")
+        #expect(japan.records[QuizMode.findOnMap.rawValue]?[1] == StageRecord(stars: 2, score: 400),
+                "a record only the flat shape knows is rescued")
+    }
+
+    /// The written file carries the namespaced form only. Writing the legacy
+    /// top-level fields too would leave every future read two sources of truth
+    /// to reconcile — the same reason `stages` is read but never written.
+    @Test func versionSevenWritesOnlyTheNamespacedForm() throws {
+        var data = SaveData()
+        data.mastery = [1: 2]
+        data.records[QuizMode.findOnMap.rawValue] = [0: StageRecord(stars: 1, score: 1)]
+        let object = try JSONSerialization.jsonObject(
+            with: JSONEncoder().encode(data))
+        let top = try #require(object as? [String: Any])
+        #expect(Set(top.keys) == ["version", "atlases", "settings"])
+    }
+
+    /// The five legacy properties are thin forwards onto `atlases["japan"]`:
+    /// a write through either side must be visible from the other, and must
+    /// not leak into the world atlas.
+    @Test func theJapanForwardsReadAndWriteTheJapanAtlas() throws {
+        var data = SaveData()
+        #expect(data.atlases[SaveData.japanAtlas] == nil)
+
+        data.mastery[13] = 4
+        #expect(data.atlases[SaveData.japanAtlas]?.mastery == [13: 4])
+
+        data.atlases[SaveData.japanAtlas]?.mastery[13] = 5
+        #expect(data.mastery == [13: 5])
+        #expect(data.masteryLevel(of: 13) == 5)
+
+        data.cards["01-1"] = 3
+        data.rainbow.insert("01-1")
+        data.streaks[13] = 2
+        data.records[QuizMode.findOnMap.rawValue, default: [:]][0] = StageRecord(stars: 3, score: 100)
+        let japan = try #require(data.atlases[SaveData.japanAtlas])
+        #expect(japan.cards == ["01-1": 3])
+        #expect(japan.rainbow == ["01-1"])
+        #expect(japan.streaks == [13: 2])
+        #expect(japan.records[QuizMode.findOnMap.rawValue]?[0] == StageRecord(stars: 3, score: 100))
+        #expect(data.atlases[SaveData.worldAtlas] == nil,
+                "japan writes must not leak into the world atlas")
     }
 }

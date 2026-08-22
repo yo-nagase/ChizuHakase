@@ -2,7 +2,7 @@ import SwiftUI
 
 /// One card, held up and turned in the light.
 ///
-/// The book shows the same 141 cards as chips. This is the other half of owning
+/// The book shows its atlas's cards as chips. This is the other half of owning
 /// something: one card big enough to look at, that tilts under a finger the way
 /// a real one does when you angle it to catch the shine. The face is
 /// `CardFaceView` at full density — this file is the backdrop, the gestures and
@@ -20,6 +20,13 @@ struct CardDetailView: View {
     /// The prefecture's current streak, for the 「あと◯れんぞく」 line under a
     /// gold card. Zero is a fine default for callers that predate streaks.
     var streak: Int = 0
+    /// What reaching silver unlocks, named — the world's flag cards promise
+    /// 「オリジナルカード」 instead of the tier (P8). The parent reads it off
+    /// its atlas (`Atlas.unlockGoalNoun(for:)`) and this view passes it on
+    /// unopened: which book the card came from is never decided here. Nil
+    /// keeps the plain 「シルバー」 wording, which is right for every japan
+    /// card and fine for callers that predate the unlock line.
+    var unlock: AtlasNoun? = nil
 
     /// Live tilt, in degrees. x is pitch, y is yaw.
     @State private var tilt: CGSize = .zero
@@ -90,7 +97,7 @@ struct CardDetailView: View {
                 if let goal = GameRules.nextGoal(stars: stars, streak: streak,
                                                  isRainbow: rainbow) {
                     VStack(spacing: 7) {
-                        Text(mode.nextGoalLabel(goal))
+                        Text(mode.nextGoalLabel(goal, unlock: unlock))
                             .font(AppFont.rounded(16, relativeTo: .subheadline))
                             .foregroundStyle(.white.opacity(0.92))
                         NextGoalBar(goal: goal, track: .white.opacity(0.25))

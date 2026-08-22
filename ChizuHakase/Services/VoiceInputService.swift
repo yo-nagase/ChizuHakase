@@ -208,11 +208,27 @@ extension VoiceInputService.Availability {
 ///
 /// Recognition returns kanji as often as kana, and children drop the
 /// 県/都/府 suffix constantly, so both spellings and both forms have to be
-/// accepted (CLAUDE.md §7).
+/// accepted (CLAUDE.md §7). The world atlas flows through the same functions —
+/// its countries are `Prefecture` values like everything else — with one more
+/// suffix family: the state forms (共和国, 連邦, …) that separate 「あめりか」
+/// from 「アメリカ合衆国」.
+///
+/// Only whole-family mechanical rules live here. A per-country alias
+/// (「中国」 for ちゅうごく, 「韓国」 for かんこく) is data, and belongs in the
+/// pipeline's tables with the same discipline as KANA_OVERRIDES
+/// (tools/world_countries.py) — never hand-written into this file.
 nonisolated enum PrefectureNameMatcher {
 
     /// Administrative suffixes that carry no information for the quiz.
     private static let suffixes = ["けん", "県", "ふ", "府", "どう", "道", "と", "都"]
+
+    /// State-form suffixes on country names, in both the spelling the
+    /// recogniser writes (kanji, for the accepted forms built from nameJa) and
+    /// the one a child's kana transcript would carry (for the spoken-side
+    /// fallback). Deliberately without a bare 「国」: too short to be safe, and
+    /// no gap needs it — モンゴル国 minus its katakana fold is already the kana.
+    private static let stateSuffixes = ["共和国", "きょうわこく", "王国", "おうこく",
+                                        "合衆国", "がっしゅうこく", "連邦", "れんぽう"]
 
     /// Whitespace, punctuation and katakana folded away. Deliberately does
     /// *not* touch suffixes — see `strippingSuffix`.
@@ -235,6 +251,15 @@ nonisolated enum PrefectureNameMatcher {
     /// 「きょうと」, but naively stripping 「と」 from a child saying 「きょうと」
     /// leaves 「きょう」 and the two would never meet.
     static func strippingSuffix(_ normalized: String) -> String? {
+        stripping(normalized, oneOf: suffixes)
+    }
+
+    /// The name with a state-form suffix removed, or nil if it has none.
+    static func strippingStateSuffix(_ normalized: String) -> String? {
+        stripping(normalized, oneOf: stateSuffixes)
+    }
+
+    private static func stripping(_ normalized: String, oneOf suffixes: [String]) -> String? {
         for suffix in suffixes where normalized.hasSuffix(suffix) {
             let stripped = String(normalized.dropLast(suffix.count))
             if !stripped.isEmpty { return stripped }
@@ -250,8 +275,29 @@ nonisolated enum PrefectureNameMatcher {
             guard !normalized.isEmpty else { continue }
             forms.insert(normalized)
             if let stripped = strippingSuffix(normalized) { forms.insert(stripped) }
+            // The state strip exists for the short forms the recogniser writes
+            // with kanji in them — 「南アフリカ」 for a child saying
+            // みなみあふりか — which no kana field can reach. It is *only* for
+            // those: a stripped form that is pure kana would overrule the
+            // pipeline's curated reading instead. WorldShapes' kana keeps a
+            // suffix exactly where it disambiguates (both Congos), and a
+            // mechanical 「こんご」 here would answer コンゴ共和国 while the
+            // question was コンゴ民主共和国 — scoring the child wrong for
+            // saying an ambiguous word.
+            if let stripped = strippingStateSuffix(normalized),
+               stripped.contains(where: isIdeograph) {
+                forms.insert(stripped)
+            }
         }
         return forms
+    }
+
+    /// Whether a character is a CJK ideograph — what survives `normalize`'s
+    /// katakana fold and so marks a form as unreachable through the kana field.
+    /// The base block alone is deliberate: it fails closed — an ideograph from
+    /// an extension block would merely forgo a short form, never accept one.
+    private static func isIdeograph(_ character: Character) -> Bool {
+        character.unicodeScalars.contains { (0x4E00...0x9FFF).contains($0.value) }
     }
 
     /// True when `heard` names `prefecture`, in kana or kanji, with or without
@@ -264,6 +310,9 @@ nonisolated enum PrefectureNameMatcher {
         // Also try the spoken form without its suffix, for a child who adds one
         // the official name does not have (「ほっかいどうけん」).
         if let stripped = strippingSuffix(spoken), forms.contains(stripped) { return true }
+        // And without a state suffix, for a transcript the recogniser wrote out
+        // in kana:「あめりかがっしゅうこく」 minus がっしゅうこく is the reading.
+        if let stripped = strippingStateSuffix(spoken), forms.contains(stripped) { return true }
         return false
     }
 

@@ -1,12 +1,18 @@
 import SwiftUI
 
-/// The whole country coloured by how well each prefecture is known
-/// (CLAUDE.md §5). Tapping a prefecture shows its detail; this screen also
-/// owns the erase-everything control.
+/// The open book's whole map coloured by how well each region is known
+/// (CLAUDE.md §5). Tapping a region shows its detail; this screen also owns
+/// the erase-everything control — which erases the *whole app*, both books,
+/// whichever page it was opened from (design doc: one record, one eraser).
 struct MyMapView: View {
     @Environment(AppState.self) private var app
     @Environment(\.dynamicTypeSize) private var typeSize
     @Environment(\.textMode) private var mode
+
+    /// The book this map shows. Regions, mastery and the tallies all come off
+    /// this one value and its save slice, so japan's greens can never colour
+    /// the world's countries (their codes collide — 44 is 大分県 and バハマ).
+    let atlas: Atlas
 
     @State private var selected: Prefecture?
     @State private var eraseStep = 0   // 0 = idle, 1 = asked once, 2 = confirming
@@ -14,10 +20,15 @@ struct MyMapView: View {
     @State private var pan: CGSize = .zero
     /// The map's frame, for dropping taps the zoom pushed off the glass.
     @State private var mapSize: CGSize = .zero
+    /// The globe's camera, when this book carries one. Opens facing
+    /// `GlobeCenter.home`; the zoom is a separate axis from the flat map's
+    /// `zoom` because it lives in the disk's radius, not in a scaleEffect.
+    @State private var globeCenter = GlobeCenter.home
+    @State private var globeZoom: CGFloat = 1
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    private var save: SaveData { app.save.data }
+    private var save: AtlasSave { app.save.data.atlas(atlas.saveKey) }
 
     var body: some View {
         ScrollView {
@@ -32,26 +43,90 @@ struct MyMapView: View {
             .padding(16)
             .pageColumn()
         }
-        // While zoomed the map owns dragging, or the column would scroll away
-        // underneath a child trying to move around Kyushu. The reset button is
-        // always on screen, so the way back to scrolling is one tap.
+        // While zoomed the flat map owns dragging, or the column would scroll
+        // away underneath a child trying to move around Kyushu. The reset
+        // button is always on screen, so the way back to scrolling is one tap.
+        // The globe never trips this (`zoom` is the flat map's camera): it
+        // rotates at *every* zoom, so instead of a scroll switch its drag is
+        // a high-priority gesture (see `GlobeSurface`) — the page scrolls
+        // from the legend, the tallies and the margins, never off the planet.
         .scrollDisabled(ZoomPan.isZoomed(zoom))
         .background(AlbumPage())
         .navigationTitle(mode.myMap)
         .navigationBarTitleDisplayMode(.inline)
-        .sheet(item: $selected) { PrefectureDetailSheet(prefecture: $0) }
+        .sheet(item: $selected) { PrefectureDetailSheet(atlas: atlas, prefecture: $0) }
+    }
+
+    /// Which panel the book gets is decided by data, never by which book it
+    /// is: a book that carries globe rings is shown as a globe (design doc §7 —
+    /// turning the sphere to find your own green is itself the reward), and
+    /// japan, which carries none, keeps the flat map it has always had.
+    @ViewBuilder private var map: some View {
+        if let globe = atlas.globe {
+            globePanel(globe)
+        } else {
+            flatMap
+        }
+    }
+
+    /// The world coloured by mastery, as a sphere the child can turn.
+    ///
+    /// Square, unlike the flat panel's derived ratio: the disk is sized by the
+    /// panel's short side, so any extra width or height is only ever empty
+    /// corner — a square wastes the least page on a round earth. Tap targets,
+    /// hints and effects are quiz furniture; here a tap just opens the same
+    /// detail sheet the flat map opens.
+    private func globePanel(_ globe: GlobeData) -> some View {
+        GlobeMapView(
+            globe: globe,
+            // The same function the legend and the flat map read (§5), so a
+            // country can only wear a colour the swatches explain.
+            appearance: { MasteryStyle.appearance(for: $0, save: save) },
+            interactiveCodes: Set(globe.shapes.map(\.code)),
+            center: $globeCenter,
+            zoom: $globeZoom,
+            // The reading, not the written name — same reasoning as the quiz
+            // globe: kanji country names are exactly where VoiceOver guesses
+            // wrong, and the reading is the form being taught.
+            accessibilityName: { atlas.mapData[$0]?.kana ?? "" },
+            onTap: { code, _ in
+                // No visibility gate (unlike the flat map's): the globe's
+                // magnification lives in its radius, so the touch region
+                // never outgrows the clipped panel the child sees.
+                if let code { selected = atlas.mapData[code] }
+            })
+            .aspectRatio(1.0, contentMode: .fit)
+            .clipShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
+            // The globe carries its own sea inside the disk; more sea around
+            // a sea-rimmed planet would swallow its edge (same call as the
+            // quiz panel), so behind it the panel stays album paper.
+            .background(Palette.background)
+            .stickerCard(fill: .clear, cornerRadius: 26)
+            // Zoom needs the same visible way back as the flat map. Rotation
+            // does not: no orientation is "lost" on a sphere that always
+            // shows half of itself, and home is one drag away.
+            .overlay(alignment: .topTrailing) {
+                resetZoomButton(isZoomed: ZoomPan.isZoomed(globeZoom)) {
+                    globeZoom = 1
+                }
+            }
+            // No ZoomHintChip: the chip teaches ZoomPan's press-and-slide,
+            // a gesture the globe does not run — there, a drag rotates.
+            .accessibilityZoomAction { globeZoom = zoomedForAccessibility(globeZoom, $0) }
     }
 
     /// Pinchable, and draggable once pinched. The zoom lives on the map itself
     /// rather than on the whole screen so the legend and the counts stay put —
     /// they are the key to what the colours mean, and scaling them away while
     /// looking closely at a prefecture would be backwards.
-    private var map: some View {
+    private var flatMap: some View {
         PrefectureMapView(
-            mapData: app.mapData,
-            codes: Array(1...47),
+            mapData: atlas.mapData,
+            codes: atlas.mapData.prefectures.map(\.code),
             appearance: appearance,
-            interactiveCodes: Set(1...47),
+            interactiveCodes: Set(atlas.mapData.prefectures.map(\.code)),
+            // Inset frames and background coastlines are data-driven — the map
+            // draws whatever `mapData` declares, so nothing is passed here.
             zoom: zoom,
             onTap: { prefecture, point in
                 // The touch region outgrows the clipped panel while zoomed
@@ -61,10 +136,13 @@ struct MyMapView: View {
                                         in: mapSize) else { return }
                 selected = prefecture
             })
-        // 0.8, taller than the country's own near-square ratio: the extra
-        // height becomes sea above and below the diagonal archipelago, and a
-        // zoomed-in child gets that much more viewport to move around in.
-        .aspectRatio(0.8, contentMode: .fit)
+        // A quarter more height than the map itself needs: the extra becomes
+        // sea above and below, and a zoomed-in child gets that much more
+        // viewport to move around in. Derived from the map's own proportions
+        // rather than fixed at japan's 0.8, so the world's wide band earns the
+        // same margin of sea instead of floating in a tall empty panel.
+        .aspectRatio(0.8 * PrefectureGeometry.aspectRatio(of: atlas.mapData.prefectures),
+                     contentMode: .fit)
         // Same gesture as the quiz map: a child who learns it on one country
         // should not find it missing on the other.
         .zoomPan(scale: $zoom, offset: $pan, oneFingerZoom: true)
@@ -80,26 +158,40 @@ struct MyMapView: View {
         .clipShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
         .background(Palette.seaGradient)
         .stickerCard(fill: .clear, cornerRadius: 26)
-        .overlay(alignment: .topTrailing) { resetZoomButton }
+        .overlay(alignment: .topTrailing) {
+            resetZoomButton(isZoomed: ZoomPan.isZoomed(zoom)) {
+                zoom = 1
+                pan = .zero
+            }
+        }
         .overlay(alignment: .bottom) { ZoomHintChip(zoom: zoom).padding(.bottom, 12) }
         .accessibilityZoomAction { action in
-            // VoiceOver cannot pinch, so it gets the same range through the
-            // rotor-driven zoom action.
-            zoom = ZoomPan.clamp(scale: action.direction == .zoomIn ? zoom * 1.5 : zoom / 1.5)
+            zoom = zoomedForAccessibility(zoom, action)
             if !ZoomPan.isZoomed(zoom) { pan = .zero }
         }
     }
 
-    /// The way back out.
+    /// VoiceOver cannot pinch, so each camera gets the same 1...4 range
+    /// through the rotor-driven zoom action instead, stepping by half again
+    /// per gesture. One function for both panels — the flat map additionally
+    /// re-centres its pan on the way out (a globe has no pan to re-centre).
+    private func zoomedForAccessibility(_ zoom: CGFloat,
+                                        _ action: AccessibilityZoomGestureAction) -> CGFloat {
+        ZoomPan.clamp(scale: action.direction == .zoomIn ? zoom * 1.5 : zoom / 1.5)
+    }
+
+    /// The way back out — shared by both cameras (the flat map's zoom+pan,
+    /// the globe's radius), because a child who learns the escape hatch on
+    /// one panel must find it in the same corner of the other.
     ///
     /// A visible button rather than a double-tap: double tap would have to be
     /// disambiguated from the single tap that opens a prefecture, delaying
     /// every selection, and a five-year-old who has pinched into a corner
     /// needs an escape hatch they can see rather than one they must know about.
-    @ViewBuilder private var resetZoomButton: some View {
-        if ZoomPan.isZoomed(zoom) {
+    @ViewBuilder private func resetZoomButton(isZoomed: Bool,
+                                              reset: @escaping () -> Void) -> some View {
+        if isZoomed {
             Button(mode.resetZoom) {
-                let reset = { zoom = 1; pan = .zero }
                 if reduceMotion { reset() } else { withAnimation(.spring(duration: 0.3), reset) }
             }
             .font(AppFont.rounded(13, relativeTo: .caption))
@@ -141,10 +233,13 @@ struct MyMapView: View {
     /// One stat, not two: 「おぼえた」 *means* reaching the top of the ladder
     /// now, so a second count beside this one was the same number wearing
     /// another name. The word matches the legend's gold swatch and the title's
-    /// 「おぼえた けん」 tile — one measurement, one name, wherever it appears.
+    /// tally tile — one measurement, one name, wherever it appears. The
+    /// denominator is whatever the open book holds (47 or 167), never a
+    /// literal.
     private var summary: some View {
         HStack(spacing: 12) {
-            stat("✨ \(mode.learnedCount)", "\(save.sparklingPrefectureCount) / 47")
+            stat("✨ \(mode.learnedCount)",
+                 "\(save.sparklingRegionCount) / \(atlas.mapData.prefectures.count)")
         }
     }
 
@@ -164,6 +259,12 @@ struct MyMapView: View {
     }
 
     /// Two deliberate steps before anything is destroyed (CLAUDE.md §6).
+    ///
+    /// Whole-app on purpose, whichever book's map sits above it: `eraseAll`
+    /// clears both books (design-doc recommendation — one record, one eraser),
+    /// and the second confirmation names both so nobody erases 「the world's
+    /// records」 and loses japan's. See `SaveStore.eraseAll` for the lastAtlas
+    /// side effect.
     private var eraseSection: some View {
         VStack(spacing: 10) {
             switch eraseStep {
@@ -197,7 +298,7 @@ struct MyMapView: View {
             }
         }
         .padding(.top, 8)
-        .animation(.snappy, value: eraseStep)
+        .animation(reduceMotion ? nil : .snappy, value: eraseStep)
     }
 }
 
@@ -205,11 +306,16 @@ private struct PrefectureDetailSheet: View {
     @Environment(AppState.self) private var app
     @Environment(\.dynamicTypeSize) private var typeSize
     @Environment(\.textMode) private var mode
+    /// The book the tapped region lives in — its catalog and its save slice,
+    /// because the region's code only means anything inside that book.
+    let atlas: Atlas
     let prefecture: Prefecture
 
+    private var save: AtlasSave { app.save.data.atlas(atlas.saveKey) }
+
     var body: some View {
-        let level = app.save.data.masteryLevel(of: prefecture.code)
-        let cards = app.cards.cards(for: prefecture.code)
+        let level = save.masteryLevel(of: prefecture.code)
+        let cards = atlas.cards.cards(for: prefecture.code)
 
         ScrollView {
             VStack(spacing: 14) {
@@ -235,8 +341,8 @@ private struct PrefectureDetailSheet: View {
                                          count: typeSize.cardColumns), spacing: 10) {
                     ForEach(cards) { card in
                         CardChipView(card: card,
-                                     stars: app.save.data.stars(of: card.id),
-                                     rainbow: app.save.data.isRainbow(card.id))
+                                     stars: save.stars(of: card.id),
+                                     rainbow: save.isRainbow(card.id))
                     }
                 }
                 .padding(.top, 4)

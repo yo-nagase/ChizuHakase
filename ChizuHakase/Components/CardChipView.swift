@@ -7,8 +7,8 @@ import SwiftUI
 /// object drawn at two sizes rather than two designs to keep in step.
 struct CardChipView: View {
     let card: SpecialtyCard
-    /// Named on the card, so the same face works in the result screen where
-    /// nothing else says which prefecture the card came from.
+    /// Named on the card where no surrounding section says which region the
+    /// card came from (results and the world's acquisition-order book).
     var prefecture: Prefecture?
     /// 0 = not collected yet, then one per copy won, to fifteen.
     var stars: Int = 1
@@ -40,7 +40,15 @@ struct CardChipView: View {
     /// that is a single win away from gold.
     private var accessibilityText: String {
         guard isOwned else { return mode.notCollectedYet }
-        let name = "\(card.displayName(mode))。\(mode.starCount(stars))"
+        let cardName = card.displayName(mode)
+        let titledName: String
+        if let prefecture {
+            let region = prefecture.displayName(mode)
+            titledName = region == cardName ? cardName : "\(region)。\(cardName)"
+        } else {
+            titledName = cardName
+        }
+        let name = "\(titledName)。\(mode.starCount(stars))"
         guard let tierName = mode.cardTierName(tier) else { return name }
         return "\(name)。\(tierName)"
     }

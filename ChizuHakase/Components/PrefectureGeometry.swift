@@ -76,10 +76,13 @@ nonisolated enum PrefectureGeometry {
 
     // MARK: - Fitting
 
+    /// Union of the boxes a stage frame should honour. A shape may declare a
+    /// `frameBbox` smaller than its true extent (Russia's European part): the
+    /// fit obeys the declaration and the rest of the shape overflows the frame
+    /// as scenery, clipped by the map view. Hit tests keep the true `bbox`.
     static func boundingBox(of prefectures: [Prefecture]) -> CGRect {
-        prefectures.dropFirst().reduce(prefectures.first?.bbox ?? .zero) {
-            $0.union($1.bbox)
-        }
+        let boxes = prefectures.map { $0.frameBbox ?? $0.bbox }
+        return boxes.dropFirst().reduce(boxes.first ?? .zero) { $0.union($1) }
     }
 
     /// Width/height of a stage once padded. Callers hand this to

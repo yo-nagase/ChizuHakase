@@ -34,6 +34,23 @@ nonisolated enum GameRules {
     static let popDuration: TimeInterval = 0.55
     static let shakeDuration: TimeInterval = 0.45
     static let hintBlinkPeriod: TimeInterval = 0.9
+    /// 地球儀が相手の国を正面へ回すアニメーション時間(ヒント、および
+    /// なまえを あてる の出題前回転)。ジャンプではなく回って見せるのは
+    /// 「地球の裏にあった」という事実そのものが教材だから。
+    static let globeCenteringDuration: TimeInterval = 0.6
+    /// 地球儀の回転救済(3 ミスのヒント点滅・なまえを あてる の出題前回転)が
+    /// 「回さなくてよい」と判断できる、中心からの角距離の上限(度)。
+    /// 可視の境界は 90° だが、正射図法は縁で cos 倍に前縮みする — 80° 台では
+    /// 輪郭が数 pt に潰れ、3 回ミスして点滅を待つ子には見つけられない。
+    /// 65° なら前縮みは cos65° ≈ 0.42 で止まり、形がまだ形に見える。内側に
+    /// いる答えを回さないのは従来どおり — 見えている答えを回すと、点滅を
+    /// 見つけかけた子から地図が逃げる。
+    static let globeHintComfortDegrees: Double = 65
+    /// VoiceOver の調整つまみ(GlobeMapView.rotateStepper)が 1 スワイプで
+    /// 回す経度(度)。ドラッグできない利用者には裏側へ届く唯一の口。
+    /// 45° = 8 歩で一周 — 一歩ごとに正面の顔ぶれが確かに入れ替わり、
+    /// かつ大陸を丸ごと飛び越さない幅。
+    static let globeRotateStepDegrees: Double = 45
     /// Wrong attempts on the current question before the answer starts blinking.
     ///
     /// Three, not two: two came up often enough that a child who was thinking
@@ -43,6 +60,13 @@ nonisolated enum GameRules {
 
     /// How many names 「なまえを あてる」 offers at once.
     static let nameChoiceCount = 4
+
+    /// How many questions one challenge-stage session asks. 47 — the length
+    /// 全国チャレンジ has always been, and the one sitting a child is proven to
+    /// run to the end. The world challenge (167 countries, world design §8) is
+    /// cut to the same length per session, which also keeps its two-star band
+    /// — ceil(47/4) — identical to japan's.
+    static let challengeQuestionCount = 47
 
     /// How loudly a streak should be celebrated. 0 means say nothing.
     ///
@@ -113,6 +137,36 @@ nonisolated enum GameRules {
         return order
     }
 
+    /// One challenge sitting's worth of regions where the book holds more
+    /// codes than the sitting asks — the world challenge's draw (design §8).
+    ///
+    /// Coverage first, randomness inside it — the same principle as the card
+    /// draw's unowned-first: the codes not yet asked in this mode's challenge
+    /// are shuffled and taken up to `count`, and only the shortfall is filled
+    /// from the already-asked pool. About four sittings therefore visit every
+    /// recorded country; `SaveStore.applyStageResult` empties the history at
+    /// that point so the next lap starts fresh.
+    ///
+    /// The combined pick is shuffled once more, so a fill-in sitting does not
+    /// end on a visible block of countries the child has seen before — the
+    /// seam between the two pools must not survive into the asking order.
+    ///
+    /// `asked` entries that are not in `codes` (a country that left the book,
+    /// or a hand-edited save) are ignored: the walk is over `codes`, so stale
+    /// history can only shrink the unasked pool it actually names. Returns
+    /// exactly `min(count, codes.count)` distinct codes — `codes` lists each
+    /// region once (the same contract `questionOrder` relies on).
+    static func challengeSelection(codes: [Int], asked: Set<Int>, count: Int,
+                                   using rng: inout AnyRandomNumberGenerator) -> [Int] {
+        let unasked = codes.filter { !asked.contains($0) }.shuffled(using: &rng)
+        var picked = Array(unasked.prefix(count))
+        if picked.count < count {
+            let seen = codes.filter { asked.contains($0) }.shuffled(using: &rng)
+            picked.append(contentsOf: seen.prefix(count - picked.count))
+        }
+        return picked.shuffled(using: &rng)
+    }
+
     /// Breathing room added around the fitted map, as a fraction of its own
     /// size on each side, plus a flat inset so coastal prefectures never touch
     /// the bezel.
@@ -122,6 +176,61 @@ nonisolated enum GameRules {
     /// that margin came straight out of how big Kagawa is drawn.
     static let mapPaddingRatio: CGFloat = 0.045
     static let mapPaddingPoints: CGFloat = 6
+
+    /// How far every flat map lets a pinch go by default. Above 4 the shapes
+    /// grow bigger than the detail behind them, so 4 is an aesthetic ceiling,
+    /// not a mechanical one. This is the single home of the number:
+    /// `ZoomPan.maxScale` and `Stage.flatMaxZoom`'s default both read it, so
+    /// the shared ceiling cannot drift apart between the gesture and the data.
+    static let mapMaxZoom: CGFloat = 4
+
+    /// The zoom ceiling for a challenge stage's flat map, derived from the
+    /// data rather than hand-placed (the same discipline as the Okinawa
+    /// inset's sea scan): the largest frame ratio `max(cw/w, ch/h)` between
+    /// the challenge's span and each regional stage's span.
+    ///
+    /// Why that ratio is enough on any device: aspect-fitting spans into a
+    /// W×H frame gives the stage a drawn scale of `min(W/w, H/h)` and the
+    /// challenge `min(W/cw, H/ch)`, and their quotient never exceeds
+    /// `max(cw/w, ch/h)` whatever W and H are. So a ceiling of the largest
+    /// such ratio lets every recorded country be pinched up to at least the
+    /// size its own regional stage draws it — which is what makes the small
+    /// islands of the world challenge findable at all. It never goes below
+    /// `mapMaxZoom`: a book whose stages need less keeps today's ceiling,
+    /// which is why 全国チャレンジ is untouched by construction.
+    ///
+    /// Degenerate spans (a stage with no resolvable bbox) are skipped rather
+    /// than divided by — a data hole must not become an infinite zoom.
+    static func challengeFlatMaxZoom(challengeSpan: CGSize,
+                                     stageSpans: [CGSize]) -> CGFloat {
+        let ratios = stageSpans
+            .filter { $0.width > 0 && $0.height > 0 }
+            .map { max(challengeSpan.width / $0.width,
+                       challengeSpan.height / $0.height) }
+        return max(mapMaxZoom, ratios.max() ?? mapMaxZoom)
+    }
+
+    /// The zoom floor for a world regional stage's flat map — how far the
+    /// same pinch and hold-slide that magnify it may also *shrink* it, so a
+    /// child can pull back and see where in the world the region sits.
+    ///
+    /// The mirror of `challengeFlatMaxZoom`, derived from the same spans:
+    /// aspect-fitting into any W×H frame draws the stage at `min(W/w, H/h)`
+    /// and the whole book at `min(W/cw, H/ch)`, and their quotient is never
+    /// below `min(w/cw, h/ch)` whatever W and H are. So a floor of that ratio
+    /// always lets the whole book into the frame, on any device, without the
+    /// data ever knowing the frame. Never above 1 — a stage the size of its
+    /// book has nothing to reveal, and a floor past 1 would forbid rest.
+    ///
+    /// Degenerate spans return 1 (no zoom-out) rather than divide: a data
+    /// hole must not become a map that can shrink away to nothing.
+    static func regionalFlatMinZoom(bookSpan: CGSize,
+                                    stageSpan: CGSize) -> CGFloat {
+        guard bookSpan.width > 0, bookSpan.height > 0,
+              stageSpan.width > 0, stageSpan.height > 0 else { return 1 }
+        return min(1, min(stageSpan.width / bookSpan.width,
+                          stageSpan.height / bookSpan.height))
+    }
 
     /// Screen-space slack for taps that miss every prefecture (CLAUDE.md §3).
     static let tapTolerancePoints: CGFloat = 22
@@ -295,30 +404,68 @@ nonisolated enum GameRules {
         var promoted: Bool { tier.isSpecial && CardTier(stars: stars - 1) != tier }
     }
 
+    /// How one prefecture's (or country's) cards enter the draw. The one rule
+    /// that differs between atlases (world design §5 「規則の差分」): star
+    /// growth, tiers and rainbow sit above the pool and are shared. `Atlas`
+    /// carries the value so the branch lives in data — views never see it.
+    enum DrawPolicy: Sendable {
+        /// 日本版: every card of the prefecture is in the pool from the start.
+        case random
+        /// 世界版: the first-listed card (the flag) is dealt alone until it
+        /// reaches silver; only then do the others join the pool. Learning
+        /// order — first the flag, then what is behind it — made a draw rule.
+        ///
+        /// "First-listed" is a contract on the catalog, not on the id: the
+        /// country's entry lists the flag card first (WorldCards.json, Task 8).
+        /// Parsing "-1" out of ids here would hide that dependency instead of
+        /// naming it.
+        case flagFirstSilverGate
+    }
+
     /// Draw one card for a correct answer.
     ///
     /// Unowned cards come first so the collection fills up quickly. After that
     /// the draw is among the cards that can still take a star, which is what
     /// keeps a cleared prefecture worth playing (CLAUDE.md §5) — drawing from
     /// all of them instead would spend wins on cards already at the cap while
-    /// others sat at one.
+    /// others sat at one. `policy` narrows the pool before any of that, and it
+    /// has no default: the policy is the atlas's one rule difference, and a
+    /// call site that forgets to pass it would silently deal japan's way.
     static func drawCard(
         from cards: [SpecialtyCard],
         owned: [String: Int],
+        policy: DrawPolicy,
         using generator: inout some RandomNumberGenerator
     ) -> CardDraw? {
-        guard !cards.isEmpty else { return nil }
+        let pool = drawPool(cards, owned: owned, policy: policy)
+        guard !pool.isEmpty else { return nil }
 
-        let unowned = cards.filter { (owned[$0.id] ?? 0) <= 0 }
+        let unowned = pool.filter { (owned[$0.id] ?? 0) <= 0 }
         if let pick = unowned.randomElement(using: &generator) {
             return .new(pick)
         }
-        let unfinished = cards.filter { (owned[$0.id] ?? 0) < maxCardStars }
+        let unfinished = pool.filter { (owned[$0.id] ?? 0) < maxCardStars }
         if let pick = unfinished.randomElement(using: &generator) {
             return .star(pick, stars: (owned[pick.id] ?? 0) + 1)
         }
-        guard let pick = cards.randomElement(using: &generator) else { return nil }
+        guard let pick = pool.randomElement(using: &generator) else { return nil }
         return .duplicate(pick)
+    }
+
+    /// The cards this answer can land on. Under the gate, every win goes to
+    /// the flag until it is silver — so the original is never the "unowned"
+    /// pick, and the win after the flag touches silver hands it over.
+    private static func drawPool(
+        _ cards: [SpecialtyCard], owned: [String: Int], policy: DrawPolicy
+    ) -> [SpecialtyCard] {
+        switch policy {
+        case .random:
+            return cards
+        case .flagFirstSilverGate:
+            guard let flag = cards.first, (owned[flag.id] ?? 0) < silverStars
+            else { return cards }
+            return [flag]
+        }
     }
 
     /// Stars after a draw, capped at `maxCardStars`.

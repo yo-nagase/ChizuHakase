@@ -1,0 +1,264 @@
+#!/usr/bin/env python3
+"""WorldShapes.json の健全性チェック (世界アトラス版).
+
+build_world_map_data.py で再生成するたびに実行する。落ちたらコミットしない。
+
+Run from tools/:
+    python3 validate_world_data.py [path/to/WorldShapes.json]
+
+引数を省略するとスクリプト位置基準で ../ChizuHakase/Resources/WorldShapes.json
+を見る (CWD に依存しない)。検査はすべて assert で、失敗すれば非ゼロ終了
+(assert が剥がれる -O での実行は冒頭で拒否する)。
+ファイルサイズ超過だけは警告に留める — 黙って簡略化率を上げず、人が判断する
+(build_world_map_data.py の WARNING と同じ扱い)。
+"""
+
+from __future__ import annotations
+
+import json
+import os
+import sys
+from collections import Counter
+
+import world_countries as wc
+from map_geometry import point_in_rings
+
+DEFAULT_DST = os.path.join("..", "ChizuHakase", "Resources", "WorldShapes.json")
+
+# build_world_map_data.py の COORD_DECIMALS / INSET_MIN_TOTAL_PTS /
+# URAL_LON / サイズ予算と同じ値。生成側の契約をこちらでも言い直して、
+# 片側だけ変わったらここで気づけるようにする。
+COORD_DECIMALS = 4
+INSET_MIN_TOTAL_PTS = 20
+URAL_LON = 60.0
+SIZE_BUDGET = 400 * 1024
+
+# インセット倍率の帯規則 (build の INSET_SCALE_FLOOR まわりのコメントが正本)。
+# 拡大後の最大寸法は 380pt パネルで 10pt 以上。22pt 以下は「床 2.5 で
+# 置いた国」には課さない — 床は上限より優先する (裁定 2026-08-20)。
+INSET_SCALE_FLOOR = 2.5
+INSET_BAND_MIN_PT = 10.0
+INSET_BAND_MAX_PT = 22.0
+INSET_PANEL_PT = 380.0
+MAP_PADDING_PT = 6.0       # GameRules.mapPaddingPoints の写し
+MAP_PADDING_RATIO = 0.045  # GameRules.mapPaddingRatio の写し
+PROJ_COS = 0.8660254037844387  # cos 30° (WorldProjection.referenceLatitudeDegrees)
+
+
+def is_pure_hiragana(s: str) -> bool:
+    # build_world_map_data.py の同名関数と同じ規則 (長音「ー」だけ許す)
+    return bool(s) and all(0x3041 <= ord(c) <= 0x3096 or c == "ー" for c in s)
+
+
+def check_decimals(values, where):
+    # 丸め漏れの桁はファイルを太らせ diff を揺らすだけ (COORD_DECIMALS の契約)
+    for v in values:
+        assert round(v, COORD_DECIMALS) == v, (where, v, "座標が 4 桁を超える")
+
+
+def check_rings(rings, where):
+    assert rings, (where, "リングが無い")
+    for ring in rings:
+        assert len(ring) >= 4, (where, "リングが退化している")
+        assert ring[0] == ring[-1], (where, "リングが閉じていない")
+        check_decimals((v for pt in ring for v in pt), where)
+
+
+def main():
+    # -O は assert を剥がす — 通っても何も検査していない偽の合格になる
+    if sys.flags.optimize:
+        sys.exit("assert が消えるので -O では実行しない")
+
+    here = os.path.dirname(os.path.abspath(__file__))
+    path = sys.argv[1] if len(sys.argv) > 1 else os.path.join(here, DEFAULT_DST)
+    with open(path, encoding="utf-8") as fh:
+        data = json.load(fh)
+
+    countries = data["countries"]
+    recorded = [c for c in countries if "stage" in c]
+    # 数の比較では「1 国消えて別の 1 国が湧いた」相殺ドリフトが見えない。
+    # 集合差で両方向を名指しする
+    recorded_codes = {c["code"] for c in recorded}
+    master_codes = set(wc.STAGE_OF_COUNTRY)
+    assert recorded_codes == master_codes, \
+        ("出力に無い", sorted(master_codes - recorded_codes),
+         "マスタに無い", sorted(recorded_codes - master_codes))
+
+    # 昇順・重複なしは Swift ローダが辞書化・二分探索で前提にしてよい契約
+    codes = [c["code"] for c in countries]
+    assert codes == sorted(codes), "countries がコード昇順でない"
+    dupes = sorted(code for code, n in Counter(codes).items() if n > 1)
+    assert not dupes, ("国コードが重複している", dupes)
+
+    for c in recorded:
+        code = c["code"]
+        check_rings(c["rings"], code)
+        assert c["nameJa"], (code, "nameJa が空")
+        assert is_pure_hiragana(c["kana"]), (code, c["kana"], "かなが純ひらがなでない")
+        assert 0 <= c["stage"] < len(wc.STAGES), (code, c["stage"], "ステージ番号が範囲外")
+        assert c["stage"] == wc.STAGE_OF_COUNTRY.get(code), \
+            (code, c["stage"], "ステージがマスタと食い違う")
+
+        x0, y0, x1, y1 = c["bbox"]
+        # 正規化後の最小スパンは実在の国なら必ず 180° 未満に収まる。
+        # ここで落ちたら上流データの変化 (build と同じ契約)
+        assert 0 < x1 - x0 < 180, (code, "日付変更線の正規化漏れ")
+        xs = [x for r in c["rings"] for x, _ in r]
+        ys = [y for r in c["rings"] for _, y in r]
+        assert [x0, y0, x1, y1] == [min(xs), min(ys), max(xs), max(ys)], \
+            (code, "bbox がリングの実範囲と食い違う")
+        check_decimals(c["bbox"], code)
+        check_decimals(c["centroid"], code)
+
+    used = {c["stage"] for c in recorded}
+    assert used == set(range(len(wc.STAGES))), \
+        ("空のステージがある", sorted(set(range(len(wc.STAGES))) - used))
+
+    code_set = set(codes)
+    assert wc.INSET_COUNTRIES <= code_set, "インセット対象が収録に無い"
+    assert 392 in code_set, "日本が世界地図にいない"
+    assert 158 in code_set, "台湾の裁定が反映されていない"
+    assert 48 not in code_set, "バーレーンは収録外の裁定"
+
+    # ひがしヨーロッパの枠はロシアのヨーロッパ側だけで計算する契約。
+    # 持ち主はロシアただ 1 国、東端はウラル線 (build の URAL_LON) そのもの
+    euro = [c for c in countries if "europeBbox" in c]
+    assert [c["code"] for c in euro] == [643], \
+        ("europeBbox の持ち主がロシアだけでない", [c["code"] for c in euro])
+    ex0, ey0, ex1, ey1 = euro[0]["europeBbox"]
+    assert ex1 == URAL_LON, ("europeBbox の東端がウラル線でない", ex1)
+    assert ex0 < ex1 and ey0 < ey1, ("europeBbox が潰れている", euro[0]["europeBbox"])
+    check_decimals(euro[0]["europeBbox"], 643)
+
+    # 背景はコード無しの海岸線。持ってよいキーは rings だけ (白リスト) —
+    # 収録国に見えるメタデータの混入をキー単位で締め出す
+    for i, entry in enumerate(data["background"]):
+        assert set(entry) == {"rings"}, \
+            (f"background[{i}]", "rings 以外のキーがある", sorted(set(entry) - {"rings"}))
+        check_rings(entry["rings"], f"background[{i}]")
+
+    inset_codes = [i["code"] for i in data["insets"]]
+    assert len(inset_codes) == len(set(inset_codes)) \
+        and set(inset_codes) == wc.INSET_COUNTRIES, \
+        ("insets がマスタと食い違う", inset_codes)
+    by_code = {c["code"]: c for c in countries}
+    inset_by_code = {i["code"]: i for i in data["insets"]}
+
+    def runtime_box(c):
+        """実行時のステージ枠が見る箱 (PrefectureGeometry.boundingBox の写し):
+        ロシアは europeBbox、インセット国は移設後の bbox、他は素の bbox。
+        移設 (WorldDataLoader.relocation) は投影座標で軸ごとに線形なので、
+        度のまま「枠中心 ± 元スパン×scale/2」で写せる。"""
+        if "europeBbox" in c:
+            return c["europeBbox"]
+        decl = inset_by_code.get(c["code"])
+        if decl is None:
+            return c["bbox"]
+        gx0, gy0, gx1, gy1 = decl["frame"]
+        b = c["bbox"]
+        w = (b[2] - b[0]) * decl["scale"]
+        h = (b[3] - b[1]) * decl["scale"]
+        return [(gx0 + gx1 - w) / 2, (gy0 + gy1 - h) / 2,
+                (gx0 + gx1 + w) / 2, (gy0 + gy1 + h) / 2]
+
+    for inset in data["insets"]:
+        code = inset["code"]
+        assert inset["scale"] > 1, (code, "縮小するインセットは無意味")
+        # 拡大して見せる国が三角形では種明かしになる (build の INSET_MIN_TOTAL_PTS)
+        pts = sum(len(r) for r in by_code[code]["rings"])
+        assert pts >= INSET_MIN_TOTAL_PTS, (code, pts, "インセット国の輪郭が痩せている")
+
+        # 倍率の帯規則 (冒頭の定数)。ステージ枠と国の寸法を投影座標 (cos 補正、
+        # 幅 = 経度×cos) で測り、380pt パネル基準の pt に換算して確かめる。
+        stage_boxes = [c.get("europeBbox", c["bbox"]) for c in recorded
+                       if c["stage"] == by_code[code]["stage"]]
+        stage_w = (max(b[2] for b in stage_boxes)
+                   - min(b[0] for b in stage_boxes)) * PROJ_COS
+        stage_h = max(b[3] for b in stage_boxes) - min(b[1] for b in stage_boxes)
+        # pt 換算 (下の pt_per_unit) は幅しか割らない — aspect fit で幅が
+        # 律速という前提。縦長ステージが生まれたらその前提ごと崩れる
+        assert stage_w >= stage_h, (code, stage_w, stage_h, "ステージ枠が縦長")
+        pt_per_unit = ((INSET_PANEL_PT - 2 * MAP_PADDING_PT)
+                       / (stage_w * (1 + 2 * MAP_PADDING_RATIO)))
+        cb = by_code[code]["bbox"]
+        raw_max_pt = max((cb[2] - cb[0]) * PROJ_COS, cb[3] - cb[1]) * pt_per_unit
+        scaled_pt = raw_max_pt * inset["scale"]
+        assert inset["scale"] >= INSET_SCALE_FLOOR - 1e-9, \
+            (code, inset["scale"], "倍率が床 2.5 を割っている")
+        assert scaled_pt >= INSET_BAND_MIN_PT - 0.05, \
+            (code, scaled_pt, "拡大後も 10pt の帯に届かない")
+        assert scaled_pt <= INSET_BAND_MAX_PT + 0.05 \
+            or abs(inset["scale"] - INSET_SCALE_FLOOR) < 1e-9, \
+            (code, scaled_pt, "床でもないのに帯の上端 22pt を超えている")
+
+        # 破線枠。Swift はこの枠の中心へ国を scale 倍して置くので、
+        # 拡大後の bbox が枠に収まらないと国が枠からはみ出して描かれる。
+        fx0, fy0, fx1, fy1 = inset["frame"]
+        assert fx0 < fx1 and fy0 < fy1, (code, "frame が潰れている")
+        check_decimals(inset["frame"], code)
+        bx0, by0, bx1, by1 = by_code[code]["bbox"]
+        # 経度は投影の cos 補正が両辺に等しく掛かるので、度のまま比べてよい
+        assert (bx1 - bx0) * inset["scale"] <= fx1 - fx0 + 1e-6, \
+            (code, "拡大後の幅が frame を超える")
+        assert (by1 - by0) * inset["scale"] <= fy1 - fy0 + 1e-6, \
+            (code, "拡大後の高さが frame を超える")
+
+        # 枠はステージ枠 (メンバー国 bbox の連結。ロシアは europeBbox) の内側
+        # — 枠のためにステージが広がる置き方はしない (build の条件 1)
+        members = [c for c in recorded if c["stage"] == by_code[code]["stage"]]
+        boxes = [c.get("europeBbox", c["bbox"]) for c in members]
+        sx0 = min(b[0] for b in boxes)
+        sy0 = min(b[1] for b in boxes)
+        sx1 = max(b[2] for b in boxes)
+        sy1 = max(b[3] for b in boxes)
+        assert sx0 <= fx0 and fy0 >= sy0 and fx1 <= sx1 and fy1 <= sy1, \
+            (code, "frame がステージ枠の外", inset["frame"], [sx0, sy0, sx1, sy1])
+
+        # 実行時のステージ枠は build の枠 (真の位置) と違い、インセット国を
+        # 移設後の位置で束ねる — 破線枠がその枠より外へ出たぶんは fit の
+        # 4.5% 余白 (GameRules.mapPaddingRatio) しか描画域が無く、余白を
+        # 食い切ると再生成がアプリの .clipped() で枠を黙って欠けさせる。
+        # 各辺のはみ出しは余白の半分まで、を再生成の契約にする。
+        rboxes = [runtime_box(c) for c in members]
+        rx0, ry0 = min(b[0] for b in rboxes), min(b[1] for b in rboxes)
+        rx1, ry1 = max(b[2] for b in rboxes), max(b[3] for b in rboxes)
+        half_x = MAP_PADDING_RATIO * (rx1 - rx0) / 2
+        half_y = MAP_PADDING_RATIO * (ry1 - ry0) / 2
+        for edge, overhang, half in (("west", rx0 - fx0, half_x),
+                                     ("east", fx1 - rx1, half_x),
+                                     ("south", ry0 - fy0, half_y),
+                                     ("north", fy1 - ry1, half_y)):
+            assert overhang <= half + 1e-9, \
+                (code, edge, overhang, half, "破線枠が実行時枠の余白を半分超えて食う")
+
+        # 空き海域であること: どの地物の頂点も枠に入らず、枠の四隅と中心も
+        # どの地物の中に落ちない (斜め横断は build の走査が辺交差まで見ている)
+        probes = [(fx0, fy0), (fx1, fy0), (fx1, fy1), (fx0, fy1),
+                  ((fx0 + fx1) / 2, (fy0 + fy1) / 2)]
+        shapes = [(c["code"], c["rings"]) for c in countries if c["code"] != code]
+        shapes += [(f"background[{i}]", e["rings"])
+                   for i, e in enumerate(data["background"])]
+        for owner, rings in shapes:
+            for ring in rings:
+                for x, y in ring:
+                    assert not (fx0 <= x <= fx1 and fy0 <= y <= fy1), \
+                        (code, "frame が地物に重なる", owner)
+            for px, py in probes:
+                assert not point_in_rings(px, py, rings), \
+                    (code, "frame が地物の中にある", owner)
+
+    # ロシアの錨はヨーロッパ側 (build の clip_rings_to_west)。シベリアに
+    # 落ちると、ひがしヨーロッパの枠の外でポップやふりがなが出る
+    assert by_code[643]["centroid"][0] < URAL_LON, \
+        ("ロシアの centroid がウラル線の東", by_code[643]["centroid"])
+
+    size = os.path.getsize(path)
+    if size > SIZE_BUDGET:
+        print(f"WARNING: {size / 1024:.1f} KB > {SIZE_BUDGET // 1024} KB budget - "
+              "黙って簡略化率を上げず、報告して判断を仰ぐこと")
+
+    print(f"OK: {len(recorded)} countries recorded")
+
+
+if __name__ == "__main__":
+    main()

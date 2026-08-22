@@ -1,17 +1,34 @@
 import SwiftUI
 
-/// Home screen. Three destinations and the map attribution required by
-/// CLAUDE.md §3.
+/// Home screen — the album's two pages (にほん ⇄ せかい), and the map
+/// attribution required by CLAUDE.md §3.
+///
+/// The whole app's one japan/world branch lives here (design doc §2): the page
+/// open in front of the child IS the book every door below opens into, which
+/// is why the pager binds straight to RootView's session `atlasKey` instead of
+/// keeping a page state of its own to sync.
 struct TitleView: View {
     @Environment(AppState.self) private var app
     @Environment(\.textMode) private var mode
     @Environment(\.horizontalSizeClass) private var hSize
     @Environment(\.verticalSizeClass) private var vSize
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    /// The open ちずちょう — `SaveData.japanAtlas` / `worldAtlas`, owned by
+    /// RootView (it is session state shaped like `quizMode`).
+    @Binding var atlasKey: String
 
     var onStart: () -> Void
     var onMyMap: () -> Void
     var onCardBook: (CardFilter) -> Void
     var onSettings: () -> Void
+
+    /// Whether the world page has ever been on (or dragged onto) the glass.
+    /// Building the world page is what first reads `app.world` — a synchronous
+    /// WorldShapes decode AppState defers on purpose — so until this flips the
+    /// slot holds a blank sheet and a japan-only launch never pays for the
+    /// second book (P6 引き継ぎ 5).
+    @State private var worldPageTouched = false
 
     /// MARKETING_VERSION from project.yml, read through the generated
     /// Info.plist — never hardcoded here, or the footer and the App Store
@@ -29,111 +46,29 @@ struct TitleView: View {
     var body: some View {
         ZStack {
             AlbumPage()
-            VStack(spacing: 0) {
-                // The plaque-free logo floats over the sea and the top of the
-                // country. Sharing this space gives the map the width and
-                // height the old separate logo row used to consume.
-                miniMap
-                    // On a portrait iPad the −52 bleed would inflate the sea
-                    // to 756pt; 680 keeps the composition. A short landscape
-                    // safe area gets the smaller ceiling below.
-                    .frame(maxWidth: isShort ? 450 : 680)
-                    // Keep a calm band below the status area, but do not let
-                    // it become a second header. The old 64pt inset made the
-                    // whole composition sit low, especially on tall phones.
-                    .padding(.top, isShort ? 8 : (hSize == .regular ? 42 : 44))
-                    .overlay(alignment: .top) {
-                        // The artwork has deliberate transparent breathing
-                        // room, so its painted width is about 85% of this
-                        // frame. These ceilings make the visible wordmark line
-                        // up with the tally row instead of looking pinched
-                        // above it. The overlay still consumes no map space.
-                        Image("TitleLogoFloating")
-                            .resizable()
-                            .scaledToFit()
-                            .frame(maxWidth: isShort ? 390
-                                                    : (hSize == .regular ? 500 : 405))
-                            .accessibilityLabel(
-                                "\(mode.appTitleTop) \(mode.appTitleMain)"
-                            )
-                            .accessibilityAddTraits(.isHeader)
-                    }
-                    // In a short landscape safe area the controls win any
-                    // final compression contest; the map is illustration,
-                    // while the CTA must remain visible and tappable.
-                    .layoutPriority(isShort ? 0 : 1)
-                    // −52 goes past cancelling the column's 20pt margin: the
-                    // frame runs 32pt off each screen edge, trading the art's
-                    // transparent side margins for a visibly larger country.
-                    .padding(.horizontal, -52)
-                    .padding(.vertical, 2)
-                    // The sea keeps its full painted height, but the layout
-                    // hands part of it back, so the tallies and あそぶ sit on
-                    // the water (drawn later in the VStack = drawn on top).
-                    // Only ever water may go under them: at −170 the tallies
-                    // covered the Okinawa inset frame, and hiding a real map
-                    // element is where "the lower sea is margin" stops being
-                    // true. These per-presentation overlaps all clear the
-                    // inset's bottom edge with water to spare.
-                    .padding(.bottom, isShort ? -92
-                                             : (hSize == .regular ? -104 : -78))
 
-                progressLine
+            // The two pages turn by swipe *and* by the page-edge tabs — swipe
+            // alone is undiscoverable at five (design doc §2). No page dots:
+            // the tabs already say, in words, that there is another page and
+            // what is on it.
+            TabView(selection: $atlasKey) {
+                albumPage(for: app.japan,
+                          turn: PageTurn(target: SaveData.worldAtlas,
+                                         label: mode.toWorldAtlas,
+                                         onTrailingEdge: true))
+                    .tag(SaveData.japanAtlas)
 
-                Spacer(minLength: isShort ? 4 : 8)
-
-                // あそぶ is the only labelled button left. The two tallies
-                // above already open the my-map and the card book; a second,
-                // smaller pair of doors to the same two rooms just competed
-                // with the one door that matters.
-                Button {
-                    SoundService.shared.play(
-                        .decide, enabled: app.save.data.settings.soundEnabled)
-                    onStart()
-                } label: {
-                    Image(mode.isKids ? "TitlePlayButton" : "TitlePlayButtonAdult")
-                        .resizable()
-                        .scaledToFit()
-                        .accessibilityHidden(true)
-                }
-                .buttonStyle(TitleArtworkButtonStyle())
-                .accessibilityLabel(mode.play)
-                // Slightly broader than before so the three main horizontal
-                // masses step down cleanly: logo, tallies, then primary CTA.
-                .frame(maxWidth: isShort ? 248
-                                         : (hSize == .regular ? 284 : 264))
-
-                // Flexible again now that the map overlap keeps the leftover
-                // small: on a phone there is almost nothing to distribute,
-                // and on iPad splitting it above and below あそぶ reads as
-                // album margins instead of one dead block over the footer.
-                Spacer(minLength: isShort ? 8 : 12)
-
-                VStack(spacing: 2) {
-                    Text("ちずデータ: Global Map Japan (国土地理院) をもとに簡略化")
-                        .font(AppFont.rounded(10, relativeTo: .caption2))
-                        .foregroundStyle(Palette.ink.opacity(0.42))
-                        .multilineTextAlignment(.center)
-                    if let version {
-                        // For the parent writing a support mail, not for the
-                        // child: the one string that says which build this is.
-                        Text(verbatim: "v\(version)")
-                            .font(AppFont.rounded(9, relativeTo: .caption2))
-                            .foregroundStyle(Palette.ink.opacity(0.32))
-                            .accessibilityLabel("バージョン \(version)")
-                    }
-                }
-                .padding(.bottom, 6)
+                worldPage
+                    .tag(SaveData.worldAtlas)
             }
-            // The painted tally frames want to sit a little closer to the
-            // page edge than ordinary text. This also gives the logo and the
-            // two-card row the same optical left/right margins on phones.
-            .padding(.horizontal, 20)
-            .pageColumn()
+            .tabViewStyle(.page(indexDisplayMode: .never))
 
             // Both discs live in the bottom corners, beside the footer: the
             // top band belongs to the logo, and these are parent-facing
             // controls — down by the small print is exactly their register.
+            // They sit *outside* the pager because they are whole-album
+            // controls (design doc §2: 設定・音はページに属さない) — turning
+            // the page must not move them.
             // A symbol on album paper, not the ⚙️ emoji: the emoji ships its
             // own steel greys on a stark white disc, the one square inch of
             // this screen that ignored the palette.
@@ -176,13 +111,248 @@ struct TitleView: View {
         }
     }
 
-    /// The child's own progress, as the title art.
-    private var miniMap: some View {
+    // MARK: - Pages
+
+    /// The world page's slot. Its real content is built only once the page is
+    /// visible or being pulled on — a launch that stays on にほん never
+    /// triggers the world decode (P6 引き継ぎ 5; verified by instrumenting
+    /// `Atlas.loadWorld`: the pager lays both slots out at launch, so building
+    /// eagerly here would put the load back on every start).
+    ///
+    /// The tab's flip moves `atlasKey` first, so a tap builds the page as the
+    /// turn begins, and a launch restored onto this page builds it in its
+    /// first frame. A swipe is caught by watching the slot's global x — not
+    /// `onAppear`, which the pager can fire for slots that are laid out but
+    /// offscreen: at rest this slot sits exactly one screen to the side and
+    /// its x never moves (verified over repeated launches), so the first
+    /// drag frame is a signal appearance cannot give. Should a drag ever slip
+    /// past unreported, the swipe's landing still commits the selection and
+    /// builds the page — the gate can only delay the build, never lose it.
+    @ViewBuilder
+    private var worldPage: some View {
+        if worldPageTouched || atlasKey == SaveData.worldAtlas {
+            albumPage(for: app.world,
+                      turn: PageTurn(target: SaveData.japanAtlas,
+                                     label: mode.toJapanAtlas,
+                                     onTrailingEdge: false))
+                // Latched so a return to にほん does not tear the page down
+                // just to rebuild it on the next turn.
+                .onAppear { worldPageTouched = true }
+        } else {
+            GeometryReader { geo in
+                let x = geo.frame(in: .global).minX
+                Color.clear
+                    .onChange(of: x) { oldX, newX in
+                        // Toward the centre only: a resize (iPad rotation)
+                        // can also move the slot, and loading on one of
+                        // those is merely early, never wrong. "Toward" means
+                        // x decreasing because the world slot rests one
+                        // screen to the trailing side — an LTR assumption,
+                        // fine for a Japanese-only UI that never mirrors.
+                        if newX < oldX { worldPageTouched = true }
+                    }
+            }
+        }
+    }
+
+    /// One album page. The two pages are this one structure fed different
+    /// books — the world gets no layout of its own, only world data and world
+    /// wording, so the flip reads as the same album continuing (design doc §2).
+    private func albumPage(for atlas: Atlas, turn: PageTurn) -> some View {
+        // The page's one read of its book. Every number below comes off this
+        // slice, so the two pages cannot mix their tallies.
+        let slice = app.save.data.atlas(atlas.saveKey)
+
+        return ZStack {
+            VStack(spacing: 0) {
+                // The plaque-free logo floats over the sea and the top of the
+                // country. Sharing this space gives the map the width and
+                // height the old separate logo row used to consume.
+                miniMap(for: atlas, slice: slice)
+                    // On a portrait iPad the −52 bleed would inflate the sea
+                    // to 756pt; 680 keeps the composition. A short landscape
+                    // safe area gets the smaller ceiling below.
+                    .frame(maxWidth: isShort ? 450 : 680)
+                    // Keep a calm band below the status area, but do not let
+                    // it become a second header. The old 64pt inset made the
+                    // whole composition sit low, especially on tall phones.
+                    .padding(.top, isShort ? 8 : (hSize == .regular ? 42 : 44))
+                    .overlay(alignment: .top) {
+                        // The artwork has deliberate transparent breathing
+                        // room, so its painted width is about 85% of this
+                        // frame. These ceilings make the visible wordmark line
+                        // up with the tally row instead of looking pinched
+                        // above it. The overlay still consumes no map space.
+                        Image(atlas.saveKey == SaveData.worldAtlas
+                              ? "TitleLogoWorld"
+                              : "TitleLogoFloating")
+                            .resizable()
+                            .scaledToFit()
+                            .frame(maxWidth: isShort ? 390
+                                                    : (hSize == .regular ? 500 : 405))
+                            .accessibilityLabel(
+                                atlas.saveKey == SaveData.worldAtlas
+                                ? "\(mode.appTitleTop) \(mode.appTitleMain) World"
+                                : "\(mode.appTitleTop) \(mode.appTitleMain)"
+                            )
+                            .accessibilityAddTraits(.isHeader)
+                    }
+                    // In a short landscape safe area the controls win any
+                    // final compression contest; the map is illustration,
+                    // while the CTA must remain visible and tappable.
+                    .layoutPriority(isShort ? 0 : 1)
+                    // −52 goes past cancelling the column's 20pt margin: the
+                    // frame runs 32pt off each screen edge, trading the art's
+                    // transparent side margins for a visibly larger country.
+                    .padding(.horizontal, -52)
+                    .padding(.vertical, 2)
+                    // The sea keeps its full painted height, but the layout
+                    // hands part of it back, so the tallies and あそぶ sit on
+                    // the water (drawn later in the VStack = drawn on top).
+                    // Only ever water may go under them: at −170 the tallies
+                    // covered the Okinawa inset frame, and hiding a real map
+                    // element is where "the lower sea is margin" stops being
+                    // true. These per-presentation overlaps all clear the
+                    // inset's bottom edge with water to spare.
+                    .padding(.bottom, isShort ? -92
+                                             : (hSize == .regular ? -104 : -78))
+
+                progressLine(for: atlas, slice: slice)
+
+                Spacer(minLength: isShort ? 4 : 8)
+
+                // あそぶ is the only labelled button left. The two tallies
+                // above already open the my-map and the card book; a second,
+                // smaller pair of doors to the same two rooms just competed
+                // with the one door that matters.
+                Button {
+                    SoundService.shared.play(
+                        .decide, enabled: app.save.data.settings.soundEnabled)
+                    onStart()
+                } label: {
+                    Image(mode.isKids ? "TitlePlayButton" : "TitlePlayButtonAdult")
+                        .resizable()
+                        .scaledToFit()
+                        .accessibilityHidden(true)
+                }
+                .buttonStyle(TitleArtworkButtonStyle())
+                .accessibilityLabel(mode.play)
+                // Both pages carry an あそぶ with the same spoken label; the
+                // identifier is how a UI test says *which page's* door it
+                // means without polluting what VoiceOver reads.
+                .accessibilityIdentifier("title-play-\(atlas.saveKey)")
+                // Slightly broader than before so the three main horizontal
+                // masses step down cleanly: logo, tallies, then primary CTA.
+                .frame(maxWidth: isShort ? 248
+                                         : (hSize == .regular ? 284 : 264))
+
+                // Flexible again now that the map overlap keeps the leftover
+                // small: on a phone there is almost nothing to distribute,
+                // and on iPad splitting it above and below あそぶ reads as
+                // album margins instead of one dead block over the footer.
+                Spacer(minLength: isShort ? 8 : 12)
+
+                footer(for: atlas)
+            }
+            // The painted tally frames want to sit a little closer to the
+            // page edge than ordinary text. This also gives the logo and the
+            // two-card row the same optical left/right margins on phones.
+            .padding(.horizontal, 20)
+            .pageColumn()
+
+            pageTurnTab(turn)
+        }
+    }
+
+    /// Each page credits its own map source. This is child-facing text too:
+    /// the small size does not make kanji readable to a child using ひらがな
+    /// mode, so the wording follows the same `TextMode` as the rest of the page.
+    private func footer(for atlas: Atlas) -> some View {
+        VStack(spacing: 2) {
+            Text(atlas.saveKey == SaveData.worldAtlas
+                 ? mode.worldMapAttribution
+                 : mode.japanMapAttribution)
+                .font(AppFont.rounded(10, relativeTo: .caption2))
+                .foregroundStyle(Palette.ink.opacity(0.42))
+                .multilineTextAlignment(.center)
+            if let version {
+                // For the parent writing a support mail, not for the
+                // child: the one string that says which build this is.
+                Text(verbatim: "v\(version)")
+                    .font(AppFont.rounded(9, relativeTo: .caption2))
+                    .foregroundStyle(Palette.ink.opacity(0.32))
+                    .accessibilityLabel("バージョン \(version)")
+            }
+        }
+        .padding(.bottom, 6)
+    }
+
+    // MARK: - Page turn
+
+    /// One page-edge tab: which book it opens, what it says, which edge of the
+    /// page it sits on. The tab names its far side, so the pair also tells the
+    /// child which page they are on without a header saying so.
+    private struct PageTurn {
+        let target: String
+        let label: String
+        /// The forward tab (にほん → せかい) sits on the trailing edge and
+        /// points right; the way back mirrors it.
+        let onTrailingEdge: Bool
+    }
+
+    /// The visible way to the other page (design doc §2). Vertically centred
+    /// on the page edge — mid-height is open sea on both maps, and an edge tab
+    /// halfway down a page is where a thumb finds a real album's tabs.
+    private func pageTurnTab(_ turn: PageTurn) -> some View {
+        Button {
+            SoundService.shared.play(
+                .decide, enabled: app.save.data.settings.soundEnabled)
+            turnPage(to: turn.target)
+        } label: {
+            HStack(spacing: 5) {
+                if !turn.onTrailingEdge {
+                    Image(systemName: "chevron.left")
+                }
+                Text(turn.label)
+                if turn.onTrailingEdge {
+                    Image(systemName: "chevron.right")
+                }
+            }
+        }
+        .buttonStyle(BouncyButtonStyle(background: Palette.teal,
+                                       horizontalPadding: 14,
+                                       verticalPadding: 8,
+                                       fontSize: 14))
+        .accessibilityLabel(turn.label)
+        .frame(maxWidth: .infinity, maxHeight: .infinity,
+               alignment: turn.onTrailingEdge ? .trailing : .leading)
+        .padding(.horizontal, 8)
+    }
+
+    private func turnPage(to target: String) {
+        // Reduce Motion lands on the page instead of sliding to it
+        // (CLAUDE.md §9). The swipe stays animated either way — it is the
+        // finger doing the moving there.
+        if reduceMotion {
+            atlasKey = target
+        } else {
+            withAnimation(.easeInOut(duration: 0.32)) { atlasKey = target }
+        }
+    }
+
+    // MARK: - Page content
+
+    /// The child's own progress, as the title art — whichever book's progress
+    /// this page shows. Flipping to a mostly-grey world next to a greening
+    /// japan is the design's whole pitch: 「こっちの本はまだ白い」.
+    private func miniMap(for atlas: Atlas, slice: AtlasSave) -> some View {
         GeometryReader { geo in
             ZStack {
                 // The sea, waves, compass and sparkles are decorative artwork.
                 // The country itself deliberately is not baked into this image,
-                // so its 47 live fills can keep changing.
+                // so its live fills can keep changing. Both pages share the
+                // one backdrop: the world map is wider than japan's, so it
+                // simply sits as a broader band in the same painted sea.
                 Image("TitleMapBackdrop")
                     .resizable()
                     .scaledToFill()
@@ -191,14 +361,18 @@ struct TitleView: View {
                     .accessibilityHidden(true)
 
                 PrefectureMapView(
-                    mapData: app.mapData,
-                    codes: Array(1...47),
+                    mapData: atlas.mapData,
+                    codes: atlas.mapData.prefectures.map(\.code),
                     appearance: {
-                        MasteryStyle.appearance(for: $0.code, save: app.save.data)
+                        MasteryStyle.appearance(for: $0.code, save: slice)
                     }
+                    // Inset frames and background coastlines are data-driven:
+                    // the map draws whatever `mapData` declares. The world
+                    // page gains its grey unrecorded coastlines for free —
+                    // the silhouette a child recognises as "the world".
                 )
                 .aspectRatio(
-                    PrefectureGeometry.aspectRatio(of: app.mapData.prefectures),
+                    PrefectureGeometry.aspectRatio(of: atlas.mapData.prefectures),
                     contentMode: .fit
                 )
                 .frame(width: geo.size.width * 0.93,
@@ -219,7 +393,7 @@ struct TitleView: View {
         .allowsHitTesting(false)
     }
 
-    /// Three counts, each with how far along it is.
+    /// Two counts, each with how far along it is.
     ///
     /// A bare number answers "how many" but not "how close am I", which is the
     /// question a collection actually raises. The bar carries that.
@@ -231,37 +405,45 @@ struct TitleView: View {
     /// Two tallies, because there are two collections: the country and the
     /// cards.
     ///
+    /// Denominators come off the atlas, never a literal: japan's 47 and the
+    /// world's country and card counts are all whatever the loaded book says,
+    /// so new world cards move the total by themselves.
+    ///
     /// The foil-card counts live inside the card tile because they are a
     /// breakdown of that collection, not a third destination. Gold, silver
     /// and rainbow are exclusive here: a rainbow card is no longer repeated
     /// under gold, so the three numbers remain an honest inventory.
-    private var progressLine: some View {
+    private func progressLine(for atlas: Atlas, slice: AtlasSave) -> some View {
         HStack(spacing: 10) {
             // 「おぼえた」 is claimed at the top of the mastery ladder, not on
             // the first clean answer — counting first answers filled the bar
             // to 47/47 while the map was still mostly green, and a full meter
             // over an unfinished map called the child done when they were not.
-            tally("TitleLearnedHUD", app.save.data.sparklingPrefectureCount, 47,
-                  mode.learnedPrefectures, Palette.learned, hint: mode.myMap,
+            // The thing counted is the atlas's noun (けん ⇄ くに) — everything
+            // else about the two pages' tallies reads identically.
+            tally("TitleLearnedHUD", slice.sparklingRegionCount,
+                  max(atlas.mapData.prefectures.count, 1),
+                  mode.learnedTally(atlas.regionNoun), Palette.learned,
+                  hint: mode.myMap,
                   action: onMyMap)
             // Opens the book unfiltered now rather than straight onto the キラ
             // cards, which the third tile used to do. One tile cannot lead two
             // places, and the book's own ✨ chip is the first thing above the
             // grid — one tap further, in the room where the cards already are.
-            tally("TitleCardsHUD", app.save.data.totalOwnedCards, max(app.cards.count, 1),
+            tally("TitleCardsHUD", slice.totalOwnedCards, max(atlas.cards.count, 1),
                   mode.ownedCards, Palette.collected,
                   breakdown: TallyBreakdown(items: [
                     .init(tier: .silver,
                           name: mode.cardTierName(.silver) ?? "シルバーカード",
-                          count: app.save.data.cardCount(ofTier: .silver),
+                          count: slice.cardCount(ofTier: .silver),
                           countTint: Palette.silverMark),
                     .init(tier: .gold,
                           name: mode.cardTierName(.gold) ?? "ゴールドカード",
-                          count: app.save.data.cardCount(ofTier: .gold),
+                          count: slice.cardCount(ofTier: .gold),
                           countTint: Palette.goldInk),
                     .init(tier: .rainbow,
                           name: mode.cardTierName(.rainbow) ?? "にじいろカード",
-                          count: app.save.data.cardCount(ofTier: .rainbow),
+                          count: slice.cardCount(ofTier: .rainbow),
                           countTint: Palette.rainbowMark),
                   ]),
                   hint: mode.viewCards) {
@@ -527,7 +709,11 @@ enum MasteryStyle {
     /// the sea while the rest stayed printed flat — the border between 東北 and
     /// 関東 became a seam. The outline is now the same printed edge at every
     /// level, so progress reads as colour spreading across one whole map.
-    static func appearance(for code: Int, save: SaveData) -> PrefectureAppearance {
+    ///
+    /// Takes one atlas's slice, never the whole save: every caller names the
+    /// book it is colouring for (a SaveData convenience that silently meant
+    /// "japan's slice" let a world screen compile while lying).
+    static func appearance(for code: Int, save: AtlasSave) -> PrefectureAppearance {
         let level = save.masteryLevel(of: code)
         return PrefectureAppearance(fill: fill(level: level),
                                     stroke: Palette.boundary,

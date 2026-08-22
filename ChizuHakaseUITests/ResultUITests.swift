@@ -15,10 +15,14 @@ final class ResultUITests: XCTestCase {
         app.launch()
     }
 
-    /// A chip's label carries its stars and tier as well as its name, so it is
-    /// matched on the name rather than pinned to a whole string.
+    /// A chip's label carries the region it came from as well as its stars and
+    /// tier — 「ほっかいどう。かに。…」 — because a run's prizes arrive with no
+    /// section heading to say which prefecture they belong to, and VoiceOver
+    /// reads what the card already shows. So the card's own name is matched
+    /// inside the label rather than from the start of it.
     private func chip(named name: String) -> XCUIElement {
-        app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", name)).firstMatch
+        app.buttons.matching(NSPredicate(format: "label CONTAINS %@", "。\(name)。"))
+            .firstMatch
     }
 
     func testTappingAWonCardOpensIt() {

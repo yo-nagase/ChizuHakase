@@ -26,6 +26,59 @@ nonisolated enum TextMode: String, Codable, Sendable, CaseIterable {
     }
 }
 
+// MARK: - Atlas-carried nouns
+
+/// A kids/adult word pair carried by an atlas (ちずちょう).
+///
+/// Born as "the noun the open book puts into otherwise shared sentences"
+/// (けん ⇄ くに), the role has since widened to any word pair that rides the
+/// `Atlas` value the way its draw policy and save key do: the card panel's
+/// standalone title, and the region-zoom button labels — which are neither
+/// slotted into a shared sentence nor a difference between the books (japan's
+/// zooms simply *are* japanese geography). What stays constant is the
+/// discipline: the view asks the value for the word and never asks which book
+/// it is in.
+nonisolated struct AtlasNoun: Sendable, Equatable {
+    let kids: String
+    let adult: String
+
+    /// The script the current mode reads — same shape as `displayName(_:)`.
+    func label(_ mode: TextMode) -> String { mode.isKids ? kids : adult }
+}
+
+nonisolated extension AtlasNoun {
+    /// 日本: the thing a stage asks about. Only the standalone noun — a
+    /// prefecture's own けん (「あいちけん」) is part of its name, not this.
+    static let prefecture = AtlasNoun(kids: "けん", adult: "県")
+    static let country = AtlasNoun(kids: "くに", adult: "国")
+    /// 日本のカード欄の見出し。
+    static let specialtyCards = AtlasNoun(kids: "とくさんひん カード",
+                                          adult: "特産品カード")
+    /// 世界のカード欄の見出し。「こっきカード」ではなく「せかいの カード」:
+    /// P8 でオリジナル札が国旗の隣に並んでも(設計 §5)この見出しは嘘に
+    /// ならない。札の種別名(国旗カード)は個々の札が言う。呼び名は設計文書が
+    /// 先に選んだもの — 動機の表がずかんの空きマスを「せかいのカード」と
+    /// 呼んでいる(docs/plans/2026-08-16-world-atlas-design.md:22)。
+    static let worldCards = AtlasNoun(kids: "せかいの カード", adult: "世界のカード")
+    /// 世界: 国旗がシルバーに達したとき解放される 2 枚目の札の呼称。
+    /// `Atlas.unlockGoalNoun(for:)` が返し、「あと◯かいで」の silver 段の
+    /// 名前に差し替わる — シルバー到達 = 解放が同じ出来事なので、予告は
+    /// 段位ではなくもらえる物を名乗る。
+    /// ★仮文言(ユーザーサインオフ待ち — 「おりじなるカード」等の代案あり)。
+    /// カタカナは両表記共通: シルバー・ゴールドと同じ扱いで、札の種別名は
+    /// 子どもがそのまま使う語。
+    static let originalCard = AtlasNoun(kids: "オリジナルカード",
+                                        adult: "オリジナルカード")
+
+    /// The nationwide map's one-press zooms — the japan atlas carries these on
+    /// its `RegionZoom`s. 「にほん」 spelt out rather than 「にし」「なか」
+    /// 「ひがし」 alone: a five-year-old meets these words here first, and the
+    /// regions should sound like parts of the country.
+    static let eastJapan = AtlasNoun(kids: "ひがしにほん", adult: "東日本")
+    static let middleJapan = AtlasNoun(kids: "なかにほん", adult: "中日本")
+    static let westJapan = AtlasNoun(kids: "にしにほん", adult: "西日本")
+}
+
 // MARK: - Interface vocabulary
 //
 // Every user-facing string in one place. Keeping them together is what makes
@@ -53,9 +106,11 @@ nonisolated extension TextMode {
 
     // Quiz
     var questionSuffix: String { isKids ? "は どこかな?" : "はどこ?" }
-    /// 「なまえを あてる」 asks about the prefecture lit up on the map, so the
-    /// question has no name in it to read out.
-    var nameItQuestion: String { isKids ? "この けんは どこかな?" : "この県はどこ?" }
+    /// 「なまえを あてる」 asks about the region lit up on the map, so the
+    /// question has no name in it to read out — only the atlas's noun.
+    func nameItQuestion(_ region: AtlasNoun) -> String {
+        isKids ? "この \(region.kids)は どこかな?" : "この\(region.adult)はどこ?"
+    }
     var nameItPrompt: String { isKids ? "なまえを えらんでね" : "名前を選んでください" }
     var readAloud: String { isKids ? "もんだいを よむ" : "問題を読む" }
     var answerByVoice: String { isKids ? "こえで こたえる" : "音声で答える" }
@@ -74,7 +129,8 @@ nonisolated extension TextMode {
     var cardWonSilver: String { isKids ? "シルバーカードに なった!" : "シルバーカードになりました" }
     var cardWonGold: String { isKids ? "ゴールドカードに なった!" : "ゴールドカードになりました" }
     var cardWonDuplicate: String { isKids ? "もっている カードだね" : "所持済みのカードです" }
-    var specialtyCards: String { isKids ? "とくさんひん カード" : "特産品カード" }
+    // The card panel's title is the atlas's `cardNoun` (「とくさんひん カード」
+    // ⇄ 「せかいの カード」), rendered through `AtlasNoun.label(_:)` above.
     /// Nil for a card with nothing to say about its tier yet. Katakana in both
     /// modes: シルバー and ゴールド are the words a six-year-old already has for
     /// second and first place.
@@ -104,10 +160,18 @@ nonisolated extension TextMode {
     /// The 「あと◯」 line under a card (CLAUDE.md §5). It only ever counts
     /// toward the next thing — a streak that broke is not mentioned, because
     /// naming the loss is the loss (CLAUDE.md §12).
-    func nextGoalLabel(_ goal: GameRules.NextGoal) -> String {
+    ///
+    /// `unlock` renames the *silver* rung only: on the world's flag cards,
+    /// reaching silver and unlocking the country's second card are the same
+    /// event (`GameRules.DrawPolicy.flagFirstSilverGate`), so the line promises
+    /// the thing the child gets rather than the tier. Gold, streak and done are
+    /// untouched — the unlock happens once, at silver, and there is nothing to
+    /// promise above it. `NextGoal.fraction` stays as it is: the rung's end
+    /// point is the same silver either way, only its name changes.
+    func nextGoalLabel(_ goal: GameRules.NextGoal, unlock: AtlasNoun? = nil) -> String {
         switch goal {
         case .wins(let n, let tier):
-            let name = tier == .gold ? "ゴールド" : "シルバー"
+            let name = tier == .gold ? "ゴールド" : unlock?.label(self) ?? "シルバー"
             return isKids ? "あと \(n)かいで \(name)!" : "あと\(n)回で\(name)"
         case .streak(let n):
             return isKids ? "あと \(n)れんぞくで にじいろ!" : "あと\(n)連続でにじいろ"
@@ -126,7 +190,11 @@ nonisolated extension TextMode {
     /// The top of the mastery ladder is called 「おぼえた」, so reaching it is
     /// announced in the same word — a celebration named 「キラキラ」 over a
     /// legend that says 「おぼえた」 reads as two different achievements.
-    var becameSparkling: String { isKids ? "✨ おぼえた けん!" : "✨ 覚えた県" }
+    /// The thing that was learned is the atlas's noun: けん on japan's result
+    /// screen, くに on the world's.
+    func becameSparkling(_ region: AtlasNoun) -> String {
+        isKids ? "✨ おぼえた \(region.kids)!" : "✨ 覚えた\(region.adult)"
+    }
     /// The rarest thing in the game, and the only one a child can reach without
     /// drawing anything — so it has to be said out loud here or it happens in
     /// silence.
@@ -145,23 +213,56 @@ nonisolated extension TextMode {
     // Title tallies. Verbs, not bare nouns: 「けん」 and 「カード」 name the things
     // rather than what the number says about them, and the title screen is
     // where a child has the least context to guess from.
-    var learnedPrefectures: String { isKids ? "おぼえた けん" : "覚えた県" }
+    /// The learned tally, counted in whatever the open book asks about.
+    /// Everything else about the two pages' tallies reads identically — same
+    /// artwork, same bar — so this one noun is the whole difference the child
+    /// sees between their numbers.
+    func learnedTally(_ region: AtlasNoun) -> String {
+        isKids ? "おぼえた \(region.kids)" : "覚えた\(region.adult)"
+    }
     var ownedCards: String { isKids ? "もっている カード" : "持っているカード" }
+
+    // Title pages. Each page-edge tab names where it leads, not where the
+    // child is — a door is labelled by its far side (design doc §2: swipe
+    // alone is undiscoverable at five, so these tabs are the visible way).
+    var toWorldAtlas: String { isKids ? "せかいの ちずへ" : "世界の地図へ" }
+    var toJapanAtlas: String { isKids ? "にほんの ちずへ" : "日本の地図へ" }
+    var japanMapAttribution: String {
+        isKids
+            ? "ちずデータ: Global Map Japan (こくどちりいん) をもとに かんたんに しています"
+            : "地図データ: Global Map Japan (国土地理院) をもとに簡略化"
+    }
+    var worldMapAttribution: String {
+        isKids
+            ? "ちずデータ: Natural Earth をもとに かんたんに しています"
+            : "地図データ: Natural Earth をもとに簡略化"
+    }
     var learnedCount: String { isKids ? "おぼえた" : "覚えた" }
     var resetZoom: String { isKids ? "もとの おおきさ" : "元の大きさ" }
+    // 地球儀 ⇄ 平面のトグルチップ(地球儀データを運ぶ本のチャレンジだけに
+    // 出る)。チップは行き先を名乗る — タイトルのページ端タブと同じ
+    // 「扉は向こう側の名前」。
+    // ★ユーザーサインオフ待ちの仮文言(計画 2026-08-20 P7)。
+    var toGlobe: String { isKids ? "🌍 ちきゅうぎ" : "🌍 地球儀" }
+    var toFlatMap: String { isKids ? "🗺️ ちず" : "🗺️ 地図" }
+    /// VoiceOver だけが聞く調整つまみのラベル(GlobeMapView.rotateStepper)。
+    /// ドラッグで回せない利用者が裏側の国へ届く唯一の口なので、
+    /// 動詞で「何が起きるか」を名乗る。
+    var rotateGlobe: String { isKids ? "ちきゅうぎを まわす" : "地球儀を回す" }
     /// How the one-finger zoom is discovered: press and hold, then slide up
     /// or down. Pinch works too, but nobody needs a label to find a pinch.
     var zoomHint: String { isKids ? "ながおしして うえしたで おおきく できるよ"
                                   : "長押しして上下で拡大縮小できます" }
-    /// The nationwide map's one-press zooms. 「にほん」 spelt out rather than
-    /// 「にし」「なか」「ひがし」 alone: a five-year-old meets these words here
-    /// first, and the regions should sound like parts of the country.
-    var westJapan: String { isKids ? "にしにほん" : "西日本" }
-    var middleJapan: String { isKids ? "なかにほん" : "中日本" }
-    var eastJapan: String { isKids ? "ひがしにほん" : "東日本" }
+    // The region zoom labels (にしにほん…) live on `AtlasNoun` above — they
+    // are the japan atlas's words, carried by its `RegionZoom`s.
     var eraseEverything: String { isKids ? "きろくを ぜんぶ けす" : "記録をすべて消去" }
     var eraseConfirm1: String { isKids ? "ほんとうに けしても いい?" : "本当に消去しますか?" }
-    var eraseConfirm2: String { isKids ? "けすと もどせないよ。いい?" : "消去すると元に戻せません" }
+    /// The second confirmation names both books: the erase is whole-app, and
+    /// a child on the world page must not think only that page's records go.
+    /// 「にほん」「せかい」 are the words the title's page tabs already taught —
+    /// not 「ちずちょう」, which never appears on the glass.
+    var eraseConfirm2: String { isKids ? "にほんも せかいも けすと もどせないよ。いい?"
+                                       : "日本も世界も消去すると元に戻せません" }
     var eraseCancel: String { isKids ? "やめる" : "キャンセル" }
     var eraseNext: String { isKids ? "つぎへ" : "次へ" }
     var eraseConfirmAction: String { isKids ? "けす" : "消去する" }
@@ -238,6 +339,8 @@ nonisolated extension SpecialtyCard.Category {
         case (.nature, false): "自然"
         case (.craft, true): "つくるもの"
         case (.craft, false): "工芸"
+        case (.flag, true): "こっき"
+        case (.flag, false): "国旗"
         }
     }
 }

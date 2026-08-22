@@ -123,6 +123,10 @@ struct PrefectureMapView: View {
     let mapData: MapData
     /// Prefectures to draw, in stage order.
     let codes: [Int]
+    /// Other recorded land that falls around this stage, drawn as quiet,
+    /// untappable scenery. A regional world stage used to omit neighbouring
+    /// countries altogether, making real land look exactly like open sea.
+    var contextCodes: [Int] = []
     var appearance: (Prefecture) -> PrefectureAppearance
     /// Prefectures a tap may resolve to. Usually the not-yet-answered ones.
     var interactiveCodes: Set<Int> = []
@@ -131,14 +135,27 @@ struct PrefectureMapView: View {
     /// Blinks a red outline once the child has missed twice.
     var hintCode: Int?
     var effect: MapEffect?
-    var showsOkinawaInset = true
+    /// The dashed boxes around relocated shapes (Okinawa, the world's inset
+    /// countries). Data-driven — a frame is drawn wherever `mapData.insets`
+    /// declares one for a shape on screen; this flag only lets the stage-select
+    /// thumbnails drop the furniture at sticker size.
+    var showsInsetFrames = true
+    /// Unrecorded coastlines (`mapData.background`), grey and untappable.
+    /// Off for the same thumbnails: at 84pt the scenery would drown the stage.
+    var showsBackground = true
     /// How much the caller has magnified this view.
     ///
     /// Outlines are drawn before `scaleEffect` is applied, so at 4x a 1.5pt
     /// border lands as 6pt and swallows the small prefectures whole. Dividing
     /// by the zoom keeps every line the same width on the glass no matter how
-    /// far in the child has pinched.
+    /// far the child has pinched — in, or (on a world regional stage) out.
     var zoom: CGFloat = 1
+    /// How far below the at-rest fit the caller may let `zoom` fall
+    /// (`Stage.flatMinZoom`). The scenery layers and the clip overscan to this
+    /// floor up front rather than following `zoom`: the zoom binding only
+    /// settles when a gesture ends, so growing the drawing lazily would show a
+    /// pinching child blank sea that pops into continents on release.
+    var minZoom: CGFloat = 1
     var comboBurst: ComboBurst?
     /// Hands back what was hit and where the finger actually landed, in this
     /// view's own coordinates.
@@ -155,8 +172,20 @@ struct PrefectureMapView: View {
                 into: geo.size)
 
             ZStack(alignment: .topLeading) {
-                if showsOkinawaInset, codes.contains(47) {
-                    OkinawaInsetFrame(rect: mapData.okinawaInset.applying(transform))
+                // Scenery first, under everything: it must never cover a
+                // question, a sticker or a celebration.
+                if showsBackground {
+                    backgroundLayer(transform: transform, canvasSize: geo.size)
+                }
+
+                contextLayer(transform: transform, canvasSize: geo.size)
+
+                if showsInsetFrames {
+                    ForEach(mapData.insets, id: \.code) { inset in
+                        if codes.contains(inset.code) {
+                            InsetFrame(rect: inset.frame.applying(transform))
+                        }
+                    }
                 }
 
                 // One shadow for the whole sheet of stuck stickers rather than
@@ -183,7 +212,21 @@ struct PrefectureMapView: View {
                 }
             }
             .frame(width: geo.size.width, height: geo.size.height)
-            .contentShape(Rectangle())
+            // Siberia and the background coastlines deliberately overflow the
+            // stage frame (frame calculation and drawn extent are separate
+            // things — Prefecture.frameBbox). Cut the overflow at the edge of
+            // what a zoom-out can ever reveal — the frame itself when the
+            // floor is 1, the floor's wider window on a world regional stage
+            // (the panel's own clip trims the rest after the scaleEffect).
+            // Overlays below (the combo stamp) attach after the clip and keep
+            // their own inside-the-canvas clamping.
+            .clipShape(Rectangle().scale(overscan, anchor: .center))
+            // The touch surface matches the drawn surface: zoomed out, the
+            // glass around the shrunken region maps to content coordinates
+            // outside the frame, and a bounds-sized shape would go deaf
+            // there. Taps resolving to nothing still land in `handleTap`'s
+            // ignore branch, the same as open sea has always done.
+            .contentShape(Rectangle().scale(overscan, anchor: .center))
             .onTapGesture { location in
                 guard let onTap else { return }
                 onTap(resolve(location, transform: transform), location)
@@ -191,6 +234,76 @@ struct PrefectureMapView: View {
             .overlay(alignment: .topLeading) {
                 comboLabel(transform: transform, canvasSize: geo.size)
             }
+        }
+    }
+
+    /// How much wider than the frame the drawing and its clip must reach so
+    /// the zoom floor has something to reveal — 1 wherever the floor is 1.
+    private var overscan: CGFloat {
+        1 / min(max(minZoom, 0.01), 1)
+    }
+
+    /// The window a fully pinched-out map shows, in this view's own
+    /// coordinates — the culling rect for the scenery layers. Kept at the
+    /// floor rather than at the current zoom (see `minZoom`).
+    private func drawableRect(_ canvasSize: CGSize) -> CGRect {
+        CGRect(origin: .zero, size: canvasSize)
+            .insetBy(dx: -canvasSize.width * (overscan - 1) / 2,
+                     dy: -canvasSize.height * (overscan - 1) / 2)
+    }
+
+    /// Recorded prefectures/countries outside the current stage. They share
+    /// the unrecorded coastline's grey so every non-question landmass has one
+    /// meaning, while the coloured stage remains the only answer surface.
+    /// Combined into one path and hidden from accessibility: this is geographic
+    /// context, not another set of buttons.
+    @ViewBuilder private func contextLayer(transform: CGAffineTransform,
+                                           canvasSize: CGSize) -> some View {
+        let stageCodes = Set(codes)
+        let canvasRect = drawableRect(canvasSize)
+        let path = mapData.prefectures(in: contextCodes).reduce(into: Path()) { path, pref in
+            guard !stageCodes.contains(pref.code),
+                  pref.bbox.applying(transform).intersects(canvasRect)
+            else { return }
+            path.addPath(PrefectureGeometry.path(for: pref, transform: transform))
+        }
+        if !path.isEmpty {
+            ZStack(alignment: .topLeading) {
+                path.fill(Palette.backgroundLand, style: FillStyle(eoFill: true))
+                path.stroke(Palette.backgroundShore,
+                            lineWidth: MapStroke.hairlineWidth(
+                                canvasWidth: canvasSize.width, zoom: zoom))
+            }
+            .allowsHitTesting(false)
+            .accessibilityHidden(true)
+        }
+    }
+
+    /// The unrecorded coastlines that fall inside the visible canvas, as one
+    /// quiet grey landmass (CLAUDE.md §3 — leaving them out draws false sea).
+    /// One combined path, filled once: it is scenery, so adjacent shapes may
+    /// fuse — separate them and they start to look like more questions.
+    /// Not tappable and hidden from VoiceOver for the same reason.
+    @ViewBuilder private func backgroundLayer(transform: CGAffineTransform,
+                                              canvasSize: CGSize) -> some View {
+        let canvasRect = drawableRect(canvasSize)
+        let path = mapData.background.reduce(into: Path()) { path, shape in
+            // The world's background covers the globe; a stage sees a corner.
+            guard shape.bbox.applying(transform).intersects(canvasRect) else { return }
+            path.addPath(PrefectureGeometry.path(rings: shape.rings,
+                                                 transform: transform))
+        }
+        if !path.isEmpty {
+            ZStack(alignment: .topLeading) {
+                path.fill(Palette.backgroundLand, style: FillStyle(eoFill: true))
+                // A shoreline hairline, or the grey mass reads as a stain on
+                // the sea rather than as land.
+                path.stroke(Palette.backgroundShore,
+                            lineWidth: MapStroke.hairlineWidth(
+                                canvasWidth: canvasSize.width, zoom: zoom))
+            }
+            .allowsHitTesting(false)
+            .accessibilityHidden(true)
         }
     }
 
@@ -206,7 +319,7 @@ struct PrefectureMapView: View {
             let safePoint = comboPoint(point, radius: radius,
                                        transform: transform, canvasSize: canvasSize)
             ComboBurstLabel(burst: comboBurst, reduceMotion: reduceMotion)
-                .scaleEffect(1 / max(zoom, 1))
+                .scaleEffect(1 / ZoomPan.magnification(zoom))
                 .position(safePoint)
                 .allowsHitTesting(false)
                 // Keyed on the burst so a second streak restarts the animation
@@ -218,46 +331,21 @@ struct PrefectureMapView: View {
     /// Places the stamp clear of the specialty emoji rising from the rewarded
     /// prefecture. Both effects used to travel upward from virtually the same
     /// point, leaving the emoji hidden behind the much larger stamp.
+    /// This resolves the map-specific part — where the badge is — and hands the
+    /// placement itself to `ComboBurstLabel.stampAnchor`, which the globe shares.
     private func comboPoint(_ point: CGPoint, radius: CGFloat,
                             transform: CGAffineTransform,
                             canvasSize: CGSize) -> CGPoint {
-        // ComboBurstLabel finishes 34pt above its position anchor.
-        var stampCenter = CGPoint(x: point.x, y: point.y - 34)
-
+        var badgeOrigin: CGPoint?
         if let effect,
            let prefecture = mapData[effect.code],
            appearance(prefecture).badge != nil {
-            let badgeOrigin = PrefectureGeometry.screenCentroid(
+            badgeOrigin = PrefectureGeometry.screenCentroid(
                 of: prefecture, transform: transform)
-            // The emoji rises 26pt. Its swept area is represented by the
-            // midpoint of that short path plus enough room for the 26pt glyph.
-            let badgePathCenter = CGPoint(x: badgeOrigin.x, y: badgeOrigin.y - 13)
-            let dx = stampCenter.x - badgePathCenter.x
-            let dy = stampCenter.y - badgePathCenter.y
-            // Extra clearance also covers the stamp's brief 1.34x arrival,
-            // not just its resting circle.
-            let clearance = radius + 42
-
-            if hypot(dx, dy) < clearance {
-                let left = badgeOrigin.x - clearance
-                let right = badgeOrigin.x + clearance
-                let leftRoom = left - radius
-                let rightRoom = canvasSize.width - (right + radius)
-
-                // Prefer the side with enough paper; when both fit, use the
-                // roomier side so coastal prefectures naturally move inward.
-                stampCenter.x = rightRoom > leftRoom ? right : left
-            }
         }
-
-        // Keep the full foil rays inside the clipped map panel. Return the
-        // anchor rather than the visual centre, restoring the label's -34pt
-        // resting offset.
-        stampCenter.x = min(max(stampCenter.x, radius),
-                            max(radius, canvasSize.width - radius))
-        stampCenter.y = min(max(stampCenter.y, radius),
-                            max(radius, canvasSize.height - radius))
-        return CGPoint(x: stampCenter.x, y: stampCenter.y + 34)
+        return ComboBurstLabel.stampAnchor(tap: point, radius: radius,
+                                           badgeOrigin: badgeOrigin,
+                                           canvasSize: canvasSize)
     }
 
     private func burstPoint(_ anchor: ComboBurst.Anchor,
@@ -298,20 +386,43 @@ struct PrefectureMapView: View {
 
     /// Direct hit first, then the near-miss allowance for the asked prefecture.
     ///
-    /// The allowance shrinks with the zoom for the same reason the outlines do:
+    /// The allowance follows the zoom for the same reason the outlines do:
     /// taps arrive in this view's own coordinates, so a fixed 22 units becomes
     /// 22 x zoom on the glass. Left alone, a pinched-in map would hand the
-    /// answer to a tap most of a thumb away from the prefecture.
+    /// answer to a tap most of a thumb away from the prefecture — and a
+    /// pinched-out one would demand aim finer than the finger doing it.
     private func resolve(_ point: CGPoint, transform: CGAffineTransform) -> Prefecture? {
         let candidates = prefectures.filter { interactiveCodes.contains($0.code) }
         guard !candidates.isEmpty else { return nil }
         let target = targetCode.flatMap { mapData[$0] }
-        let magnification = max(zoom, 1)
+        let magnification = ZoomPan.magnification(zoom)
         return PrefectureGeometry.resolveTap(
             at: point, target: target, among: candidates, transform: transform,
             tolerance: GameRules.tapTolerancePoints / magnification,
             targetBias: GameRules.tapTargetBiasPoints / magnification)
     }
+}
+
+/// The stroke weights the flat map and the globe share. A free function and a
+/// constant duplicated across the two files used to promise, in comments, to
+/// stay equal — gathering them under one name makes the compiler keep the
+/// promise. Internal, not private: `GlobeMapView` draws the same lines (at
+/// zoom 1 — its magnification is in the radius, not in a scaleEffect).
+nonisolated enum MapStroke {
+    /// The map's one hairline weight, shared by the printed prefecture boundary
+    /// and the background shoreline. Deliberately hair-thin: at 47 shapes it is
+    /// a grid of borders, and anything heavier reads as the lines being the
+    /// subject rather than the country. Divided by the zoom because the stroke
+    /// is drawn inside the magnified content (see `PrefectureMapView.zoom`).
+    static func hairlineWidth(canvasWidth: CGFloat, zoom: CGFloat) -> CGFloat {
+        min(max(canvasWidth * 0.0019, 0.3), 0.7) / ZoomPan.magnification(zoom)
+    }
+
+    /// One weight for every red ring — the asked-about shape and the blinking
+    /// hint — so "a red line" always weighs the same thing, on either map.
+    /// The flat map divides it by the zoom (drawn inside the magnification);
+    /// the globe uses it as is (its magnification lives in the radius).
+    static let ringWidth: CGFloat = 3.5
 }
 
 // MARK: - One prefecture
@@ -344,19 +455,16 @@ private struct PrefectureLayer: View {
     /// The white die-cut has to scale with the render, or an 84pt stage
     /// thumbnail is drawn almost entirely in border and the colour disappears.
     private var dieCutWidth: CGFloat {
-        min(max(canvasSize.width * 0.009, 0.5), 3) / max(zoom, 1)
+        min(max(canvasSize.width * 0.009, 0.5), 3) / ZoomPan.magnification(zoom)
     }
 
-    /// The prefecture boundary itself. Deliberately hair-thin: at 47 shapes it
-    /// is a grid of borders, and anything heavier reads as the lines being the
-    /// subject rather than the country.
+    /// The prefecture boundary itself (see `MapStroke.hairlineWidth`).
     private var boundaryWidth: CGFloat {
-        min(max(canvasSize.width * 0.0019, 0.3), 0.7) / max(zoom, 1)
+        MapStroke.hairlineWidth(canvasWidth: canvasSize.width, zoom: zoom)
     }
 
-    /// One width for every red ring — the asked-about prefecture and the
-    /// blinking hint — so "a red line" always weighs the same thing.
-    private var ringWidth: CGFloat { 3.5 / max(zoom, 1) }
+    /// The red rings, drawn inside the magnification (see `MapStroke.ringWidth`).
+    private var ringWidth: CGFloat { MapStroke.ringWidth / ZoomPan.magnification(zoom) }
 
     private var anchor: UnitPoint {
         guard canvasSize.width > 0, canvasSize.height > 0 else { return .center }
@@ -423,7 +531,8 @@ private struct PrefectureLayer: View {
             // answers to the same prefecture.
             if appearance.isStuck, case .pop? = effect?.kind {
                 CorrectFoilTrace(path: path,
-                                 lineWidth: max(dieCutWidth * 0.8, 1 / max(zoom, 1)),
+                                 lineWidth: max(dieCutWidth * 0.8,
+                                                1 / ZoomPan.magnification(zoom)),
                                  reduceMotion: reduceMotion)
                     .id(effect?.id)
             }
@@ -474,8 +583,13 @@ private struct PrefectureLayer: View {
 //
 // Every one of these is a no-op when Reduce Motion is on; the state change is
 // still legible because colour carries it (CLAUDE.md §9).
+//
+// Internal, not private: `GlobeMapView` replays the same celebrations on the
+// globe. One implementation per animation, or the two maps drift apart in
+// exactly the moments a child watches most closely (minimal visibility hoist —
+// only `StampRays` and `InsetFrame` stay file-private).
 
-private struct PopEffect: ViewModifier {
+struct PopEffect: ViewModifier {
     let trigger: Int
     let anchor: UnitPoint
     let enabled: Bool
@@ -498,7 +612,7 @@ private struct PopEffect: ViewModifier {
     }
 }
 
-private struct ShakeEffect: ViewModifier {
+struct ShakeEffect: ViewModifier {
     let trigger: Int
     let enabled: Bool
 
@@ -523,7 +637,7 @@ private struct ShakeEffect: ViewModifier {
     }
 }
 
-private struct HintBlink: ViewModifier {
+struct HintBlink: ViewModifier {
     let enabled: Bool
     @State private var on = false
 
@@ -540,7 +654,7 @@ private struct HintBlink: ViewModifier {
     }
 }
 
-private struct SlowGlow: ViewModifier {
+struct SlowGlow: ViewModifier {
     let enabled: Bool
     @State private var on = false
 
@@ -557,7 +671,7 @@ private struct SlowGlow: ViewModifier {
     }
 }
 
-private struct RiseEffect: ViewModifier {
+struct RiseEffect: ViewModifier {
     let enabled: Bool
     @State private var lifted = false
 
@@ -581,7 +695,7 @@ private struct RiseEffect: ViewModifier {
 /// over the map. This uses the album's paper, ink and foil instead: the count is
 /// printed inside a round souvenir stamp and restrained rays make longer runs
 /// feel rarer without throwing confetti over the question.
-private struct ComboBurstLabel: View {
+struct ComboBurstLabel: View {
     let burst: ComboBurst
     let reduceMotion: Bool
 
@@ -598,6 +712,49 @@ private struct ComboBurstLabel: View {
         let diameters: [CGFloat] = [72, 84, 98]
         let rayLengths: [CGFloat] = [7, 10, 13]
         return diameters[index] / 2 + 5 + rayLengths[index]
+    }
+
+    /// Where the stamp's position anchor should land, given where the finger
+    /// tapped and (when a specialty emoji is rising) where it rises from.
+    /// Pure and shared by both maps — the flat map and the globe resolve the
+    /// badge's screen position their own way, but the stamp must dodge and
+    /// clamp by the same rules on either one.
+    nonisolated static func stampAnchor(tap point: CGPoint, radius: CGFloat,
+                                        badgeOrigin: CGPoint?,
+                                        canvasSize: CGSize) -> CGPoint {
+        // The label finishes 34pt above its position anchor.
+        var stampCenter = CGPoint(x: point.x, y: point.y - 34)
+
+        if let badgeOrigin {
+            // The emoji rises 26pt. Its swept area is represented by the
+            // midpoint of that short path plus enough room for the 26pt glyph.
+            let badgePathCenter = CGPoint(x: badgeOrigin.x, y: badgeOrigin.y - 13)
+            let dx = stampCenter.x - badgePathCenter.x
+            let dy = stampCenter.y - badgePathCenter.y
+            // Extra clearance also covers the stamp's brief 1.34x arrival,
+            // not just its resting circle.
+            let clearance = radius + 42
+
+            if hypot(dx, dy) < clearance {
+                let left = badgeOrigin.x - clearance
+                let right = badgeOrigin.x + clearance
+                let leftRoom = left - radius
+                let rightRoom = canvasSize.width - (right + radius)
+
+                // Prefer the side with enough paper; when both fit, use the
+                // roomier side so coastal prefectures naturally move inward.
+                stampCenter.x = rightRoom > leftRoom ? right : left
+            }
+        }
+
+        // Keep the full foil rays inside the clipped map panel. Return the
+        // anchor rather than the visual centre, restoring the label's -34pt
+        // resting offset.
+        stampCenter.x = min(max(stampCenter.x, radius),
+                            max(radius, canvasSize.width - radius))
+        stampCenter.y = min(max(stampCenter.y, radius),
+                            max(radius, canvasSize.height - radius))
+        return CGPoint(x: stampCenter.x, y: stampCenter.y + 34)
     }
 
     private var parts: (count: String, label: String) {
@@ -695,7 +852,7 @@ private struct StampRays: View {
 
 /// A bright segment runs once around the rewarded prefecture. With Reduce
 /// Motion the existing steady gold edge carries the same meaning on its own.
-private struct CorrectFoilTrace: View {
+struct CorrectFoilTrace: View {
     let path: Path
     let lineWidth: CGFloat
     let reduceMotion: Bool
@@ -719,11 +876,12 @@ private struct CorrectFoilTrace: View {
     }
 }
 
-// MARK: - Okinawa inset
+// MARK: - Inset frame
 
-/// Dashed box around the relocated Okinawa so it reads as a separate frame
-/// rather than Okinawa's real position (CLAUDE.md §3).
-private struct OkinawaInsetFrame: View {
+/// Dashed box around a relocated, enlarged shape — Okinawa on the japan map,
+/// the Singapore-class countries on the world map — so it reads as a separate
+/// frame rather than the shape's real position (CLAUDE.md §3).
+private struct InsetFrame: View {
     let rect: CGRect
 
     var body: some View {

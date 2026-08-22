@@ -1,12 +1,18 @@
 import SwiftUI
 
-/// The collection: all 141 cards, filterable by category, grouped by
-/// prefecture. Unowned cards stay visible as silhouettes so there is something
-/// to aim at.
+/// The collection: Japan's catalog stays grouped by prefecture with unowned
+/// silhouettes to aim at. The world book is the child's travel stack instead:
+/// only cards already won, in the order they were first obtained.
 struct CardBookView: View {
     @Environment(AppState.self) private var app
     @Environment(\.dynamicTypeSize) private var typeSize
     @Environment(\.textMode) private var mode
+
+    /// The book on display. Catalog, region names and the owned stars all come
+    /// off this one value and its save slice — card IDs collide as strings
+    /// across books (world "12-1" is アルジェリア's flag, japan's is 千葉の
+    /// らっかせい), so a lookup outside the atlas shows the wrong card.
+    let atlas: Atlas
 
     /// Which cards the book opens on. A caller that already knows what the
     /// child is looking for should not make them find it again.
@@ -15,18 +21,29 @@ struct CardBookView: View {
     @State private var filter: CardFilter?
     @State private var opened: SpecialtyCard?
 
-    private var save: SaveData { app.save.data }
+    private var save: AtlasSave { app.save.data.atlas(atlas.saveKey) }
     private var active: CardFilter { filter ?? initialFilter }
     private var isOpeningOneCard: Bool {
         if case .card = active { true } else { false }
     }
 
+    /// The categories with at least one card in this book's catalog.
+    private var dealtCategories: Set<SpecialtyCard.Category> {
+        Set(atlas.cards.all.map(\.category))
+    }
+
     private var groups: [(prefecture: Prefecture, cards: [SpecialtyCard])] {
-        app.mapData.prefectures.compactMap { pref in
-            let cards = app.cards.cards(for: pref.code).filter { matches($0) }
+        atlas.mapData.prefectures.compactMap { pref in
+            let cards = atlas.cards.cards(for: pref.code).filter { matches($0) }
             return cards.isEmpty ? nil : (pref, cards)
         }
     }
+
+    private var worldCards: [SpecialtyCard] {
+        save.ownedCardsInAcquisitionOrder(from: atlas.cards).filter { matches($0) }
+    }
+
+    private var isWorldBook: Bool { atlas.saveKey == SaveData.worldAtlas }
 
     /// Opens with the cover's own slide suppressed.
     ///
@@ -56,8 +73,12 @@ struct CardBookView: View {
         ScrollView {
             LazyVStack(spacing: 16, pinnedViews: [.sectionHeaders]) {
                 Section {
-                    ForEach(groups, id: \.prefecture.code) { group in
-                        prefectureSection(group.prefecture, cards: group.cards)
+                    if isWorldBook {
+                        worldCardGrid
+                    } else {
+                        ForEach(groups, id: \.prefecture.code) { group in
+                            prefectureSection(group.prefecture, cards: group.cards)
+                        }
                     }
                     emptyNote
                 } header: {
@@ -71,20 +92,21 @@ struct CardBookView: View {
         .navigationTitle(mode.cardBook)
         .navigationBarTitleDisplayMode(.inline)
         .task {
-            if case .card(let id) = initialFilter, let card = app.cards[id] { open(card) }
+            if case .card(let id) = initialFilter, let card = atlas.cards[id] { open(card) }
         }
         .fullScreenCover(item: $opened) { card in
             CardDetailView(card: card,
-                           prefecture: app.mapData[card.prefectureCode],
+                           prefecture: atlas.mapData[card.prefectureCode],
                            stars: save.stars(of: card.id),
                            rainbow: save.isRainbow(card.id),
-                           streak: save.streak(of: card.prefectureCode))
+                           streak: save.streak(of: card.prefectureCode),
+                           unlock: atlas.unlockGoalNoun(for: card))
                 .environment(\.textMode, mode)
                 .presentationBackground(.clear)
         }
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
-                Text("\(save.totalOwnedCards) / \(app.cards.count)")
+                Text("\(save.totalOwnedCards) / \(atlas.cards.count)")
                     .font(AppFont.rounded(14, relativeTo: .footnote))
                     .foregroundStyle(Palette.ink.opacity(0.6))
                     .monospacedDigit()
@@ -104,7 +126,11 @@ struct CardBookView: View {
                 ForEach([CardTier.silver, .gold, .rainbow], id: \.self) { tier in
                     tierChip(tier)
                 }
-                ForEach(SpecialtyCard.Category.allCases, id: \.self) { c in
+                // Only the categories this book actually deals: `flag` exists
+                // for the world atlas, and a chip whose filter can never show
+                // a card is a button that teaches "buttons do nothing".
+                ForEach(SpecialtyCard.Category.allCases.filter(dealtCategories.contains),
+                        id: \.self) { c in
                     chip(title: "\(c.emoji) \(c.label(mode))",
                          isOn: active == .category(c)) {
                         filter = active == .category(c) ? .all : .category(c)
@@ -113,7 +139,6 @@ struct CardBookView: View {
             }
             .padding(.vertical, 8)
         }
-        .background(Palette.page)
     }
 
     /// A tier's filter chip, lit in the tier's own colour when selected — the
@@ -145,12 +170,25 @@ struct CardBookView: View {
     /// Shown when a filter leaves nothing, so an empty book reads as "none yet"
     /// rather than as broken.
     @ViewBuilder private var emptyNote: some View {
-        if groups.isEmpty {
+        if isWorldBook ? worldCards.isEmpty : groups.isEmpty {
             Text(mode.notCollectedYet)
                 .font(AppFont.rounded(15, relativeTo: .body))
                 .foregroundStyle(Palette.ink.opacity(0.55))
                 .frame(maxWidth: .infinity)
                 .padding(.top, 40)
+        }
+    }
+
+    private var worldCardGrid: some View {
+        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10),
+                                 count: typeSize.cardColumns), spacing: 10) {
+            ForEach(worldCards) { card in
+                CardChipView(card: card,
+                             prefecture: atlas.mapData[card.prefectureCode],
+                             stars: save.stars(of: card.id),
+                             rainbow: save.isRainbow(card.id),
+                             onOpen: { open(card) })
+            }
         }
     }
 

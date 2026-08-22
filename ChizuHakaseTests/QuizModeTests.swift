@@ -13,6 +13,10 @@ struct QuizModeTests {
                       mode: mode,
                       mapData: MapDataTests.map,
                       catalog: MapDataTests.catalog,
+                      // Japan's policy, spelled out — the parameter carries no
+                      // default (see the init's doc comment).
+                      drawPolicy: .random,
+                      askedInChallenge: [],
                       generator: AnyRandomNumberGenerator(SeededGenerator(seed: seed)))
     }
 
@@ -113,5 +117,56 @@ struct QuizModeTests {
             }
             #expect(quiz.makeResult().mode == mode)
         }
+    }
+
+    // MARK: - 世界(P6 Task 5)
+
+    // 4 択のロジックはステージのコード列から引く(47 とも県コードの範囲とも
+    // 無縁)ので、世界のステージでもそのまま働く — ここはそれを釘で打つ。
+
+    static let world = Result {
+        try WorldDataLoader.load(contentsOf: TestResources.require("WorldShapes"))
+    }
+
+    private func makeWorldQuiz(stageIndex: Int, seed: UInt64 = 7) throws -> QuizViewModel {
+        let atlas = Atlas.world(from: try Self.world.get())
+        return QuizViewModel(stage: try #require(atlas.stage(at: stageIndex)),
+                             mode: .nameIt,
+                             mapData: atlas.mapData,
+                             catalog: atlas.cards,
+                             drawPolicy: atlas.drawPolicy,
+                             askedInChallenge: [],
+                             generator: AnyRandomNumberGenerator(SeededGenerator(seed: seed)))
+    }
+
+    /// ひがしアジア(6 カ国)を最後まで: どの問題も 4 つの名前を出し、
+    /// 正解を含み、外れも全部このステージの国 — 全世界から選ぶと画面の形
+    /// だけで消去できてしまう(§5)。ISO numeric(156, 392, …)がそのまま
+    /// 通ることが、コードを 1–47 と思い込んだ箇所が無いことの証明になる。
+    @Test func 世界のなまえあての選択肢は同じステージから出る() throws {
+        let quiz = try makeWorldQuiz(stageIndex: 15)
+        let stageCodes = Set(quiz.stage.codes)
+        #expect(quiz.phase != .finished, "ひがしアジアが空のステージになっている")
+        while quiz.phase != .finished {
+            let target = try #require(quiz.target)
+            #expect(quiz.choices.count == GameRules.nameChoiceCount)
+            #expect(quiz.choices.contains(target.code),
+                    "\(target.name) was not among its own choices")
+            #expect(Set(quiz.choices).count == quiz.choices.count, "a name is repeated")
+            #expect(Set(quiz.choices).isSubset(of: stageCodes),
+                    "a decoy came from outside the stage: \(quiz.choices)")
+            quiz.answer(target.code)
+            quiz.advance()
+        }
+    }
+
+    /// 16 カ国のひがしヨーロッパでも 4 つのまま — 候補の数はステージの
+    /// 大きさではなく GameRules.nameChoiceCount が決める。
+    @Test func 世界の大きいステージでも選択肢は4つ() throws {
+        let quiz = try makeWorldQuiz(stageIndex: 5)
+        let stageCodes = Set(quiz.stage.codes)
+        #expect(stageCodes.count > GameRules.nameChoiceCount)
+        #expect(quiz.choices.count == GameRules.nameChoiceCount)
+        #expect(Set(quiz.choices).isSubset(of: stageCodes))
     }
 }
