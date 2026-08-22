@@ -751,6 +751,41 @@ footer p {
   background: linear-gradient(145deg, #ffd7df, #ffe8a2 35%, #bcecdf 67%, #b7dff7);
 }
 
+/* 世界編: スクリーンショットが揃うまでは絵文字の地球儀と国旗で見せる。
+   .feature-visual を重ねるのはモバイル用パディング(下の media query)より
+   詳細度を上げるため */
+.feature-visual.feature-visual--world {
+  padding: 0;
+  place-items: center;
+  background: linear-gradient(145deg, #d8f4ff, #6fc9e8 62%, #4fb4d6);
+}
+
+.world-visual {
+  position: relative;
+  display: grid;
+  place-items: center;
+}
+
+.world-visual__globe {
+  font-size: clamp(8rem, 24vw, 11rem);
+  line-height: 1;
+  filter: drop-shadow(0 22px 34px rgba(76, 41, 66, 0.28));
+}
+
+.world-visual__flag {
+  position: absolute;
+  font-size: clamp(1.7rem, 5vw, 2.3rem);
+  line-height: 1;
+  filter: drop-shadow(0 6px 12px rgba(76, 41, 66, 0.2));
+}
+
+.world-visual__flag--1 { top: -3.4rem; left: -2rem; transform: rotate(-12deg); }
+.world-visual__flag--2 { top: -4rem; right: -1.2rem; transform: rotate(9deg); }
+.world-visual__flag--3 { top: 32%; right: -4.2rem; transform: rotate(14deg); }
+.world-visual__flag--4 { bottom: -2.8rem; right: -1.6rem; transform: rotate(-8deg); }
+.world-visual__flag--5 { bottom: -3.5rem; left: -0.8rem; transform: rotate(11deg); }
+.world-visual__flag--6 { top: 34%; left: -4.4rem; transform: rotate(-15deg); }
+
 .story-section {
   position: relative;
   overflow: hidden;
@@ -900,7 +935,7 @@ footer p {
 
 .screens-gallery {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: clamp(0.7rem, 2vw, 1.25rem);
 }
 
@@ -942,6 +977,10 @@ footer p {
 
 .screen-frame--green {
   background: linear-gradient(145deg, #def7e4, #6fce9d);
+}
+
+.screen-frame--tan {
+  background: linear-gradient(145deg, #f9edca, #ddb271);
 }
 
 .screens-gallery figcaption {
@@ -1111,13 +1150,6 @@ footer p {
   .screens-gallery {
     grid-template-columns: repeat(2, 1fr);
     gap: 2rem 1rem;
-  }
-
-  /* 5枚目(結果画面)の孤立行: 隣と同じ幅のまま中央に置く */
-  .screens-gallery figure:nth-child(5) {
-    grid-column: 1 / -1;
-    width: calc(50% - 0.5rem);
-    justify-self: center;
   }
 }
 
