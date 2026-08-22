@@ -100,6 +100,26 @@ ART_FOR_CARD = {
     "montenegro-bay-of-kotor": "499-2",  # コトル湾
     "portugal-azulejo": "620-2",  # アズレージョ
     "serbia-ajvar": "688-2",  # アイバル
+    "slovenia-lake-bled": "705-2",  # ブレッド湖
+    "spain-paella": "724-2",  # パエリア
+    "north-macedonia-lake-ohrid": "807-2",  # オフリド湖
+    "algeria-sahara-desert": "12-2",  # サハラ砂漠
+    "libya-leptis-magna": "434-2",  # レプティス・マグナ遺跡
+    "morocco-tagine": "504-2",  # タジン
+    "sudan-meroe-pyramids": "729-2",  # メロエのピラミッド
+    "tunisia-mosaic": "788-2",  # モザイク
+    "egypt-pyramids": "818-2",  # ピラミッド
+    "benin-bronze-sculpture": "204-2",  # ブロンズ彫刻
+    "gambia-river": "270-2",  # ガンビア川
+    "ghana-kente": "288-2",  # ケンテ
+    "guinea-djembe": "324-2",  # ジャンベ
+    "cote-divoire-cacao": "384-2",  # カカオ
+    "liberia-pygmy-hippo": "430-2",  # コビトカバ
+    "mali-bogolanfini": "466-2",  # ボゴランフィニ
+    "mauritania-richat-structure": "478-2",  # リシャット構造
+    "niger-west-african-giraffe": "562-2",  # ニシアフリカキリン
+    "nigeria-nok-terracotta": "566-2",  # ノクの土偶
+    "guinea-bissau-cashews": "624-2",  # カシューナッツ
 }
 
 

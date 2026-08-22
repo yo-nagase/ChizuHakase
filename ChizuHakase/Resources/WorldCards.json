@@ -53,7 +53,8 @@
       "nameKana": "さはらさばく",
       "nameKanji": "サハラ砂漠",
       "category": "nature",
-      "description": "すなが どこまでも ひろがる さばくだよ"
+      "description": "すなが どこまでも ひろがる さばくだよ",
+      "art": "world-card-12-2"
     },
     {
       "id": "24-1",
@@ -754,7 +755,8 @@
       "nameKana": "ぶろんずちょうこく",
       "nameKanji": "ブロンズ彫刻",
       "category": "craft",
-      "description": "きんぞくを とかして つくる ぞうだよ"
+      "description": "きんぞくを とかして つくる ぞうだよ",
+      "art": "world-card-204-2"
     },
     {
       "id": "208-1",
@@ -1031,7 +1033,8 @@
       "nameKana": "がんびあがわ",
       "nameKanji": "ガンビア川",
       "category": "nature",
-      "description": "くにの なかを ながく ながれる かわだよ"
+      "description": "くにの なかを ながく ながれる かわだよ",
+      "art": "world-card-270-2"
     },
     {
       "id": "276-1",
@@ -1068,7 +1071,8 @@
       "nameKana": "けんて",
       "nameKanji": "ケンテ",
       "category": "craft",
-      "description": "あざやかな いろを おった ぬのだよ"
+      "description": "あざやかな いろを おった ぬのだよ",
+      "art": "world-card-288-2"
     },
     {
       "id": "300-1",
@@ -1124,7 +1128,8 @@
       "nameKana": "じゃんべ",
       "nameKanji": "ジャンベ",
       "category": "craft",
-      "description": "てで たたいて ならす さかずきがたの たいこだよ"
+      "description": "てで たたいて ならす さかずきがたの たいこだよ",
+      "art": "world-card-324-2"
     },
     {
       "id": "328-1",
@@ -1365,7 +1370,8 @@
       "nameKana": "かかお",
       "nameKanji": "カカオ",
       "category": "food",
-      "description": "ちょこれーとの もとに なる みが たくさん そだつよ"
+      "description": "ちょこれーとの もとに なる みが たくさん そだつよ",
+      "art": "world-card-384-2"
     },
     {
       "id": "388-1",
@@ -1619,7 +1625,8 @@
       "nameKana": "こびとかば",
       "nameKanji": "コビトカバ",
       "category": "nature",
-      "description": "もりの みずべに くらす ちいさな かばだよ"
+      "description": "もりの みずべに くらす ちいさな かばだよ",
+      "art": "world-card-430-2"
     },
     {
       "id": "434-1",
@@ -1637,7 +1644,8 @@
       "nameKana": "れぷてぃすまぐないせき",
       "nameKanji": "レプティス・マグナ遺跡",
       "category": "landmark",
-      "description": "うみの ちかくに のこる いしの まちだよ"
+      "description": "うみの ちかくに のこる いしの まちだよ",
+      "art": "world-card-434-2"
     },
     {
       "id": "440-1",
@@ -1765,7 +1773,8 @@
       "nameKana": "ぼごらんふぃに",
       "nameKanji": "ボゴランフィニ",
       "category": "craft",
-      "description": "どろで もようを そめる めんの ぬのだよ"
+      "description": "どろで もようを そめる めんの ぬのだよ",
+      "art": "world-card-466-2"
     },
     {
       "id": "470-1",
@@ -1802,7 +1811,8 @@
       "nameKana": "りしゃっとこうぞう",
       "nameKanji": "リシャット構造",
       "category": "nature",
-      "description": "さばくに ひろがる おおきな わの もようだよ"
+      "description": "さばくに ひろがる おおきな わの もようだよ",
+      "art": "world-card-478-2"
     },
     {
       "id": "484-1",
@@ -1895,7 +1905,8 @@
       "nameKana": "たじん",
       "nameKanji": "タジン",
       "category": "food",
-      "description": "とんがりぼうしの なべで むしにする りょうりだよ"
+      "description": "とんがりぼうしの なべで むしにする りょうりだよ",
+      "art": "world-card-504-2"
     },
     {
       "id": "508-1",
@@ -2041,7 +2052,8 @@
       "nameKana": "にしあふりかきりん",
       "nameKanji": "ニシアフリカキリン",
       "category": "nature",
-      "description": "しろっぽい からだに あみめが ある きりんだよ"
+      "description": "しろっぽい からだに あみめが ある きりんだよ",
+      "art": "world-card-562-2"
     },
     {
       "id": "566-1",
@@ -2059,7 +2071,8 @@
       "nameKana": "のくの どぐう",
       "nameKanji": "ノクの土偶",
       "category": "craft",
-      "description": "つちを やいて つくった むかしの ぞうだよ"
+      "description": "つちを やいて つくった むかしの ぞうだよ",
+      "art": "world-card-566-2"
     },
     {
       "id": "578-1",
@@ -2245,7 +2258,8 @@
       "nameKana": "かしゅーなっつ",
       "nameKanji": "カシューナッツ",
       "category": "food",
-      "description": "あつい ちいきで こうばしい きのみが そだつよ"
+      "description": "あつい ちいきで こうばしい きのみが そだつよ",
+      "art": "world-card-624-2"
     },
     {
       "id": "626-1",
@@ -2483,7 +2497,8 @@
       "nameKana": "ぶれっどこ",
       "nameKanji": "ブレッド湖",
       "category": "nature",
-      "description": "しまの きょうかいが みずうみに うかぶよ"
+      "description": "しまの きょうかいが みずうみに うかぶよ",
+      "art": "world-card-705-2"
     },
     {
       "id": "706-1",
@@ -2555,7 +2570,8 @@
       "nameKana": "ぱえりあ",
       "nameKanji": "パエリア",
       "category": "food",
-      "description": "こめと うみの さちを ひらたい なべで たくよ"
+      "description": "こめと うみの さちを ひらたい なべで たくよ",
+      "art": "world-card-724-2"
     },
     {
       "id": "728-1",
@@ -2591,7 +2607,8 @@
       "nameKana": "めろえの ぴらみっど",
       "nameKanji": "メロエのピラミッド",
       "category": "landmark",
-      "description": "さばくに ちいさな ぴらみっどが ならぶよ"
+      "description": "さばくに ちいさな ぴらみっどが ならぶよ",
+      "art": "world-card-729-2"
     },
     {
       "id": "740-1",
@@ -2793,7 +2810,8 @@
       "nameKana": "もざいく",
       "nameKanji": "モザイク",
       "category": "craft",
-      "description": "ちいさな いしを ならべて えや もようを つくるよ"
+      "description": "ちいさな いしを ならべて えや もようを つくるよ",
+      "art": "world-card-788-2"
     },
     {
       "id": "792-1",
@@ -2884,7 +2902,8 @@
       "nameKana": "おふりどこ",
       "nameKanji": "オフリド湖",
       "category": "nature",
-      "description": "やまに かこまれた とうめいな みずうみだよ"
+      "description": "やまに かこまれた とうめいな みずうみだよ",
+      "art": "world-card-807-2"
     },
     {
       "id": "818-1",
@@ -2902,7 +2921,8 @@
       "nameKana": "ぴらみっど",
       "nameKanji": "ピラミッド",
       "category": "landmark",
-      "description": "おおきな いしを つんだ さんかくの いせきだよ"
+      "description": "おおきな いしを つんだ さんかくの いせきだよ",
+      "art": "world-card-818-2"
     },
     {
       "id": "826-1",
