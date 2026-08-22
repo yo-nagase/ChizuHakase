@@ -88,14 +88,15 @@ App Store Connect の各欄にそのまま貼り付けられる形式。文字�
 
 ## このバージョンの新機能(What's New)
 
-### v2.0(世界編)
+### v2(世界編)
 
-**番号は申請時に確定させる。** `project.yml` は `1.7`、ローカル生成の
-`ChizuHakase.xcodeproj` は `2`(build 3)で食い違っている(xcodeproj は
-git 管理外の生成物なので、`xcodegen generate` を回すと project.yml 側が勝つ)。
-App Store Connect の公開済みバージョンを確認し、それより大きい番号へ
-project.yml を揃えてから `xcodegen generate` → アーカイブすること。
-下の v1.7 が未アップロードのままなら、その項目もこの文面に畳んでから出す —
+`project.yml` を `MARKETING_VERSION: "2"` / `CURRENT_PROJECT_VERSION: "4"` にして
+`xcodegen generate` 済み。ビルド番号を 4 から始めたのは、生成前の xcodeproj が
+同じバージョン 2 のまま build 3 まで進んでいたため — 3 以下はアップロード済みの
+ビルドと衝突しうる。App Store Connect が衝突を報告したら project.yml で上げる。
+
+下の v1.7 はコードが main に入っているだけで、ストアへ出したかは未確認。
+未アップロードなら v1.7 の項目もこの文面に畳んでから申請する —
 利用者が v1.7 の文面を見る機会は無くなるため。
 
 ```

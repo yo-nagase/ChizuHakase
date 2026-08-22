@@ -44,8 +44,13 @@ targets:
         # Single source of truth for the version the title screen shows
         # (TitleView reads CFBundleShortVersionString). Bump ONLY here and run
         # `xcodegen generate` — editing it in Xcode drifts from this file.
-        MARKETING_VERSION: "1.7"
-        CURRENT_PROJECT_VERSION: "1"
+        MARKETING_VERSION: "2"
+        # Build number. Only has to be unique within a marketing version, but
+        # the generated project had already been hand-set to 3 under version 2,
+        # so any build ≤ 3 risks colliding with one already uploaded. Starting
+        # at 4 is safe either way — a version nobody has uploaded does not
+        # require its builds to start at 1.
+        CURRENT_PROJECT_VERSION: "4"
         # Five characters: 「めざせ!ちずはかせ」 truncates under a home-screen
         # icon, and a name that ends in … is not a name a child can read.
         INFOPLIST_KEY_CFBundleDisplayName: ちずはかせ
