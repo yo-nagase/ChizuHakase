@@ -58,6 +58,13 @@ nonisolated struct AtlasSave: Codable, Sendable, Equatable {
     var mastery: [Int: Int] = [:]
     /// card id -> stars, 0...10. Five is silver, ten is gold.
     var cards: [String: Int] = [:]
+    /// Card IDs in the order they were first obtained.
+    ///
+    /// The world card book is a chronological collection rather than a
+    /// country-by-country catalog. Stars can rise many times after the first
+    /// copy, so this order is recorded separately from `cards` and each ID
+    /// appears at most once.
+    var cardAcquisitionOrder: [String] = []
     /// Cards that were gold while their region's clean streak reached the
     /// rainbow line.
     ///
@@ -91,6 +98,8 @@ nonisolated struct AtlasSave: Codable, Sendable, Equatable {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         mastery = try c.decodeIfPresent([Int: Int].self, forKey: .mastery) ?? [:]
         cards = try c.decodeIfPresent([String: Int].self, forKey: .cards) ?? [:]
+        cardAcquisitionOrder = try c.decodeIfPresent([String].self,
+                                                      forKey: .cardAcquisitionOrder) ?? []
         rainbow = try c.decodeIfPresent(Set<String>.self, forKey: .rainbow) ?? []
         streaks = try c.decodeIfPresent([Int: Int].self, forKey: .streaks) ?? [:]
         records = try c.decodeIfPresent([String: [Int: StageRecord]].self,
@@ -114,6 +123,19 @@ nonisolated struct AtlasSave: Codable, Sendable, Equatable {
     }
 
     func owns(_ cardID: String) -> Bool { stars(of: cardID) > 0 }
+
+    /// Owned cards in first-acquired order. Saves written before that order
+    /// existed fall back to catalog order for their already-owned cards; the
+    /// store persists that baseline the next time a result is applied.
+    func ownedCardsInAcquisitionOrder(from catalog: CardCatalog) -> [SpecialtyCard] {
+        var seen: Set<String> = []
+        let recorded = cardAcquisitionOrder.compactMap { id -> SpecialtyCard? in
+            guard seen.insert(id).inserted, owns(id) else { return nil }
+            return catalog[id]
+        }
+        let legacy = catalog.all.filter { owns($0.id) && seen.insert($0.id).inserted }
+        return recorded + legacy
+    }
 
     func isRainbow(_ cardID: String) -> Bool { rainbow.contains(cardID) }
 
@@ -152,6 +174,7 @@ nonisolated struct AtlasSave: Codable, Sendable, Equatable {
 }
 
 nonisolated struct SaveData: Codable, Sendable, Equatable {
+    /// 8 records the order cards were first obtained for the world card book.
     /// 7 moved the per-atlas fields under `atlases` so the world map can save
     /// beside Japan. 6 folded the card stars down to a ten-star ladder —
     /// fifteen put the first gold about eighteen clean runs of a stage away,
@@ -160,7 +183,7 @@ nonisolated struct SaveData: Codable, Sendable, Equatable {
     /// their rainbow latch. 3 gave every card five stars instead of a plain/キラ
     /// pair. 2 split the stage records per quiz mode. Version 1 had one mode
     /// and wrote a flat `stages` dictionary.
-    static let currentVersion = 7
+    static let currentVersion = 8
 
     /// Canonical `atlases` keys. Once written into save files they are as
     /// frozen as card IDs — never rename.

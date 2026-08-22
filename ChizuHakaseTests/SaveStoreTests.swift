@@ -469,6 +469,7 @@ struct SaveStoreTests {
         let world = store.data.atlas(SaveData.worldAtlas)
         #expect(world.mastery == [392: 1, 156: 1])
         #expect(world.cards == ["392-1": 1])
+        #expect(world.cardAcquisitionOrder == ["392-1"])
         #expect(world.streaks == [392: 2])
         #expect(world.record(forStage: 15, mode: .findOnMap) == StageRecord(stars: 3, score: 640))
         // Japan stays exactly untouched — absent, not merely empty.
@@ -529,6 +530,43 @@ struct SaveStoreTests {
         #expect(store.data.atlas(SaveData.worldAtlas).cards == ["44-1": GameRules.silverStars])
         #expect(store.data.atlas(SaveData.worldAtlas).stars(of: "44-1") == GameRules.silverStars)
         #expect(store.data.stars(of: "44-1") == 1, "the japan-facing read moved")
+    }
+
+    @Test func cardAcquisitionOrderRecordsOnlyTheFirstCopyInDrawOrder() throws {
+        let dir = try makeScratch()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let first = card("01-1")
+        let second = card("02-1")
+        let catalog = CardCatalog(cards: [first, second])
+        let store = SaveStore(directory: dir)
+
+        store.applyStageResult(
+            StageResult(mode: .findOnMap, stageIndex: 0, score: 0, stars: 1,
+                        firstTryByPrefecture: [:],
+                        cardDraws: [.new(second), .new(first), .star(second, stars: 2)]),
+            catalog: catalog, atlas: SaveData.worldAtlas)
+        store.applyStageResult(
+            StageResult(mode: .findOnMap, stageIndex: 0, score: 0, stars: 1,
+                        firstTryByPrefecture: [:], cardDraws: [.star(first, stars: 2)]),
+            catalog: catalog, atlas: SaveData.worldAtlas)
+
+        let world = store.data.atlas(SaveData.worldAtlas)
+        #expect(world.cardAcquisitionOrder == [second.id, first.id])
+        #expect(world.ownedCardsInAcquisitionOrder(from: catalog).map(\.id)
+                == [second.id, first.id])
+        #expect(SaveStore(directory: dir).data.atlas(SaveData.worldAtlas)
+            .cardAcquisitionOrder == [second.id, first.id])
+    }
+
+    @Test func oldOwnedCardsWithoutAnOrderFallBackToCatalogOrder() throws {
+        let first = card("01-1")
+        let second = card("02-1")
+        let catalog = CardCatalog(cards: [first, second])
+        let json = #"{"version":7,"atlases":{"world":{"cards":{"02-1":1,"01-1":1}}}}"#
+        let data = try JSONDecoder().decode(SaveData.self, from: Data(json.utf8))
+
+        #expect(data.atlas(SaveData.worldAtlas)
+            .ownedCardsInAcquisitionOrder(from: catalog).map(\.id) == [first.id, second.id])
     }
 
     private func card(_ id: String) -> SpecialtyCard {
@@ -910,15 +948,16 @@ struct SaveMigrationTests {
         #expect(data.version == SaveData.currentVersion)
     }
 
-    /// A version 7 file is already the current shape: encode → decode must be
-    /// the identity, including a world atlas with a challenge history.
-    @Test func aVersionSevenFileRoundTripsIdentically() throws {
+    /// A version 8 file is already the current shape: encode → decode must be
+    /// the identity, including the world's card order and challenge history.
+    @Test func aVersionEightFileRoundTripsIdentically() throws {
         var data = SaveData()
         data.mastery = [1: 3]
         data.cards = ["01-1": 5]
         var world = AtlasSave()
         world.mastery = [840: 2]
         world.cards = ["840-1": 1]
+        world.cardAcquisitionOrder = ["840-1"]
         world.askedInChallenge = [QuizMode.findOnMap.rawValue: [840, 392]]
         data.atlases[SaveData.worldAtlas] = world
 

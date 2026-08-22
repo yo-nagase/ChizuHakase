@@ -138,8 +138,23 @@ final class SaveStore {
                 .map(\.id))
         }
 
+        // A version 7 save knows which cards are owned but not when they were
+        // earned. Give those cards one stable catalog-order baseline before
+        // appending this result's genuinely new cards in draw order.
+        var acquisitionSeen = Set(atlas.cardAcquisitionOrder)
+        for card in catalog.all where atlas.owns(card.id) {
+            if acquisitionSeen.insert(card.id).inserted {
+                atlas.cardAcquisitionOrder.append(card.id)
+            }
+        }
+
         for draw in result.cardDraws {
+            let wasOwned = atlas.owns(draw.card.id)
             atlas.cards = GameRules.applyDraw(draw, to: atlas.cards)
+            if !wasOwned, atlas.owns(draw.card.id),
+               acquisitionSeen.insert(draw.card.id).inserted {
+                atlas.cardAcquisitionOrder.append(draw.card.id)
+            }
         }
 
         // Streaks and the rainbow latch move together: pairing each clean

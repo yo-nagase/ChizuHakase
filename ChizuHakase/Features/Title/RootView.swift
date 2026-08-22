@@ -242,13 +242,19 @@ struct RootView: View {
         // is correct but leaves nothing to open.
         if arguments.contains("-grantCards") {
             // Per book, because IDs only mean anything inside one catalog —
-            // seven even collide as strings across the books (引き継ぎ 2). The
+            // fourteen even collide as strings across the books (引き継ぎ 2). The
             // world's gold is deliberately "12-1", the collision id itself:
             // opening it must say アルジェリア, never 千葉の らっかせい.
             let ids = atlasKey == SaveData.worldAtlas
                 ? (new: "36-1", gold: "12-1", rainbow: "392-1")
                 : (new: "01-1", gold: "04-2", rainbow: "13-2")
             let catalog = atlas.cards
+            let originalDraws: [GameRules.CardDraw]
+            if atlasKey == SaveData.worldAtlas, let original = catalog["36-2"] {
+                originalDraws = [.new(original)]
+            } else {
+                originalDraws = []
+            }
             app.save.applyStageResult(StageResult(
                 mode: .findOnMap, stageIndex: 0, score: 0, stars: 3,
                 firstTryByPrefecture: [:],
@@ -260,7 +266,11 @@ struct RootView: View {
                     } ?? [])
                     + (catalog[ids.rainbow].map {
                         [GameRules.CardDraw.star($0, stars: GameRules.maxCardStars)]
-                    } ?? []),
+                    } ?? [])
+                    // The world book has no country headings, so keep one
+                    // original in its debug collection to catch a missing
+                    // country label on the card itself.
+                    + originalDraws,
                 // The gold-finishing answer plus a clean run on its region, so
                 // the rainbow card comes out of the real latch rather than
                 // being written in as rainbow — a debug state that stages

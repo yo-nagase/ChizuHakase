@@ -1,8 +1,8 @@
 import SwiftUI
 
-/// The collection: the open book's whole catalog (japan's 141 特産品 or the
-/// world's flags), filterable by category, grouped by region. Unowned cards
-/// stay visible as silhouettes so there is something to aim at.
+/// The collection: Japan's catalog stays grouped by prefecture with unowned
+/// silhouettes to aim at. The world book is the child's travel stack instead:
+/// only cards already won, in the order they were first obtained.
 struct CardBookView: View {
     @Environment(AppState.self) private var app
     @Environment(\.dynamicTypeSize) private var typeSize
@@ -39,6 +39,12 @@ struct CardBookView: View {
         }
     }
 
+    private var worldCards: [SpecialtyCard] {
+        save.ownedCardsInAcquisitionOrder(from: atlas.cards).filter { matches($0) }
+    }
+
+    private var isWorldBook: Bool { atlas.saveKey == SaveData.worldAtlas }
+
     /// Opens with the cover's own slide suppressed.
     ///
     /// A full-screen cover comes up from the bottom edge, which is the gesture
@@ -67,8 +73,12 @@ struct CardBookView: View {
         ScrollView {
             LazyVStack(spacing: 16, pinnedViews: [.sectionHeaders]) {
                 Section {
-                    ForEach(groups, id: \.prefecture.code) { group in
-                        prefectureSection(group.prefecture, cards: group.cards)
+                    if isWorldBook {
+                        worldCardGrid
+                    } else {
+                        ForEach(groups, id: \.prefecture.code) { group in
+                            prefectureSection(group.prefecture, cards: group.cards)
+                        }
                     }
                     emptyNote
                 } header: {
@@ -89,7 +99,8 @@ struct CardBookView: View {
                            prefecture: atlas.mapData[card.prefectureCode],
                            stars: save.stars(of: card.id),
                            rainbow: save.isRainbow(card.id),
-                           streak: save.streak(of: card.prefectureCode))
+                           streak: save.streak(of: card.prefectureCode),
+                           unlock: atlas.unlockGoalNoun(for: card))
                 .environment(\.textMode, mode)
                 .presentationBackground(.clear)
         }
@@ -128,7 +139,6 @@ struct CardBookView: View {
             }
             .padding(.vertical, 8)
         }
-        .background(Palette.page)
     }
 
     /// A tier's filter chip, lit in the tier's own colour when selected — the
@@ -160,12 +170,25 @@ struct CardBookView: View {
     /// Shown when a filter leaves nothing, so an empty book reads as "none yet"
     /// rather than as broken.
     @ViewBuilder private var emptyNote: some View {
-        if groups.isEmpty {
+        if isWorldBook ? worldCards.isEmpty : groups.isEmpty {
             Text(mode.notCollectedYet)
                 .font(AppFont.rounded(15, relativeTo: .body))
                 .foregroundStyle(Palette.ink.opacity(0.55))
                 .frame(maxWidth: .infinity)
                 .padding(.top, 40)
+        }
+    }
+
+    private var worldCardGrid: some View {
+        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10),
+                                 count: typeSize.cardColumns), spacing: 10) {
+            ForEach(worldCards) { card in
+                CardChipView(card: card,
+                             prefecture: atlas.mapData[card.prefectureCode],
+                             stars: save.stars(of: card.id),
+                             rainbow: save.isRainbow(card.id),
+                             onOpen: { open(card) })
+            }
         }
     }
 

@@ -2,7 +2,7 @@ import SwiftUI
 
 /// One card, held up and turned in the light.
 ///
-/// The book shows the same 141 cards as chips. This is the other half of owning
+/// The book shows its atlas's cards as chips. This is the other half of owning
 /// something: one card big enough to look at, that tilts under a finger the way
 /// a real one does when you angle it to catch the shine. The face is
 /// `CardFaceView` at full density — this file is the backdrop, the gestures and
