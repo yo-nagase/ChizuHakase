@@ -227,6 +227,16 @@ nonisolated extension TextMode {
     // alone is undiscoverable at five, so these tabs are the visible way).
     var toWorldAtlas: String { isKids ? "せかいの ちずへ" : "世界の地図へ" }
     var toJapanAtlas: String { isKids ? "にほんの ちずへ" : "日本の地図へ" }
+    var japanMapAttribution: String {
+        isKids
+            ? "ちずデータ: Global Map Japan (こくどちりいん) をもとに かんたんに しています"
+            : "地図データ: Global Map Japan (国土地理院) をもとに簡略化"
+    }
+    var worldMapAttribution: String {
+        isKids
+            ? "ちずデータ: Natural Earth をもとに かんたんに しています"
+            : "地図データ: Natural Earth をもとに簡略化"
+    }
     var learnedCount: String { isKids ? "おぼえた" : "覚えた" }
     var resetZoom: String { isKids ? "もとの おおきさ" : "元の大きさ" }
     // 地球儀 ⇄ 平面のトグルチップ(地球儀データを運ぶ本のチャレンジだけに

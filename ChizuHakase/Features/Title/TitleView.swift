@@ -183,13 +183,17 @@ struct TitleView: View {
                         // frame. These ceilings make the visible wordmark line
                         // up with the tally row instead of looking pinched
                         // above it. The overlay still consumes no map space.
-                        Image("TitleLogoFloating")
+                        Image(atlas.saveKey == SaveData.worldAtlas
+                              ? "TitleLogoWorld"
+                              : "TitleLogoFloating")
                             .resizable()
                             .scaledToFit()
                             .frame(maxWidth: isShort ? 390
                                                     : (hSize == .regular ? 500 : 405))
                             .accessibilityLabel(
-                                "\(mode.appTitleTop) \(mode.appTitleMain)"
+                                atlas.saveKey == SaveData.worldAtlas
+                                ? "\(mode.appTitleTop) \(mode.appTitleMain) World"
+                                : "\(mode.appTitleTop) \(mode.appTitleMain)"
                             )
                             .accessibilityAddTraits(.isHeader)
                     }
@@ -248,7 +252,7 @@ struct TitleView: View {
                 // album margins instead of one dead block over the footer.
                 Spacer(minLength: isShort ? 8 : 12)
 
-                footer
+                footer(for: atlas)
             }
             // The painted tally frames want to sit a little closer to the
             // page edge than ordinary text. This also gives the logo and the
@@ -260,15 +264,14 @@ struct TitleView: View {
         }
     }
 
-    /// Identical on both pages: the attribution is a title-screen duty
-    /// (CLAUDE.md §3) and both pages are the title.
-    ///
-    /// TODO(P6 Task 6 / リリース前): 世界地図の出典 (Natural Earth) を追記する。
-    /// パブリックドメインで法的義務はないが、国土地理院と同じ誠実さで書く —
-    /// 文言はストア準備と一緒に決める(P6 では保留)。
-    private var footer: some View {
+    /// Each page credits its own map source. This is child-facing text too:
+    /// the small size does not make kanji readable to a child using ひらがな
+    /// mode, so the wording follows the same `TextMode` as the rest of the page.
+    private func footer(for atlas: Atlas) -> some View {
         VStack(spacing: 2) {
-            Text("ちずデータ: Global Map Japan (国土地理院) をもとに簡略化")
+            Text(atlas.saveKey == SaveData.worldAtlas
+                 ? mode.worldMapAttribution
+                 : mode.japanMapAttribution)
                 .font(AppFont.rounded(10, relativeTo: .caption2))
                 .foregroundStyle(Palette.ink.opacity(0.42))
                 .multilineTextAlignment(.center)

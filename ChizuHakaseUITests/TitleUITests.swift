@@ -53,6 +53,9 @@ final class TitleUITests: XCTestCase {
                       "the world page did not come on after the page-edge tab")
         XCTAssertTrue(app.buttons["にほんの ちずへ"].isHittable,
                       "the world page must carry the visible way back")
+        XCTAssertTrue(app.staticTexts[
+            "ちずデータ: Natural Earth をもとに かんたんに しています"
+        ].isHittable, "the world map caption does not follow hiragana mode")
     }
 
     /// Swiping also turns the page (design doc §2: スワイプ併用) — the tab is
@@ -121,7 +124,9 @@ final class TitleUITests: XCTestCase {
             .firstMatch.isHittable, "the japan card tally is gone")
         XCTAssertTrue(app.buttons["title-play-japan"].isHittable,
                       "あそぶ is gone from the japan page")
-        XCTAssertTrue(app.staticTexts["ちずデータ: Global Map Japan (国土地理院) をもとに簡略化"]
+        XCTAssertTrue(app.staticTexts[
+            "ちずデータ: Global Map Japan (こくどちりいん) をもとに かんたんに しています"
+        ]
             .exists, "the map attribution left the title footer")
         XCTAssertTrue(app.buttons["せかいの ちずへ"].isHittable,
                       "the world's page-edge tab is missing from page one")

@@ -41,7 +41,10 @@ targets:
         # Executable/bundle name stays ASCII (TEST_HOST and codesign paths
         # depend on it); the Japanese name users see is the display name.
         PRODUCT_NAME: ChizuHakase
-        MARKETING_VERSION: "1.0"
+        # Single source of truth for the version the title screen shows
+        # (TitleView reads CFBundleShortVersionString). Bump ONLY here and run
+        # `xcodegen generate` — editing it in Xcode drifts from this file.
+        MARKETING_VERSION: "1.7"
         CURRENT_PROJECT_VERSION: "1"
         # Five characters: 「めざせ!ちずはかせ」 truncates under a home-screen
         # icon, and a name that ends in … is not a name a child can read.

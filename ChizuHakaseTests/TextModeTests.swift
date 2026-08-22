@@ -87,6 +87,17 @@ struct TextModeTests {
                 "only \(changed) of \(kids.count) strings change; the mode is barely doing anything")
     }
 
+    @Test func titlePageTurnLabelsFollowTheMode() {
+        #expect(TextMode.kids.toWorldAtlas == "せかいの ちずへ")
+        #expect(TextMode.adult.toWorldAtlas == "世界の地図へ")
+        #expect(TextMode.kids.toJapanAtlas == "にほんの ちずへ")
+        #expect(TextMode.adult.toJapanAtlas == "日本の地図へ")
+        #expect(!containsKanji(TextMode.kids.japanMapAttribution))
+        #expect(!containsKanji(TextMode.kids.worldMapAttribution))
+        #expect(TextMode.adult.japanMapAttribution.contains("国土地理院"))
+        #expect(TextMode.adult.worldMapAttribution.contains("Natural Earth"))
+    }
+
     @Test func everyChildFacingStringIsNonEmpty() {
         for mode in TextMode.allCases {
             for text in mode.allInterfaceStrings {
@@ -223,6 +234,7 @@ extension TextMode {
          becameSparkling(.prefecture), becameSparkling(.country), becameRainbow,
          starCount(3),
          sparklingCards, learnedTally(.prefecture), learnedTally(.country), ownedCards,
+         toWorldAtlas, toJapanAtlas, japanMapAttribution, worldMapAttribution,
          learnedCount, resetZoom, zoomHint, toGlobe, toFlatMap, rotateGlobe,
          AtlasNoun.eastJapan.label(self), AtlasNoun.middleJapan.label(self),
          AtlasNoun.westJapan.label(self),
