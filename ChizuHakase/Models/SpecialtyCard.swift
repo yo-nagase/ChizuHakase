@@ -2,7 +2,7 @@ import Foundation
 
 /// A collectible card belonging to one region of one atlas. Japan deals a
 /// prefecture's specialties (47 x 3 = 141); the world deals per-country cards,
-/// flag first (167 flags today, originals to follow).
+/// flag first (167 flags + 167 country originals today).
 nonisolated struct SpecialtyCard: Identifiable, Sendable, Hashable, Codable {
     enum Category: String, Sendable, Codable, CaseIterable {
         case food, landmark, nature, craft
