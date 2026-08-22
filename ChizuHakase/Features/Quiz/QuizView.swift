@@ -384,7 +384,7 @@ struct QuizView: View {
             }
         }
         .zoomPan(scale: $zoom, offset: $pan, oneFingerZoom: true,
-                 maxScale: stage.flatMaxZoom)
+                 maxScale: stage.flatMaxZoom, minScale: stage.flatMinZoom)
     }
 
     /// Codes a tap on either map may resolve to. Empty in 「なまえを あてる」:
@@ -403,20 +403,22 @@ struct QuizView: View {
             mapData: atlas.mapData,
             // A sampling challenge asks 47 countries out of the whole book,
             // but its map must still be the whole world — drawing only that
-            // sitting's sample leaves 120 country-shaped holes in the sea
-            // (the globe never had this hole: it draws every shape). On every
-            // non-sampling stage the two lists name the same shapes.
+            // sitting's sample leaves 120 country-shaped holes in the sea.
+            // Regional stages keep their question pool as the coloured layer;
+            // neighbouring countries sit in the grey context layer below.
             // Regional stages used to pass `quiz.order` here instead — the
             // same countries (the map deduplicates), just in question order —
             // so one list now serves every stage, and the drawn stack and
             // VoiceOver's reading order stop reshuffling with every sitting.
             codes: stage.codes,
+            contextCodes: surroundingCodes,
             appearance: { appearance(for: $0, quiz: quiz) },
             interactiveCodes: tappableCodes(quiz),
             targetCode: quiz.target?.code,
             hintCode: quiz.hintCode,
             effect: quiz.effect,
             zoom: zoom,
+            minZoom: stage.flatMinZoom,
             comboBurst: comboBurst,
             onTap: { prefecture, point in
                 // The clip hides everything outside the panel; the touch
@@ -427,6 +429,15 @@ struct QuizView: View {
                                         in: mapSize) else { return }
                 handleTap(prefecture, at: .point(point), quiz: quiz)
             })
+    }
+
+    /// Every recorded country outside a regional world stage. Japan keeps its
+    /// existing regional presentation; the challenge already contains the
+    /// whole atlas, so it needs no surrounding scenery layer either.
+    private var surroundingCodes: [Int] {
+        guard atlas.regionNoun == .country, !stage.isChallenge else { return [] }
+        let stageCodes = Set(stage.codes)
+        return atlas.mapData.prefectures.map(\.code).filter { !stageCodes.contains($0) }
     }
 
     /// The globe, wired the same way the flat map is — same appearance
@@ -491,8 +502,12 @@ struct QuizView: View {
         // Whichever camera is on screen is the one the button resets — the
         // flat ×4 and the globe's radius multiplier are separate coordinate
         // systems (`toggleMapDisplay`). The globe's rotation is not reset:
-        // where the child turned the world is not a mistake to undo.
-        if mapDisplay == .globe ? ZoomPan.isZoomed(globeZoom) : ZoomPan.isZoomed(zoom) {
+        // where the child turned the world is not a mistake to undo. The flat
+        // map answers to the chip in both directions — a world regional stage
+        // pinched out below the fit needs the same one-press way home.
+        if mapDisplay == .globe
+            ? ZoomPan.isZoomed(globeZoom)
+            : ZoomPan.isZoomed(zoom) || ZoomPan.isZoomedOut(zoom) {
             mapChip(mode.resetZoom) {
                 let reset = {
                     if mapDisplay == .globe {

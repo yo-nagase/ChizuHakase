@@ -714,6 +714,52 @@ struct GameRulesTests {
             challengeSpan: CGSize(width: 100, height: 80),
             stageSpans: [.zero, CGSize(width: 50, height: 40)]) == GameRules.mapMaxZoom)
     }
+
+    // MARK: - Regional flat zoom floor (世界の地方ステージの縮小)
+
+    /// 床は「ステージ枠 / 全体枠」の軸ごとの比の小さい方。細長いステージは
+    /// 細い軸の側まで引かないと全体が枠に入らない — 上限が大きい方の比を
+    /// 採るのと鏡合わせ。
+    @Test func 縮小の床は小さい方の枠比を選ぶ() {
+        let floor = GameRules.regionalFlatMinZoom(
+            bookSpan: CGSize(width: 100, height: 80),
+            stageSpan: CGSize(width: 10, height: 40))
+        #expect(abs(floor - 0.1) < 0.001)
+    }
+
+    /// 床まで引けばどのフレーム比でも全体が入る — 上限と同じ「フレームを
+    /// 知らないままデバイス非依存で保証する」比であることの確認。
+    @Test func 床まで引けばどのフレームでも全体が入る() {
+        let book = CGSize(width: 100, height: 80)
+        let stage = CGSize(width: 10, height: 40)
+        let floor = GameRules.regionalFlatMinZoom(bookSpan: book, stageSpan: stage)
+        for frame in [CGSize(width: 300, height: 300),
+                      CGSize(width: 200, height: 600),
+                      CGSize(width: 800, height: 250)] {
+            let stageFit = min(frame.width / stage.width,
+                               frame.height / stage.height)
+            // 床の縮小率で描いたとき、フレームが覗ける地図上の範囲。
+            let visible = CGSize(width: frame.width / (stageFit * floor),
+                                 height: frame.height / (stageFit * floor))
+            #expect(visible.width >= book.width - 0.001)
+            #expect(visible.height >= book.height - 0.001)
+        }
+    }
+
+    /// 本と同じ大きさのステージに引く先は無い — 床が 1 を超えることはない。
+    @Test func 全体と同じ枠のステージは床1() {
+        #expect(GameRules.regionalFlatMinZoom(
+            bookSpan: CGSize(width: 100, height: 80),
+            stageSpan: CGSize(width: 100, height: 80)) == 1)
+    }
+
+    /// 空・退化した枠は 0 や NaN ではなく 1(縮小なし)へ倒れる。
+    @Test func 退化した枠は床を壊さない() {
+        #expect(GameRules.regionalFlatMinZoom(
+            bookSpan: .zero, stageSpan: CGSize(width: 10, height: 10)) == 1)
+        #expect(GameRules.regionalFlatMinZoom(
+            bookSpan: CGSize(width: 100, height: 80), stageSpan: .zero) == 1)
+    }
 }
 
 /// Deterministic RNG so card-draw tests are reproducible.

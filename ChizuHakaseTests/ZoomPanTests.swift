@@ -299,4 +299,33 @@ struct ZoomPanTests {
         #expect(ZoomPan.scale(1, liftedBy: 5_000, max: 17) == 17)
         #expect(ZoomPan.scale(1, liftedBy: 5_000) == ZoomPan.maxScale)
     }
+
+    // MARK: - Per-map floor
+
+    /// A world regional stage passes a floor below 1 (`Stage.flatMinZoom`) so
+    /// the same pinch that magnifies the region can also shrink it until the
+    /// whole world is in the frame; every other map omits the argument and
+    /// keeps the default floor — nothing there may move by a pixel.
+    @Test func aLowerFloorLetsThePinchBelowTheFit() {
+        #expect(ZoomPan.clamp(scale: 0.3, min: 0.2) == 0.3)
+        #expect(ZoomPan.clamp(scale: 0.1, min: 0.2) == 0.2)
+        #expect(ZoomPan.clamp(scale: 0.3) == ZoomPan.minScale)
+    }
+
+    /// One finger and two share the floor the way they share the ceiling.
+    @Test func slidingObeysTheLowerFloor() {
+        #expect(abs(ZoomPan.scale(1, liftedBy: -5_000, min: 0.2) - 0.2) < 0.001)
+        #expect(ZoomPan.scale(1, liftedBy: -5_000) == ZoomPan.minScale)
+    }
+
+    /// Zoomed out is its own state: not zoomed (there is nothing to pan — the
+    /// offset clamp keeps the shrunken map centred), but not at rest either
+    /// (the reset chip must show the way home).
+    @Test func belowTheFitCountsAsZoomedOutNotZoomed() {
+        #expect(ZoomPan.isZoomedOut(0.5))
+        #expect(!ZoomPan.isZoomed(0.5))
+        #expect(!ZoomPan.isZoomedOut(1))
+        #expect(!ZoomPan.isZoomedOut(0.999))
+        #expect(!ZoomPan.isZoomedOut(2))
+    }
 }

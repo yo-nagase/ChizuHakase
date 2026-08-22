@@ -123,6 +123,10 @@ struct PrefectureMapView: View {
     let mapData: MapData
     /// Prefectures to draw, in stage order.
     let codes: [Int]
+    /// Other recorded land that falls around this stage, drawn as quiet,
+    /// untappable scenery. A regional world stage used to omit neighbouring
+    /// countries altogether, making real land look exactly like open sea.
+    var contextCodes: [Int] = []
     var appearance: (Prefecture) -> PrefectureAppearance
     /// Prefectures a tap may resolve to. Usually the not-yet-answered ones.
     var interactiveCodes: Set<Int> = []
@@ -144,8 +148,14 @@ struct PrefectureMapView: View {
     /// Outlines are drawn before `scaleEffect` is applied, so at 4x a 1.5pt
     /// border lands as 6pt and swallows the small prefectures whole. Dividing
     /// by the zoom keeps every line the same width on the glass no matter how
-    /// far in the child has pinched.
+    /// far the child has pinched — in, or (on a world regional stage) out.
     var zoom: CGFloat = 1
+    /// How far below the at-rest fit the caller may let `zoom` fall
+    /// (`Stage.flatMinZoom`). The scenery layers and the clip overscan to this
+    /// floor up front rather than following `zoom`: the zoom binding only
+    /// settles when a gesture ends, so growing the drawing lazily would show a
+    /// pinching child blank sea that pops into continents on release.
+    var minZoom: CGFloat = 1
     var comboBurst: ComboBurst?
     /// Hands back what was hit and where the finger actually landed, in this
     /// view's own coordinates.
@@ -167,6 +177,8 @@ struct PrefectureMapView: View {
                 if showsBackground {
                     backgroundLayer(transform: transform, canvasSize: geo.size)
                 }
+
+                contextLayer(transform: transform, canvasSize: geo.size)
 
                 if showsInsetFrames {
                     ForEach(mapData.insets, id: \.code) { inset in
@@ -202,12 +214,19 @@ struct PrefectureMapView: View {
             .frame(width: geo.size.width, height: geo.size.height)
             // Siberia and the background coastlines deliberately overflow the
             // stage frame (frame calculation and drawn extent are separate
-            // things — Prefecture.frameBbox). Cut the overflow at the map's
-            // own edge; nothing on the japan map reaches it, so nothing there
-            // changes. Overlays below (the combo stamp) attach after the clip
-            // and keep their own inside-the-canvas clamping.
-            .clipped()
-            .contentShape(Rectangle())
+            // things — Prefecture.frameBbox). Cut the overflow at the edge of
+            // what a zoom-out can ever reveal — the frame itself when the
+            // floor is 1, the floor's wider window on a world regional stage
+            // (the panel's own clip trims the rest after the scaleEffect).
+            // Overlays below (the combo stamp) attach after the clip and keep
+            // their own inside-the-canvas clamping.
+            .clipShape(Rectangle().scale(overscan, anchor: .center))
+            // The touch surface matches the drawn surface: zoomed out, the
+            // glass around the shrunken region maps to content coordinates
+            // outside the frame, and a bounds-sized shape would go deaf
+            // there. Taps resolving to nothing still land in `handleTap`'s
+            // ignore branch, the same as open sea has always done.
+            .contentShape(Rectangle().scale(overscan, anchor: .center))
             .onTapGesture { location in
                 guard let onTap else { return }
                 onTap(resolve(location, transform: transform), location)
@@ -218,6 +237,48 @@ struct PrefectureMapView: View {
         }
     }
 
+    /// How much wider than the frame the drawing and its clip must reach so
+    /// the zoom floor has something to reveal — 1 wherever the floor is 1.
+    private var overscan: CGFloat {
+        1 / min(max(minZoom, 0.01), 1)
+    }
+
+    /// The window a fully pinched-out map shows, in this view's own
+    /// coordinates — the culling rect for the scenery layers. Kept at the
+    /// floor rather than at the current zoom (see `minZoom`).
+    private func drawableRect(_ canvasSize: CGSize) -> CGRect {
+        CGRect(origin: .zero, size: canvasSize)
+            .insetBy(dx: -canvasSize.width * (overscan - 1) / 2,
+                     dy: -canvasSize.height * (overscan - 1) / 2)
+    }
+
+    /// Recorded prefectures/countries outside the current stage. They share
+    /// the unrecorded coastline's grey so every non-question landmass has one
+    /// meaning, while the coloured stage remains the only answer surface.
+    /// Combined into one path and hidden from accessibility: this is geographic
+    /// context, not another set of buttons.
+    @ViewBuilder private func contextLayer(transform: CGAffineTransform,
+                                           canvasSize: CGSize) -> some View {
+        let stageCodes = Set(codes)
+        let canvasRect = drawableRect(canvasSize)
+        let path = mapData.prefectures(in: contextCodes).reduce(into: Path()) { path, pref in
+            guard !stageCodes.contains(pref.code),
+                  pref.bbox.applying(transform).intersects(canvasRect)
+            else { return }
+            path.addPath(PrefectureGeometry.path(for: pref, transform: transform))
+        }
+        if !path.isEmpty {
+            ZStack(alignment: .topLeading) {
+                path.fill(Palette.backgroundLand, style: FillStyle(eoFill: true))
+                path.stroke(Palette.backgroundShore,
+                            lineWidth: MapStroke.hairlineWidth(
+                                canvasWidth: canvasSize.width, zoom: zoom))
+            }
+            .allowsHitTesting(false)
+            .accessibilityHidden(true)
+        }
+    }
+
     /// The unrecorded coastlines that fall inside the visible canvas, as one
     /// quiet grey landmass (CLAUDE.md §3 — leaving them out draws false sea).
     /// One combined path, filled once: it is scenery, so adjacent shapes may
@@ -225,7 +286,7 @@ struct PrefectureMapView: View {
     /// Not tappable and hidden from VoiceOver for the same reason.
     @ViewBuilder private func backgroundLayer(transform: CGAffineTransform,
                                               canvasSize: CGSize) -> some View {
-        let canvasRect = CGRect(origin: .zero, size: canvasSize)
+        let canvasRect = drawableRect(canvasSize)
         let path = mapData.background.reduce(into: Path()) { path, shape in
             // The world's background covers the globe; a stage sees a corner.
             guard shape.bbox.applying(transform).intersects(canvasRect) else { return }
@@ -258,7 +319,7 @@ struct PrefectureMapView: View {
             let safePoint = comboPoint(point, radius: radius,
                                        transform: transform, canvasSize: canvasSize)
             ComboBurstLabel(burst: comboBurst, reduceMotion: reduceMotion)
-                .scaleEffect(1 / max(zoom, 1))
+                .scaleEffect(1 / ZoomPan.magnification(zoom))
                 .position(safePoint)
                 .allowsHitTesting(false)
                 // Keyed on the burst so a second streak restarts the animation
@@ -325,15 +386,16 @@ struct PrefectureMapView: View {
 
     /// Direct hit first, then the near-miss allowance for the asked prefecture.
     ///
-    /// The allowance shrinks with the zoom for the same reason the outlines do:
+    /// The allowance follows the zoom for the same reason the outlines do:
     /// taps arrive in this view's own coordinates, so a fixed 22 units becomes
     /// 22 x zoom on the glass. Left alone, a pinched-in map would hand the
-    /// answer to a tap most of a thumb away from the prefecture.
+    /// answer to a tap most of a thumb away from the prefecture — and a
+    /// pinched-out one would demand aim finer than the finger doing it.
     private func resolve(_ point: CGPoint, transform: CGAffineTransform) -> Prefecture? {
         let candidates = prefectures.filter { interactiveCodes.contains($0.code) }
         guard !candidates.isEmpty else { return nil }
         let target = targetCode.flatMap { mapData[$0] }
-        let magnification = max(zoom, 1)
+        let magnification = ZoomPan.magnification(zoom)
         return PrefectureGeometry.resolveTap(
             at: point, target: target, among: candidates, transform: transform,
             tolerance: GameRules.tapTolerancePoints / magnification,
@@ -353,7 +415,7 @@ nonisolated enum MapStroke {
     /// subject rather than the country. Divided by the zoom because the stroke
     /// is drawn inside the magnified content (see `PrefectureMapView.zoom`).
     static func hairlineWidth(canvasWidth: CGFloat, zoom: CGFloat) -> CGFloat {
-        min(max(canvasWidth * 0.0019, 0.3), 0.7) / max(zoom, 1)
+        min(max(canvasWidth * 0.0019, 0.3), 0.7) / ZoomPan.magnification(zoom)
     }
 
     /// One weight for every red ring — the asked-about shape and the blinking
@@ -393,7 +455,7 @@ private struct PrefectureLayer: View {
     /// The white die-cut has to scale with the render, or an 84pt stage
     /// thumbnail is drawn almost entirely in border and the colour disappears.
     private var dieCutWidth: CGFloat {
-        min(max(canvasSize.width * 0.009, 0.5), 3) / max(zoom, 1)
+        min(max(canvasSize.width * 0.009, 0.5), 3) / ZoomPan.magnification(zoom)
     }
 
     /// The prefecture boundary itself (see `MapStroke.hairlineWidth`).
@@ -402,7 +464,7 @@ private struct PrefectureLayer: View {
     }
 
     /// The red rings, drawn inside the magnification (see `MapStroke.ringWidth`).
-    private var ringWidth: CGFloat { MapStroke.ringWidth / max(zoom, 1) }
+    private var ringWidth: CGFloat { MapStroke.ringWidth / ZoomPan.magnification(zoom) }
 
     private var anchor: UnitPoint {
         guard canvasSize.width > 0, canvasSize.height > 0 else { return .center }
@@ -469,7 +531,8 @@ private struct PrefectureLayer: View {
             // answers to the same prefecture.
             if appearance.isStuck, case .pop? = effect?.kind {
                 CorrectFoilTrace(path: path,
-                                 lineWidth: max(dieCutWidth * 0.8, 1 / max(zoom, 1)),
+                                 lineWidth: max(dieCutWidth * 0.8,
+                                                1 / ZoomPan.magnification(zoom)),
                                  reduceMotion: reduceMotion)
                     .id(effect?.id)
             }

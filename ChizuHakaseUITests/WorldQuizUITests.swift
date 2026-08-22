@@ -49,6 +49,37 @@ final class WorldQuizUITests: XCTestCase {
                       "a correct first tap on \(target) should score 100")
     }
 
+    /// A world regional stage pinches *out* below its fit (2026-08-22 plan):
+    /// the road to 「この地方は世界のどのあたり?」. Shrinking summons the same
+    /// 「もとの おおきさ」 chip zooming in does, and the chip brings the
+    /// region's fit back. The world that appears around it is the context
+    /// layer — scenery hidden from accessibility — so no element count can
+    /// see it; the look is reviewed on the attached screenshot. Japan's maps
+    /// keep their floor: MyMapUITests pins that a pinch closed from rest
+    /// still does nothing there.
+    func testWorldRegionalStagePinchesOutToShowTheWorld() {
+        app.launchArguments = ["-resetSave", "-atlas", "world", "-startAt", "quiz:15"]
+        app.launch()
+        XCTAssertTrue(app.staticTexts["12 もんちゅう 1 もんめ"].waitForExistence(timeout: 10),
+                      "the world quiz never appeared")
+        let reset = app.buttons["もとの おおきさ"]
+        XCTAssertFalse(reset.exists, "the reset chip shows before any zoom")
+
+        // Anchored on China: its proxy spans most of the stage, giving the
+        // synthesised two-finger gesture room a small island's 44pt square
+        // would not.
+        let anchor = app.buttons["中華人民共和国"]
+        XCTAssertTrue(anchor.waitForExistence(timeout: 5))
+        anchor.pinch(withScale: 0.4, velocity: -1)
+
+        XCTAssertTrue(reset.waitForExistence(timeout: 5),
+                      "pinching closed did not shrink the region below its fit")
+        record("world-regional-zoomed-out")
+        reset.tap()
+        XCTAssertFalse(reset.waitForExistence(timeout: 2),
+                       "the reset chip did not bring the fit back")
+    }
+
     /// The world challenge opens on the globe (P7 Task 6): the toggle chip is
     /// there offering the flat map, the globe labels visible countries by
     /// their reading — home is front and centre — and the flat map's
@@ -199,7 +230,10 @@ final class WorldQuizUITests: XCTestCase {
 
         // The cards this run won are the world's flags, under the world's own
         // panel title — 「とくさんひん」 is japan's word (P6 Task 6)…
-        XCTAssertTrue(chip(named: "こっき").waitForExistence(timeout: 3),
+        let flagCard = app.buttons.matching(
+            NSPredicate(format: "label CONTAINS %@", "ほし")
+        ).firstMatch
+        XCTAssertTrue(flagCard.waitForExistence(timeout: 3),
                       "no flag card in the world result's card panel")
         XCTAssertTrue(app.staticTexts["せかいの カード"].exists,
                       "the world result's card panel is not titled せかいの カード")
@@ -369,32 +403,44 @@ final class WorldQuizUITests: XCTestCase {
         app.buttons["やめる"].tap()
     }
 
-    /// The world card book: flag cards from the world's catalog, and only the
-    /// categories the world actually deals (こっき — no japan chips).
+    /// The world card book: flag cards and country-original categories from
+    /// the world's catalog. All five filters are useful now that every country
+    /// has a second card.
     func testWorldCardBookShowsFlagsFromTheWorldBook() {
         app.launchArguments = ["-resetSave", "-atlas", "world", "-grantCards",
                                "-startAt", "cardBook"]
         app.launch()
         XCTAssertTrue(app.buttons["🚩 こっき"].waitForExistence(timeout: 10),
                       "the world book has no flag category chip")
-        XCTAssertFalse(app.buttons["🍙 たべもの"].exists,
-                       "a japan-only category chip showed in the world book")
-        // -grantCards deals three world cards; the denominator is the world's.
-        XCTAssertTrue(app.staticTexts["3 / 167"].exists,
+        for category in ["🍙 たべもの", "🏯 めいしょ", "🌲 しぜん", "🎨 つくるもの"] {
+            XCTAssertTrue(app.buttons[category].exists,
+                          "the world book is missing its \(category) originals")
+        }
+        // -grantCards deals three flags plus one original; the denominator is
+        // the world's full two-cards-per-country catalog.
+        XCTAssertTrue(app.staticTexts["4 / 334"].exists,
                       "the owned count is not reading the world's slice")
 
-        // Open the first owned flag — アルジェリア's, the colliding "12-1".
-        // Its description proves which catalog answered: japan's 12-1 talks
-        // about peanuts, the world's about アルジェリア's flag.
-        // Assumes catalog order puts "12-1" first among the three granted
-        // flags (ISO 12 < 36 < 392) — the book lists cards in catalog order.
-        let card = chip(named: "こっき")
+        // The world book is one acquisition-order grid, without country
+        // headings. -grantCards deals Australia first, then Algeria, then
+        // Japan. The cards now name those countries instead of all saying
+        // 「こっき」; opening Australia pins the visible acquisition order too.
+        XCTAssertTrue(chip(named: "あるじぇりあ").exists,
+                      "the Algeria flag does not show its country name")
+        XCTAssertTrue(chip(named: "にほん").exists,
+                      "the Japan flag does not show its country name")
+        let original = app.buttons.matching(NSPredicate(
+            format: "label CONTAINS %@", "おーすとらりあ。ぐれーとばりありーふ"
+        )).firstMatch
+        XCTAssertTrue(original.exists,
+                      "the world original card does not show its country name")
+        let card = chip(named: "おーすとらりあ")
         XCTAssertTrue(card.waitForExistence(timeout: 5), "no owned flag card in the book")
         card.tap()
         XCTAssertTrue(app.buttons["とじる"].waitForExistence(timeout: 3),
                       "tapping a flag card did not open it")
-        XCTAssertTrue(app.staticTexts["あるじぇりあの こっきだよ"].exists,
-                      "the opened card is not the world's 12-1")
+        XCTAssertTrue(app.staticTexts["おーすとらりあの こっきだよ"].exists,
+                      "the first card is not the first one granted")
         XCTAssertFalse(anythingNamed("らっかせい"),
                        "japan's 12-1 leaked into the world card book")
     }

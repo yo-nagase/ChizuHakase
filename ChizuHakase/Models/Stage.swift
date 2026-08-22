@@ -29,15 +29,27 @@ nonisolated struct Stage: Identifiable, Sendable, Equatable {
     /// (`GameRules.challengeFlatMaxZoom`) and carries it here as a value, keeping
     /// the view free of any japan/world branch.
     let flatMaxZoom: CGFloat
+    /// How far this stage's flat map may be pinched *out*, below the at-rest
+    /// fit. Almost every stage keeps 1: japan's regional maps draw no
+    /// neighbouring scenery, so shrinking them would only reveal false sea,
+    /// and a challenge frame already holds its whole book. The world's
+    /// regional stages are the exception — where the region sits on the globe
+    /// is part of what they teach — so their atlas derives a floor from the
+    /// data (`GameRules.regionalFlatMinZoom`) that lets a pinch shrink the
+    /// region until the whole world is in the frame, and carries it here the
+    /// same way `flatMaxZoom` carries the ceiling: as a value, never a branch.
+    let flatMinZoom: CGFloat
 
     init(index: Int, name: String, kanjiName: String, codes: [Int],
-         isChallenge: Bool = false, flatMaxZoom: CGFloat = GameRules.mapMaxZoom) {
+         isChallenge: Bool = false, flatMaxZoom: CGFloat = GameRules.mapMaxZoom,
+         flatMinZoom: CGFloat = 1) {
         self.index = index
         self.name = name
         self.kanjiName = kanjiName
         self.codes = codes
         self.isChallenge = isChallenge
         self.flatMaxZoom = flatMaxZoom
+        self.flatMinZoom = flatMinZoom
     }
 
     var id: Int { index }

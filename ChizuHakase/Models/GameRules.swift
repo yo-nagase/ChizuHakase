@@ -210,6 +210,28 @@ nonisolated enum GameRules {
         return max(mapMaxZoom, ratios.max() ?? mapMaxZoom)
     }
 
+    /// The zoom floor for a world regional stage's flat map — how far the
+    /// same pinch and hold-slide that magnify it may also *shrink* it, so a
+    /// child can pull back and see where in the world the region sits.
+    ///
+    /// The mirror of `challengeFlatMaxZoom`, derived from the same spans:
+    /// aspect-fitting into any W×H frame draws the stage at `min(W/w, H/h)`
+    /// and the whole book at `min(W/cw, H/ch)`, and their quotient is never
+    /// below `min(w/cw, h/ch)` whatever W and H are. So a floor of that ratio
+    /// always lets the whole book into the frame, on any device, without the
+    /// data ever knowing the frame. Never above 1 — a stage the size of its
+    /// book has nothing to reveal, and a floor past 1 would forbid rest.
+    ///
+    /// Degenerate spans return 1 (no zoom-out) rather than divide: a data
+    /// hole must not become a map that can shrink away to nothing.
+    static func regionalFlatMinZoom(bookSpan: CGSize,
+                                    stageSpan: CGSize) -> CGFloat {
+        guard bookSpan.width > 0, bookSpan.height > 0,
+              stageSpan.width > 0, stageSpan.height > 0 else { return 1 }
+        return min(1, min(stageSpan.width / bookSpan.width,
+                          stageSpan.height / bookSpan.height))
+    }
+
     /// Screen-space slack for taps that miss every prefecture (CLAUDE.md §3).
     static let tapTolerancePoints: CGFloat = 22
     /// Head start the prefecture being asked about gets when a tap falls

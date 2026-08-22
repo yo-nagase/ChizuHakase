@@ -237,13 +237,15 @@ struct AtlasTests {
 
     // MARK: - 世界のカード目録(WorldCards.json)
 
-    /// 国旗 167 枚 + オリジナル 6 枚(P8 パイロット: ひがしアジア)。
+    /// 全 167 カ国が国旗 + オリジナルを 1 枚ずつ持つ。
     /// オリジナルは絵文字先行(P8 裁定 1)— 絵は後続バッチが持ってくる。
-    @Test func 世界の目録は国旗167枚とオリジナル6枚() throws {
+    @Test func 世界の目録は国旗とオリジナルが167枚ずつ() throws {
         let atlas = try worldAtlas()
-        #expect(atlas.cards.count == 173)
+        #expect(atlas.cards.count == 334)
         let flags = atlas.cards.all.filter { $0.category == .flag }
+        let originals = atlas.cards.all.filter { $0.category != .flag }
         #expect(flags.count == 167)
+        #expect(originals.count == 167)
         for card in flags {
             #expect(card.art == nil, "\(card.id): 絵文字が国旗そのもの、絵は持たない")
         }
@@ -275,6 +277,18 @@ struct AtlasTests {
         }
     }
 
+    /// 国旗の絵だけでは国を見分けられない子もいるため、札面のタイトルは
+    /// 「国旗」ではなく持ち主の国名を表示する。かな/通常表記とも地図データを
+    /// 正本にして、図鑑とクイズで国名が食い違わないようにする。
+    @Test func 国旗カードのタイトルは国名() throws {
+        let atlas = try worldAtlas()
+        for pref in atlas.mapData.prefectures {
+            let flag = try #require(atlas.cards.cards(for: pref.code).first)
+            #expect(flag.nameKana == pref.kana, "code \(pref.code)")
+            #expect(flag.nameKanji == pref.name, "code \(pref.code)")
+        }
+    }
+
     /// オリジナル札(P8): id は "{code}-2" で、国旗の直後 = その国の 2 枚目に
     /// 立つ。国旗は -1 の持ち場なので、-2 が flag を名乗ったら生成器の誤り。
     @Test func オリジナル札は国旗の直後に立ち国旗を名乗らない() throws {
@@ -290,25 +304,29 @@ struct AtlasTests {
         }
     }
 
-    /// ひがしアジアのパイロット 6 カ国(P8 Task 1)。題材の選び方と文言の調子は
-    /// ここで確立してユーザーサインオフを得る — 残り 161 カ国はその後のバッチ。
-    @Test func パイロット6カ国はオリジナル札を持つ() throws {
+    /// パイロットのサインオフ後に全地域へ展開済み。国旗先行ゲートは 2 枚目が
+    /// ある前提で解放を約束するので、1 国でも欠けたら目録を出荷しない。
+    @Test func 全収録国がオリジナル札を持つ() throws {
         let atlas = try worldAtlas()
-        for code in [156, 158, 392, 408, 410, 496] {
-            #expect(atlas.cards.cards(for: code).count == 2, "code \(code)")
+        for pref in atlas.mapData.prefectures {
+            let cards = atlas.cards.cards(for: pref.code)
+            #expect(cards.count == 2, "code \(pref.code)")
+            #expect(cards.last?.id == "\(pref.code)-2", "code \(pref.code)")
         }
     }
 
-    /// 説明文はこども表記: ひらがな・カタカナ・語間スペース・長音だけ。
+    /// 読みと説明文はこども表記: ひらがな・カタカナ・語間スペース・長音だけ。
     /// 漢字が混ざったら生成器の検査漏れ(読めない子に届かない札になる)。
-    @Test func 全札の説明はかなとスペースだけでできている() throws {
+    @Test func 全札の読みと説明はかなとスペースだけでできている() throws {
         for card in try worldAtlas().cards.all {
-            for scalar in card.description.unicodeScalars {
-                let value = scalar.value
-                let allowed = value == 0x20 || value == 0x30FC
-                    || (0x3041...0x3096).contains(value)
-                    || (0x30A1...0x30FA).contains(value)
-                #expect(allowed, "\(card.id): \(card.description) に \(scalar)")
+            for text in [card.nameKana, card.description] {
+                for scalar in text.unicodeScalars {
+                    let value = scalar.value
+                    let allowed = value == 0x20 || value == 0x30FC
+                        || (0x3041...0x3096).contains(value)
+                        || (0x30A1...0x30FA).contains(value)
+                    #expect(allowed, "\(card.id): \(text) に \(scalar)")
+                }
             }
         }
     }
@@ -360,7 +378,7 @@ struct AtlasTests {
     /// (上のテストはテスト用 URL 経由なので、リソースがアプリターゲットに
     /// 入り忘れてもすり抜ける。)
     @Test func バンドルからの読み込みもカードを運ぶ() {
-        #expect(Atlas.loadWorld().cards.count == 173)
+        #expect(Atlas.loadWorld().cards.count == 334)
     }
 
     /// 引き継ぎ 2 の罠を実データで固定する: カード ID は 2 冊の間で文字列
@@ -372,12 +390,17 @@ struct AtlasTests {
     @Test func カードIDは本の間で衝突し目録ごとに別の札へ解決する() {
         let japanIDs = Set(Self.japanCards.all.map(\.id))
         let collisions = japanIDs.intersection(Self.worldCards.all.map(\.id))
-        #expect(collisions.count == 7, "collisions = \(collisions.sorted())")
+        let expected = Set([12, 24, 31, 32, 36, 40, 44].flatMap {
+            ["\($0)-1", "\($0)-2"]
+        })
+        #expect(collisions == expected, "collisions = \(collisions.sorted())")
         for id in collisions {
             #expect(Self.japanCards[id]?.category != .flag,
                     "\(id): japan's card should not be a flag")
-            #expect(Self.worldCards[id]?.category == .flag,
-                    "\(id): world's card should be a flag")
+            #expect((Self.worldCards[id]?.category == .flag) == id.hasSuffix("-1"),
+                    "\(id): world's first card alone should be a flag")
+            #expect(Self.japanCards[id] != Self.worldCards[id],
+                    "\(id): the two books resolved to the same card")
         }
     }
 
@@ -538,13 +561,14 @@ struct AtlasTests {
 
     /// 国旗がシルバーに達するとオリジナル札が解放される(flagFirstSilverGate)
     /// ので、その国旗の「あと◯」はシルバーではなく解放される物を名乗る。
-    /// 予告は嘘をつかない(P8 裁定 3): 名詞が返るのは 2 枚目が目録に実在する
-    /// 国の国旗だけ。
+    /// 予告は嘘をつかない(P8 裁定 3): 全収録国に 2 枚目が実在するので、
+    /// すべての国旗がオリジナルカードの解放を名乗る。
     @Test func 世界の国旗札はオリジナル解放を予告する() throws {
         let atlas = try worldAtlas()
-        for code in [156, 158, 392, 408, 410, 496] {
-            let flag = try #require(atlas.cards["\(code)-1"])
-            #expect(atlas.unlockGoalNoun(for: flag) == .originalCard, "code \(code)")
+        for pref in atlas.mapData.prefectures {
+            let flag = try #require(atlas.cards["\(pref.code)-1"])
+            #expect(atlas.unlockGoalNoun(for: flag) == .originalCard,
+                    "code \(pref.code)")
         }
     }
 
@@ -553,15 +577,6 @@ struct AtlasTests {
         let atlas = try worldAtlas()
         let original = try #require(atlas.cards["156-2"])
         #expect(atlas.unlockGoalNoun(for: original) == nil)
-    }
-
-    /// 2 枚目がまだ目録に無い国(パイロット外)の国旗は従来の「シルバー」の
-    /// まま — 実在しない札を約束しない。
-    @Test func 二枚目の無い国の国旗は解放を予告しない() throws {
-        let atlas = try worldAtlas()
-        let flag = try #require(atlas.cards["4-1"]) // アフガニスタン(国旗のみ)
-        #expect(atlas.cards.cards(for: 4).count == 1, "前提が崩れた: 4 に 2 枚目がある")
-        #expect(atlas.unlockGoalNoun(for: flag) == nil)
     }
 
     /// 日本の抽選は .random でゲートが無い — どの札も解放を予告しない。
@@ -665,6 +680,45 @@ struct AtlasTests {
     @Test func 日本の全ステージの平面ズーム上限は既定のまま() {
         for stage in Stage.all {
             #expect(stage.flatMaxZoom == GameRules.mapMaxZoom)
+        }
+    }
+
+    // MARK: - 平面ズームの床(世界の地方ステージの縮小・2026-08-22 計画)
+
+    /// 地方 18 面は全収録国の枠が入るまでピンチで引ける — 「この地方は
+    /// 世界のどのあたりか」は地方の切り取りの外にしか描かれていない。
+    /// 床は上限と同じ枠(`frameBbox ?? bbox`)から独立に再計算して
+    /// 運ばれた値と突き合わせる。
+    @Test func 世界の地方ステージは全体が入るまで縮小できる() throws {
+        let atlas = try worldAtlas()
+        var frames: [Int: CGRect] = [:]
+        for prefecture in atlas.mapData.prefectures {
+            frames[prefecture.code] = prefecture.frameBbox ?? prefecture.bbox
+        }
+        let bookBox = frames.values.reduce(CGRect.null) { $0.union($1) }
+        for stage in atlas.stages where !stage.isChallenge {
+            let box = stage.codes.compactMap { frames[$0] }
+                .reduce(CGRect.null) { $0.union($1) }
+            let expected = min(1, min(box.width / bookBox.width,
+                                      box.height / bookBox.height))
+            #expect(stage.flatMinZoom > 0)
+            #expect(stage.flatMinZoom < 1)
+            #expect(abs(stage.flatMinZoom - expected) < 0.001)
+        }
+    }
+
+    /// せかいチャレンジの枠は既に全世界 — 引いて見せる外側が無いので
+    /// 床は既定の 1 のまま。
+    @Test func 世界チャレンジの床は既定のまま() throws {
+        let challenge = try #require(try worldAtlas().stages.first { $0.isChallenge })
+        #expect(challenge.flatMinZoom == 1)
+    }
+
+    /// 日本は全ステージ床 1 — 地方ステージは周辺県を描いておらず、縮小して
+    /// 見えるのは偽の海だけ。今日の挙動から 1 ピクセルも動かさない。
+    @Test func 日本の全ステージの縮小の床は既定のまま() {
+        for stage in Stage.all {
+            #expect(stage.flatMinZoom == 1)
         }
     }
 

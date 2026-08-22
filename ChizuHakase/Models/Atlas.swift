@@ -73,7 +73,7 @@ nonisolated struct Atlas: Sendable {
     /// チャレンジステージのワンプレスズーム(日本 = 3 分割、世界 = 空 —
     /// 世界チャレンジの平面は地球儀の控えで、ボタンを育てる場所ではない)。
     let regionZooms: [RegionZoom]
-    /// 日本は SpecialtyCards.json、世界は WorldCards.json(国旗のみ。
+    /// 日本は SpecialtyCards.json、世界は WorldCards.json(国旗 + オリジナル。
     /// オリジナル札は P6)。読み込み失敗は空(空の本 > クラッシュ)。
     let cards: CardCatalog
     /// カード抽選の方針(設計 §5「規則の差分」)。日本と世界の唯一の規則差で、
@@ -294,6 +294,18 @@ nonisolated struct Atlas: Sendable {
                 .map { $0.frameBbox ?? $0.bbox }
                 .reduce(CGRect.null) { $0.union($1) }.size
         }
+        // 縮小の床は上限と同じ枠から導く(2026-08-22 計画): 地方 18 面は
+        // 全収録国の枠が収まるまでピンチで引ける — 「この地方は世界の
+        // どのあたりか」は、地方の切り取りの外にしか描かれていない。
+        // チャレンジは既定の床 1 のまま(枠が既に全世界)。
+        let flooredStages = zip(regionalStages, stageSpans).map { stage, span in
+            Stage(index: stage.index,
+                  name: stage.name,
+                  kanjiName: stage.kanjiName,
+                  codes: stage.codes,
+                  flatMinZoom: GameRules.regionalFlatMinZoom(
+                      bookSpan: challengeSpan, stageSpan: span))
+        }
         let challenge = Stage(index: WorldStage.challengeIndex,
                               name: WorldStage.challengeName,
                               kanjiName: WorldStage.challengeKanjiName,
@@ -304,7 +316,7 @@ nonisolated struct Atlas: Sendable {
                                   stageSpans: stageSpans))
         // 国旗カードが銀になるまでオリジナルを配らないゲート(設計 §5)。
         return Atlas(mapData: mapData, globe: world.globe,
-                     stages: regionalStages + [challenge],
+                     stages: flooredStages + [challenge],
                      sections: WorldStage.sections, regionZooms: [],
                      cards: cards, drawPolicy: .flagFirstSilverGate,
                      saveKey: SaveData.worldAtlas,
