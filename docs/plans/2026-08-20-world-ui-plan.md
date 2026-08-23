@@ -33,9 +33,10 @@ P6 引き継ぎメモ 8 項目)。設計は `2026-08-16-world-atlas-design.md` �
 - 世界のとき大陸セクション見出しを出す。見出しは stage index 区間から機械的に
   (0–2 アメリカ / 3–6 ヨーロッパ / 7–11 アフリカ / 12–16 アジア / 17 オセアニア)。
   日本のときは見出しなし(今のまま)
-- 看板の色(`StageCardBackground.tints` 7 色)と地標アイコン
-  (`StageLandmark.assetNames` 7 個)は `% count` 循環で 18 枚に流用し、
-  世界専用の地標アセットは P6 では作らない(コメントで明示)
+- 看板の色(`StageCardBackground.tints` 7 色)は `% count` 循環で流用する。
+  地標アイコンは当初 P6 の範囲外として日本編 7 個を循環させていたが、
+  **Issue #10 で解消済み**: 世界編 18 地方 + 世界チャレンジに固有の 19 個を追加し、
+  `Atlas.stageLandmarkAssetNames` から値として運ぶ。View に japan/world 分岐は置かない
 - ナビタイトルは `mode.stages`(「ステージ」)のまま両方共通
 
 ### Task 2: タイトル 2 ページ化(にほん ⇄ せかいの ちずちょう)★分岐はここだけ

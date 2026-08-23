@@ -68,6 +68,9 @@ nonisolated struct Atlas: Sendable {
     /// どの本かでは分岐しない(インセット判定と同じ規律)。
     let globe: GlobeData?
     let stages: [Stage]
+    /// ステージ index と同じ順で並ぶ看板スタンプ名。日本/世界の差はここで
+    /// 値として運び、StageSelectView にアトラス分岐を作らない(Issue #10)。
+    let stageLandmarkAssetNames: [String]
     /// ステージ棚の区切り(世界 = 大陸見出し、日本 = 空)。
     let sections: [AtlasSection]
     /// チャレンジステージのワンプレスズーム(日本 = 3 分割、世界 = 空 —
@@ -102,6 +105,15 @@ nonisolated struct Atlas: Sendable {
     /// 使える形)。index はアトラス内でだけ意味を持つ(セーブの records と同じ)。
     func stage(at index: Int) -> Stage? {
         stages.first { $0.index == index }
+    }
+
+    /// 看板が描く地域スタンプ。欠損時に別地域の絵へフォールバックすると
+    /// 子どもへ嘘をつくので nil に倒し、View は空の装飾枠を保つだけにする。
+    func stageLandmarkAssetName(for stage: Stage) -> String? {
+        guard stage.index >= 0, stage.index < stageLandmarkAssetNames.count else {
+            return nil
+        }
+        return stageLandmarkAssetNames[stage.index]
     }
 
     /// この札がシルバーに達したとき解放される物の名詞。無ければ nil(P8)。
@@ -164,7 +176,8 @@ nonisolated struct Atlas: Sendable {
     /// 現行アプリそのまま: ローダの結果と `Stage.all` を束ねるだけで、
     /// データにも挙動にも手を加えない。
     static func japan(mapData: MapData, cards: CardCatalog) -> Atlas {
-        Atlas(mapData: mapData, globe: nil, stages: Stage.all, sections: [],
+        Atlas(mapData: mapData, globe: nil, stages: Stage.all,
+              stageLandmarkAssetNames: Stage.landmarkAssetNames, sections: [],
               regionZooms: RegionZoom.japanThirds, cards: cards,
               drawPolicy: .random, saveKey: SaveData.japanAtlas,
               regionNoun: .prefecture, cardNoun: .specialtyCards)
@@ -207,6 +220,7 @@ nonisolated struct Atlas: Sendable {
             // 空へ倒れても方針・名前空間・見出し定義・語彙は世界のまま —
             // カードを失っても「どの本か」までは失わない(棚はステージが無いので空)。
             return Atlas(mapData: .empty, globe: nil, stages: [],
+                         stageLandmarkAssetNames: WorldStage.landmarkAssetNames,
                          sections: WorldStage.sections, regionZooms: [],
                          cards: .empty, drawPolicy: .flagFirstSilverGate,
                          saveKey: SaveData.worldAtlas,
@@ -253,6 +267,7 @@ nonisolated struct Atlas: Sendable {
             // 収録国の無い本に 0 問の総合ステージを立てても、棚に「遊べない
             // 面」が増えるだけだから(globe を落とすのと同じ判断)。
             return Atlas(mapData: .empty, globe: nil, stages: regionalStages,
+                         stageLandmarkAssetNames: WorldStage.landmarkAssetNames,
                          sections: WorldStage.sections, regionZooms: [],
                          cards: cards, drawPolicy: .flagFirstSilverGate,
                          saveKey: SaveData.worldAtlas,
@@ -317,6 +332,7 @@ nonisolated struct Atlas: Sendable {
         // 国旗カードが銀になるまでオリジナルを配らないゲート(設計 §5)。
         return Atlas(mapData: mapData, globe: world.globe,
                      stages: flooredStages + [challenge],
+                     stageLandmarkAssetNames: WorldStage.landmarkAssetNames,
                      sections: WorldStage.sections, regionZooms: [],
                      cards: cards, drawPolicy: .flagFirstSilverGate,
                      saveKey: SaveData.worldAtlas,

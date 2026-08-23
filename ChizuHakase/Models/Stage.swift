@@ -95,6 +95,15 @@ nonisolated struct Stage: Identifiable, Sendable, Equatable {
               codes: Array(1...47), isChallenge: true),
     ]
 
+    /// 日本編 7 面の看板スタンプ。index と同じ固定順で、世界編の絵を足しても
+    /// 既存の 1 対 1 対応は変えない(Issue #10)。View はこの配列を知らず、
+    /// `Atlas.stageLandmarkAssetName(for:)` が運んだ値だけを描く。
+    static let landmarkAssetNames = [
+        "stage-icon-balloon", "stage-icon-tower", "stage-icon-fuji",
+        "stage-icon-castle", "stage-icon-yuzu", "stage-icon-hibiscus",
+        "stage-icon-globe",
+    ]
+
     static func stage(at index: Int) -> Stage? {
         all.first { $0.index == index }
     }
