@@ -26,14 +26,17 @@ ChizuHakase.xcodeproj/
 Packages/
 
 ## assets/ — the full-size hand-painted originals (~2.6MB each).
-## World-card originals are preserved through Git LFS; all other originals
-## stay local. What ships is still only the 480px output under
-## ChizuHakase/Resources/Assets.xcassets/CardArt/: the app target's sources are
-## ChizuHakase/ only, so LFS originals cannot enter the app bundle by accident.
+## World-card and world-stage-landmark originals are preserved through Git
+## LFS; all other originals stay local. What ships is still only the reduced
+## output under ChizuHakase/Resources/Assets.xcassets/: the app target's
+## sources are ChizuHakase/ only, so LFS originals cannot enter the app bundle.
 assets/*
 !assets/world-cards/
 assets/world-cards/*
 !assets/world-cards/*.png
+!assets/stage-landmarks/
+assets/stage-landmarks/*
+!assets/stage-landmarks/*.png
 
 ## tmp/ — scratch space for generating card art before it is cut down.
 ## Same rule: originals stay out.
