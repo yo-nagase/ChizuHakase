@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
-"""Build the world stage-selection landmark stamps.
+"""Build generated stage-selection landmark stamps.
 
 The 1254px painted originals live in ``assets/stage-landmarks`` and are kept
 through Git LFS.  This script produces the 384px, palette-reduced 1x assets
-that ship in ``StageSelectArt``.  The explicit source-to-asset table is also
-the contract used by ``WorldStage.landmarkAssetNames``: never infer a region
-from a filename or a stage number.
+that ship in ``StageSelectArt``.  The explicit source-to-asset tables are also
+the contract used by ``Stage.landmarkAssetNames`` and
+``WorldStage.landmarkAssetNames``: never infer a region from a filename or a
+stage number.
 
 Run from the repository root whenever an original changes:
 
@@ -29,9 +30,15 @@ CATALOG = os.path.join(
 SIZE = 384
 PALETTE_COLOURS = 192
 
-# Source slug -> asset name, in WorldStage index order (0...18).  The last
-# entry belongs to the world challenge rather than a regional data stage.
-LANDMARKS = [
+# Source slug -> asset name for japan stamps replaced after the original seven
+# were drawn. The other six still use their existing catalog-only art.
+JAPAN_REPLACEMENTS = [
+    ("japan-stage-00-ezo-red-fox", "stage-icon-ezo-red-fox"),
+]
+
+# Source slug -> asset name, in WorldStage index order (0...18). The last entry
+# belongs to the world challenge rather than a regional data stage.
+WORLD_LANDMARKS = [
     ("world-stage-00-monarch-butterfly", "stage-icon-world-north-central-america"),
     ("world-stage-01-caribbean-island", "stage-icon-world-caribbean"),
     ("world-stage-02-llama", "stage-icon-world-south-america"),
@@ -101,13 +108,16 @@ def build_imageset(source_slug: str, asset_name: str) -> int:
 
 
 def main() -> None:
-    if len(LANDMARKS) != 19:
-        raise SystemExit(f"expected 19 world landmarks, got {len(LANDMARKS)}")
-    if len({asset for _, asset in LANDMARKS}) != len(LANDMARKS):
-        raise SystemExit("duplicate world landmark asset name")
+    if len(WORLD_LANDMARKS) != 19:
+        raise SystemExit(
+            f"expected 19 world landmarks, got {len(WORLD_LANDMARKS)}"
+        )
+    landmarks = JAPAN_REPLACEMENTS + WORLD_LANDMARKS
+    if len({asset for _, asset in landmarks}) != len(landmarks):
+        raise SystemExit("duplicate landmark asset name")
 
-    total = sum(build_imageset(source, asset) for source, asset in LANDMARKS)
-    print(f"built {len(LANDMARKS)} world stage landmarks ({total // 1024} KB total)")
+    total = sum(build_imageset(source, asset) for source, asset in landmarks)
+    print(f"built {len(landmarks)} stage landmarks ({total // 1024} KB total)")
 
 
 if __name__ == "__main__":

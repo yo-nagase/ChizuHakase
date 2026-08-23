@@ -3,16 +3,16 @@ import UIKit
 
 @testable import ChizuHakase
 
-/// Stage-selection landmark assets (GitHub Issue #10).
+/// Stage-selection landmark assets (GitHub Issues #10 and #11).
 ///
 /// The names are code, while the painted PNGs are an asset catalog: without a
 /// bundle-resolution test those two sources can drift into blank signboards.
 @MainActor
 struct StageLandmarkArtTests {
 
-    @Test func japanKeepsItsOriginalSevenLandmarks() {
+    @Test func japanUsesTheApprovedRegionalLandmarks() {
         #expect(Stage.landmarkAssetNames == [
-            "stage-icon-balloon", "stage-icon-tower", "stage-icon-fuji",
+            "stage-icon-ezo-red-fox", "stage-icon-tower", "stage-icon-fuji",
             "stage-icon-castle", "stage-icon-yuzu", "stage-icon-hibiscus",
             "stage-icon-globe",
         ])
