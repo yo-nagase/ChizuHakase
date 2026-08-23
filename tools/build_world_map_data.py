@@ -13,7 +13,7 @@ Run from tools/:
     curl -sL -o ne_10m_countries.geojson \\
         https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_10m_admin_0_countries.geojson
     npx mapshaper ne_50m_countries.geojson \\
-        -simplify visvalingam 4% keep-shapes -clean \\
+        -simplify visvalingam 20% keep-shapes -clean \\
         -o ne_50m_simplified.geojson format=geojson
     python3 build_world_map_data.py
     mv WorldShapes.json ../ChizuHakase/Resources/
@@ -40,6 +40,21 @@ DST = "WorldShapes.json"
 # 0.0001° ≈ 赤道で 11m。世界地図の視認単位よりはるかに細かく、
 # これ以上の桁はファイルを太らせて diff を揺らすだけ。
 COORD_DECIMALS = 4
+
+# ファイルサイズの上限。超えたら警告を出すだけで止めはしない — 判断は人の側
+# (validate_world_data.py の SIZE_BUDGET と対で持つ)。
+# 当初は 400 KB で、簡略化率 4% の 141 KB に対する上限だった。輪郭が
+# カクカクだという指摘を受けて率を 20% へ上げ (docstring の mapshaper 行)、
+# 出力が 422 KB になったのに合わせて引き上げた (裁定 2026-08-23)。
+# 上げた根拠は 2 つとも計測済み:
+#   - 地球儀はドラッグ 1 フレームで全点を投影し直すが、6.4k → 21.9k 点で
+#     0.39ms → 1.21ms (M1 Max)。最古の対応機 (iOS 17 = iPhone XS の A12) を
+#     3 倍遅いと見ても 60Hz の 16.7ms 予算に対して十分に余る
+#   - 完全オフラインのアプリなので 280 KB の増加はバンドルにしか効かない
+# 500 KB は 422 KB に約 18% の余裕を足した数字。上流 (Natural Earth) の
+# 更新でじりじり太ったら気づける幅に留めてある。次に超えたときも、
+# 黙って上げるのではなく率とサイズの両方を測り直して決めること。
+SIZE_BUDGET = 500 * 1024
 
 # --- 国コードの解決 ---------------------------------------------------------
 # Natural Earth は ISO_N3 に -99 を入れる地物がある。収録国のうち該当する
@@ -88,9 +103,57 @@ GAP_OVERRIDES = {
                # きたヨーロッパの枠が北へ 10° 伸び、本土側の国が皆小さくなる
 }
 
+# --- 日付変更線の向こうに落ちる小島 -----------------------------------------
+# 距離ではなく経度で外す例外。KEEP_ALL_RINGS の国は距離刈りが効かないので、
+# ここが唯一の網になる。
+# アメリカのアリューシャン列島は西端 (アッツ島など) が日付変更線をまたぎ、
+# 生の経度で +172° を名乗る。この 3 つ (5 点・4 点・4 点の岩) が 1 つでも
+# 残ると地物の経度スパンが 340° になり、normalize_dateline が**国ごと**
+# +360 側へ反転させて bbox が 172°..293° になる。すると:
+#   - 全世界チャレンジの枠がカナダの −141° から 293° まで 434° に広がり、
+#     全 167 カ国がその分 (25%) 小さく描かれる
+#   - きた・ちゅうおうアメリカのステージ枠も同じだけ壊れる
+# 日本版の沖縄インセットで「枠を 1 度も広げない」と決めたのと同じ判断
+# (CLAUDE.md §3: 枠が 14% 広がるだけでも全県が小さくなる)。
+# 岩そのものは捨てず背景として実位置に描く — 仏領ギアナ・スバールバルと
+# 同じ「属領は背景描画」の扱い。地図の上ではカムチャツカの隣に出る。
+# 簡略化率が低かった頃 (4%) はこの岩が mapshaper 側で消えていて問題が
+# 顕在化しなかった。率を上げると出てくるので、率とは独立に網を張る。
+DATELINE_OUTLIER_LON = {
+    840: 100.0,  # アメリカ: 経度がこれより東のリングは背景へ
+}
+
+
+def split_dateline_outliers(code, rings):
+    """(収録国の形に残すリング, 背景へ回すリング) に分ける。
+
+    DATELINE_OUTLIER_LON に無い国は素通し。normalize_dateline の**前**に
+    通すこと — 反転してからでは経度で見分けられない。
+    """
+    limit = DATELINE_OUTLIER_LON.get(code)
+    if limit is None:
+        return rings, []
+    near, far = [], []
+    for ring in rings:
+        (far if min(x for x, _ in ring) > limit else near).append(ring)
+    if not near:
+        sys.exit(f"dateline exclusion emptied country {code} - "
+                 "the limit is on the wrong side of the data")
+    return near, far
+
+
+# 全収録国の bbox を連結した「世界チャレンジの枠」の横幅の上限 (度)。
+# 地球一周は 360° で、日付変更線をまたぐ国 (ロシア・フィジー・NZ) の
+# +360 正規化ぶんだけ超えうるが、それでも 380° には収まる。ここを超えたら
+# どこかの国が丸ごと反転している (上の DATELINE_OUTLIER_LON の事故) 合図。
+# 黙って出荷すると「全部が少し小さい」だけの静かな劣化になり、
+# 地図を見ても原因が分からないので、ビルドで止める。
+MAX_CHALLENGE_SPAN_DEG = 380.0
+
 # --- 小国の形の取り直し -----------------------------------------------------
-# 4% 簡略化は世界全体には十分だが、小さい国を三角形まで潰す (シンガポール・
-# マルタ・モルディブは 4 点リングになる)。主リングがこの点数を割った国は
+# mapshaper の簡略化はデータ全体でしきい値が 1 つなので、率をどれだけ上げても
+# 小さい国は取り残される (率 4% 時代はシンガポール・マルタ・モルディブが
+# 4 点リングだった)。主リングがこの点数を割った国は
 # 生データから形を取り直し、控えめな Douglas-Peucker で間引き直す。
 # ただし**陸の国境を接する国は取り直さない**: mapshaper は隣接国の共有国境を
 # 同じ折れ線として簡略化しており、片側だけ生データに替えると国境が二重に
@@ -663,7 +726,8 @@ def main():
         if not name_ja:
             sys.exit(f"NAME_JA missing for recorded country {code}")
 
-        rings = normalize_dateline(feat["rings"])
+        near_rings, dateline_far = split_dateline_outliers(code, feat["rings"])
+        rings = normalize_dateline(near_rings)
         main_pts = len(max(rings, key=ring_area))
         # 頂点照合は読み込んだままの座標 (feat["rings"]) で行う。shared も
         # 同じ生座標で作ってあり、正規化で +360 した座標では完全一致が壊れる。
@@ -710,8 +774,12 @@ def main():
             sys.exit(f"inset country {code} has no silhouette "
                      f"({sum(len(r) for r in kept)} pts) - upstream data changed?")
 
-        if pruned:
-            pruned_entries.append((props["ADMIN"], rounded_rings(pruned)))
+        # 日付変更線の向こうの島は距離刈りの結果と同じ扱いで背景へ回す。
+        # 面積の床は通さない — 外した理由は小ささではなく経度なので、
+        # 岩だからと二重に落とすと海岸線に嘘の空白ができる。
+        if pruned or dateline_far:
+            pruned_entries.append((props["ADMIN"],
+                                   rounded_rings(pruned + dateline_far)))
 
         # 面積重心はここでは使えない: 群島国 (フィリピン等) や凹形状の国
         # (クロアチア等) で海に落ちる。ラベル・エフェクトの錨は必ず自国の
@@ -793,6 +861,26 @@ def main():
     recorded_codes = {c["code"] for c in countries}
     if not wc.INSET_COUNTRIES <= recorded_codes:
         sys.exit("inset country missing from recorded output")
+    # 世界チャレンジの枠が広がりすぎていないか (MAX_CHALLENGE_SPAN_DEG の註)。
+    # 枠は Swift 側で全収録国の bbox を連結して決まるので、ここで同じ計算をする。
+    frame_boxes = [c.get("europeBbox", c["bbox"]) for c in countries]
+    challenge_span = (max(b[2] for b in frame_boxes)
+                      - min(b[0] for b in frame_boxes))
+    if challenge_span > MAX_CHALLENGE_SPAN_DEG:
+        # 犯人は「いちばん横長な国」ではない — 反転した国は自分の bbox が
+        # むしろ縮む (アメリカは 340° → 120°)。枠を決めているのは連結の
+        # 両端なので、そこに立っている国を名指しする。
+        west = min(countries, key=lambda c: c.get("europeBbox", c["bbox"])[0])
+        east = max(countries, key=lambda c: c.get("europeBbox", c["bbox"])[2])
+        sys.exit(
+            f"challenge frame spans {challenge_span:.1f}° "
+            f"(> {MAX_CHALLENGE_SPAN_DEG}°) - どこかの国が日付変更線で反転して"
+            f"いる。枠の西端は {west['code']} ({west['nameJa']}, "
+            f"{west.get('europeBbox', west['bbox'])[0]:.1f}°)、"
+            f"東端は {east['code']} ({east['nameJa']}, "
+            f"{east.get('europeBbox', east['bbox'])[2]:.1f}°)。"
+            "DATELINE_OUTLIER_LON に足すか、既存の閾値を見直すこと"
+        )
 
     insets = place_inset_frames(countries, background)
 
@@ -829,9 +917,9 @@ def main():
         scale, frame = insets[code]
         print(f"  inset frame: {code} x{scale} -> {frame}")
     print(f"  size       : {size / 1024:.1f} KB")
-    if size > 400 * 1024:
+    if size > SIZE_BUDGET:
         # 超過は報告して人が判断する。黙って簡略化率を上げない。
-        print("  WARNING: over the 400 KB budget")
+        print(f"  WARNING: over the {SIZE_BUDGET // 1024} KB budget")
 
 
 if __name__ == "__main__":

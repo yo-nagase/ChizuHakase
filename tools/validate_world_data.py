@@ -31,7 +31,7 @@ DEFAULT_DST = os.path.join("..", "ChizuHakase", "Resources", "WorldShapes.json")
 COORD_DECIMALS = 4
 INSET_MIN_TOTAL_PTS = 20
 URAL_LON = 60.0
-SIZE_BUDGET = 400 * 1024
+SIZE_BUDGET = 500 * 1024  # 400 KB から引き上げ (裁定 2026-08-23)。理由は生成側
 
 # インセット倍率の帯規則 (build の INSET_SCALE_FLOOR まわりのコメントが正本)。
 # 拡大後の最大寸法は 380pt パネルで 10pt 以上。22pt 以下は「床 2.5 で

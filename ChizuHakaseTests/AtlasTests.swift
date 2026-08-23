@@ -657,13 +657,26 @@ struct AtlasTests {
         #expect(abs(challenge.flatMaxZoom - expected) < 0.001)
     }
 
-    /// 実データの釘打ち: 最大比は stage 11 みなみアフリカの ≈ 16.4。
+    /// 実データの釘打ち: 最大比は stage 11 みなみアフリカの ≈ 17.1。
     /// 導出はコードなのでデータが変われば追従するが、桁が動いたら
     /// (投影や bbox の退行で)ここで気づく。
-    @Test func 世界チャレンジの上限はおよそ16() throws {
+    ///
+    /// 簡略化率を 4% → 20% に上げたとき ≈ 16.4 から動いた(2026-08-23)。
+    /// 内訳は 2 つあり、**通してよかったのは前者だけ**:
+    ///   - アリューシャン列島の西寄りの島が残るようになり、チャレンジ枠が
+    ///     348° → 362° に広がった。実在の陸地なので受け入れる(全体が 4%
+    ///     小さくなる)
+    ///   - 同時に日付変更線の向こうの岩 3 つも残り、アメリカが丸ごと +360
+    ///     側へ反転して枠が 434° に膨らんだ。こちらは事故で、この
+    ///     アサーションが捕まえた。パイプライン側の DATELINE_OUTLIER_LON で
+    ///     岩を背景へ回して直してある
+    /// つまりこの上下限は「枠がじわじわ広がっていないか」の網であって、
+    /// 広がったら黙って数字を書き換える場所ではない。動いたらまず
+    /// どの国の bbox が伸びたのかを見ること。
+    @Test func 世界チャレンジの上限はおよそ17() throws {
         let challenge = try #require(try worldAtlas().stages.first { $0.isChallenge })
-        #expect(challenge.flatMaxZoom > 16.0)
-        #expect(challenge.flatMaxZoom < 17.0)
+        #expect(challenge.flatMaxZoom > 17.0)
+        #expect(challenge.flatMaxZoom < 18.0)
     }
 
     /// 広がるのは世界チャレンジだけ。地方ステージはその地方が枠いっぱいに
