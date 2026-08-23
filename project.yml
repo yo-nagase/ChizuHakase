@@ -26,6 +26,21 @@ settings:
     CODE_SIGN_STYLE: Automatic
     ENABLE_USER_SCRIPT_SANDBOXING: "YES"
     GCC_WARN_ABOUT_RETURN_TYPE: "YES_ERROR"
+    # 出荷先は iPhone と iPad だけ。Xcode の "Supported Destinations" で
+    # チェックを外しても、それが書かれるのは .xcodeproj —— つまり生成物
+    # なので、xcodegen generate のたびに既定値へ戻る (DEVELOPMENT_TEAM と
+    # まったく同じ事故)。Vision Pro と Mac が毎回復活していたのはこれ。
+    #
+    # Vision Pro を外すのは動かないからではなく、動いてしまうから:
+    # このアプリは指で県をタップする前提で、タップ許容も 22pt という
+    # 「子どもの指」の寸法で決めてある (CLAUDE.md §3)。視線とピンチで
+    # 遊ぶ互換モードはその設計を一度も通っていないし、5〜9 歳が
+    # Vision Pro を被る画は対象ユーザーの想定にない。検証していない
+    # 入り口を開けておくより、閉じておくほうが正直。
+    # Mac (Catalyst) も同じ — マウスで押す地図として調整していない。
+    SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD: "NO"
+    SUPPORTS_MACCATALYST: "NO"
+    SUPPORTED_PLATFORMS: "iphoneos iphonesimulator"
 
 targets:
   ChizuHakase:
