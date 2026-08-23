@@ -224,6 +224,7 @@ struct AtlasTests {
     @Test func 区間から漏れたステージは見出しなしで末尾に残る() {
         let stray = Stage(index: 99, name: "はぐれ", kanjiName: "逸れ", codes: [1])
         let atlas = Atlas(mapData: .empty, globe: nil, stages: Stage.all + [stray],
+                          stageLandmarkAssetNames: Stage.landmarkAssetNames,
                           sections: [AtlasSection(title: "テスト", stageIndexes: 0..<7)],
                           regionZooms: [], cards: .empty, drawPolicy: .random,
                           saveKey: "test",

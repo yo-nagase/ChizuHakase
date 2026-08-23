@@ -35,6 +35,7 @@ struct StageSelectView: View {
                     ForEach(shelf.stages) { stage in
                         StageSignboard(
                             stage: stage,
+                            landmarkAssetName: atlas.stageLandmarkAssetName(for: stage),
                             mapData: atlas.mapData,
                             record: save.record(forStage: stage.index,
                                                 mode: quizMode),
@@ -158,6 +159,8 @@ private extension QuizMode {
 private struct StageSignboard: View {
     @Environment(\.textMode) private var mode
     let stage: Stage
+    /// Atlas が運んだ地域の絵。View 自身は japan/world を判定しない。
+    let landmarkAssetName: String?
     let mapData: MapData
     let record: StageRecord?
     /// One atlas's slice, not the whole save: the board can only ever read the
@@ -205,7 +208,7 @@ private struct StageSignboard: View {
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
 
-                    StageLandmark(stageIndex: stage.index)
+                    StageLandmark(assetName: landmarkAssetName)
                         .frame(width: 42, height: 54)
                         .padding(.leading, 1)
                 }
@@ -287,7 +290,7 @@ private struct StageCardBackground: View {
     /// Sampled from the supplied screenshot's signboard washes. The seventh
     /// stage continues the sequence with quiet mint.
     ///
-    /// The world's 18 signboards reuse these seven by the same `% count`
+    /// The world's 19 signboards reuse these seven by the same `% count`
     /// cycle: neighbouring boards never share a wash, and a repeat only comes
     /// back seven rows later — further apart than one screen shows at once.
     private static let tints: [Color] = [
@@ -300,27 +303,22 @@ private struct StageCardBackground: View {
 // MARK: - Regional landmarks
 
 private struct StageLandmark: View {
-    let stageIndex: Int
+    let assetName: String?
 
     var body: some View {
-        Image(Self.assetNames[stageIndex % Self.assetNames.count])
-            .resizable()
-            .scaledToFit()
+        Group {
+            if let assetName {
+                Image(assetName)
+                    .resizable()
+                    .scaledToFit()
+            } else {
+                // A missing value must not borrow another region's stamp.
+                Color.clear
+            }
+        }
         .shadow(color: Palette.ink.opacity(0.16), radius: 0, y: 1)
         .accessibilityHidden(true)
     }
-
-    /// Seven stamps for japan's seven stages. The world's 18 boards cycle
-    /// through the same seven (`% count` above) — 富士山 on みなみアメリカ is
-    /// admittedly a postcard from the wrong continent, but a decorative stamp,
-    /// not a fact the quiz teaches. World-specific landmark art is deliberately
-    /// deferred out of P6 (plan Task 1); drawing 18 honest landmarks is its
-    /// own art task.
-    private static let assetNames = [
-        "stage-icon-balloon", "stage-icon-tower", "stage-icon-fuji",
-        "stage-icon-castle", "stage-icon-yuzu", "stage-icon-hibiscus",
-        "stage-icon-globe",
-    ]
 }
 
 // MARK: - Page

@@ -53,6 +53,31 @@ nonisolated struct WorldStage: Identifiable, Sendable, Equatable {
     static let challengeName = "せかい チャレンジ"
     static let challengeKanjiName = "世界チャレンジ"
 
+    /// 世界編 18 地方 + 世界チャレンジの看板スタンプ。`names` と同じく
+    /// stage index 順で、19 面目だけはチャレンジの値。地域の意味は View の
+    /// `% count` から推測せず、Atlas がこの値をそのまま運ぶ(Issue #10)。
+    static let landmarkAssetNames = [
+        "stage-icon-world-north-central-america", // 0 オオカバマダラ
+        "stage-icon-world-caribbean",             // 1 ヤシの木と波
+        "stage-icon-world-south-america",         // 2 リャマ
+        "stage-icon-world-north-europe",          // 3 オーロラ
+        "stage-icon-world-west-europe",           // 4 木組みの家
+        "stage-icon-world-east-europe",           // 5 コウノトリ
+        "stage-icon-world-south-europe",          // 6 オリーブ
+        "stage-icon-world-north-africa",          // 7 オアシス
+        "stage-icon-world-west-africa",           // 8 バオバブ
+        "stage-icon-world-central-africa",        // 9 オカピ
+        "stage-icon-world-east-africa",           // 10 アカシアとキリン
+        "stage-icon-world-south-africa",          // 11 ゲムズボック
+        "stage-icon-world-west-asia",             // 12 アラビアオリックス
+        "stage-icon-world-central-asia",          // 13 ユルト
+        "stage-icon-world-south-asia",            // 14 インドゾウ
+        "stage-icon-world-east-asia",             // 15 タンチョウ
+        "stage-icon-world-southeast-asia",        // 16 サイチョウ
+        "stage-icon-world-oceania",               // 17 アウトリガーカヌー
+        "stage-icon-world-challenge",             // 18 全大陸の地球儀
+    ]
+
     /// ステージ選択の棚を区切る大陸見出し(UI 決定 2026-08-20 —
     /// docs/plans/2026-08-18-world-stages.md「ステージ選択 UI」)。
     /// 上の `names` はすでに大陸ごとに連続して並んでいるので、見出しは
