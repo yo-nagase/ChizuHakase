@@ -39,6 +39,12 @@ struct PrefectureNameMatcherTests {
         #expect(PrefectureNameMatcher.matches("きょうと", prefecture: try #require(map[26])))
         #expect(PrefectureNameMatcher.matches("おおさかふ", prefecture: try #require(map[27])))
         #expect(PrefectureNameMatcher.matches("あおもりけん", prefecture: try #require(map[2])))
+        // The state suffixes (P6 Task 5) reach japan too: an invented
+        // 「あおもりきょうわこく」 still lands on Aomori. Intentional lenience —
+        // the strip only ever widens what a prefecture accepts, and a child
+        // being silly should not lose an answer that names the right place.
+        #expect(PrefectureNameMatcher.matches("あおもりきょうわこく",
+                                              prefecture: try #require(map[2])))
     }
 
     @Test func rejectsADifferentPrefecture() throws {
@@ -89,5 +95,110 @@ struct PrefectureNameMatcherTests {
     @Test func unrecognisedSpeechMatchesNothing() {
         #expect(PrefectureNameMatcher.match("こんにちは", among: map.prefectures) == nil)
         #expect(PrefectureNameMatcher.match("", among: map.prefectures) == nil)
+    }
+
+    // MARK: - 世界(P6 Task 5)
+
+    // 世界の国は境界で Prefecture になる(Atlas)ので、照合器は同じ関数のまま
+    // 国名も引き受ける。増えたのは州体サフィックス(共和国・連邦 …)の 1 族だけ。
+
+    static let world = Result {
+        try WorldDataLoader.load(contentsOf: TestResources.require("WorldShapes"))
+    }
+
+    private func countries() throws -> [Prefecture] {
+        Atlas.world(from: try Self.world.get()).mapData.prefectures
+    }
+
+    private func country(_ code: Int) throws -> Prefecture {
+        try #require(Atlas.world(from: try Self.world.get()).mapData[code])
+    }
+
+    /// 「とうきょう」「とうきょうと」相当のゆれ: よみ・正式表記・かな書きの
+    /// 正式名のどれで届いても同じ国にあたる。
+    @Test func acceptsACountryInEverySpellingTheRecogniserWrites() throws {
+        let america = try country(840)
+        #expect(PrefectureNameMatcher.matches("あめりか", prefecture: america))
+        #expect(PrefectureNameMatcher.matches("アメリカ", prefecture: america))
+        #expect(PrefectureNameMatcher.matches("アメリカ合衆国", prefecture: america))
+        #expect(PrefectureNameMatcher.matches("あめりかがっしゅうこく", prefecture: america))
+    }
+
+    /// 認識器は子どもの「みなみあふりか」を「南アフリカ」と書く — nameJa
+    /// (南アフリカ共和国)とも kana とも一致しない、州体ストリップだけが
+    /// 届く表記。
+    @Test func acceptsTheKanjiShortFormTheRecogniserWrites() throws {
+        #expect(PrefectureNameMatcher.matches("南アフリカ", prefecture: try country(710)))
+        #expect(PrefectureNameMatcher.matches("中央アフリカ", prefecture: try country(140)))
+        #expect(PrefectureNameMatcher.matches("アラブ首長国", prefecture: try country(784)))
+    }
+
+    /// 裸の「こんご」はどちらのコンゴにもあたらない。kana が接尾辞を残して
+    /// いるのは両国を分けるためで、機械ストリップがそれを覆すと、
+    /// コンゴ民主共和国の問題で「こんご」と言った子がコンゴ共和国を
+    /// 誤答したことにされる。
+    @Test func anAmbiguousBareNameMatchesNeitherCongo() throws {
+        let congo = try country(178)
+        let drCongo = try country(180)
+        #expect(!PrefectureNameMatcher.matches("こんご", prefecture: congo))
+        #expect(!PrefectureNameMatcher.matches("こんご", prefecture: drCongo))
+        #expect(PrefectureNameMatcher.matches("こんごきょうわこく", prefecture: congo))
+        #expect(PrefectureNameMatcher.matches("こんごみんしゅきょうわこく", prefecture: drCongo))
+        #expect(!PrefectureNameMatcher.matches("こんごきょうわこく", prefecture: drCongo))
+    }
+
+    /// なまえあての候補はステージの国々から出る(選択肢はその部分集合)。
+    /// その中で、正解でない国のよみはその国自身に解決される — 正解に
+    /// 吸われて誤爆しない。
+    @Test func aNonAnswerKanaResolvesToItsOwnCountryAmongStageChoices() throws {
+        let atlas = Atlas.world(from: try Self.world.get())
+        let eastAsia = try #require(atlas.stage(at: 15))
+        let candidates = atlas.mapData.prefectures(in: eastAsia.codes)
+        #expect(PrefectureNameMatcher.match("にほん", among: candidates)?.code == 392)
+        #expect(PrefectureNameMatcher.match("たいわん", among: candidates)?.code == 158)
+        #expect(PrefectureNameMatcher.match("きたちょうせん", among: candidates)?.code == 408)
+        #expect(PrefectureNameMatcher.match("ぱり", among: candidates) == nil)
+    }
+
+    /// 日本版の大域条件に、話し手側の層を足したもの。受理形が交わらない
+    /// だけでは足りない — `matches` はトランスクリプト側もストリップする
+    /// ので、ある発話が B には直接・A にはストリップ経由であたる余地が
+    /// 残る(例: ドミニカ国を将来収録すると「どみにかきょうわこく」が
+    /// 2 国にあたり、正しい正式名を言った子が沈黙をもらう)。そこで
+    /// ここで立てるのは 2 つ:
+    /// 1. 167 カ国のどの 2 国も受理形を共有しない。
+    /// 2. どの国のよみ・表記も、`matches` が試す 3 つの綴り(そのまま・
+    ///    行政接尾辞なし・州体接尾辞なし)のどれを通っても、自国以外の
+    ///    受理形に触れない。
+    /// この 2 つで、正典の発話(kana / nameJa の正書法)が候補の中で
+    /// 一意に自国へ解決することが実際の照合経路の上で従う。
+    @Test func noTwoCountriesShareAnAcceptedForm() throws {
+        let all = try countries()
+        var owner: [String: String] = [:]
+        for country in all {
+            let forms = PrefectureNameMatcher.acceptedForms(for: country)
+            #expect(!forms.isEmpty)
+            for form in forms {
+                if let other = owner[form] {
+                    Issue.record("\(form) is accepted by both \(other) and \(country.name)")
+                }
+                owner[form] = country.name
+            }
+        }
+        for country in all {
+            for base in [country.kana, country.name] {
+                let spoken = PrefectureNameMatcher.normalize(base)
+                let spellings = [spoken,
+                                 PrefectureNameMatcher.strippingSuffix(spoken),
+                                 PrefectureNameMatcher.strippingStateSuffix(spoken)]
+                for spelling in spellings.compactMap({ $0 }) {
+                    if let hit = owner[spelling], hit != country.name {
+                        Issue.record("\(base) reaches \(hit) through \(spelling)")
+                    }
+                }
+            }
+            #expect(PrefectureNameMatcher.matches(country.kana, prefecture: country))
+            #expect(PrefectureNameMatcher.matches(country.name, prefecture: country))
+        }
     }
 }

@@ -121,7 +121,7 @@ mv PrefectureShapes.json ../ChizuHakase/Resources/
 ```jsonc
 {
   "mapWidth": 1000.0,
-  "mapHeight": 997.9,
+  "mapHeight": 1066.7,
   "okinawaInset": [0.0, 832.5, 56.7, 915.9],  // 沖縄インセットの枠 [x0,y0,x1,y1]
   "prefectures": [
     {
@@ -218,9 +218,10 @@ python3 tools/build_card_art.py
   シルバー・ゴールド・レインボーの違いは、絵の有無ではなく地板・縁・星・
   箔の表現で伝える
 - 絵が無い札は絵文字のまま。プレースホルダを出さない
-- 原画（`assets/`）は **git にもアプリにも入れない。** ローカル限定。
-  アプリターゲットのソースは `ChizuHakase/` のみなので、
-  ビルドが誤って拾うことはない
+- 日本編原画（`assets/meisanhin-cards/`）は git 管理外のローカル限定。
+  世界編原画（`assets/world-cards/`）は消失防止のため **Git LFS** で管理する。
+  どちらもアプリターゲットのソースではなく、出荷物には
+  `ChizuHakase/Resources/Assets.xcassets/CardArt/` の 480px 版だけを入れる
 - 絵に対応する札が無い場合、**公開前に限り**同じ県・同じカテゴリの札を
   絵の題材へ書き換えてよい。公開後は `id` がセーブキーなので不可（上記）
 

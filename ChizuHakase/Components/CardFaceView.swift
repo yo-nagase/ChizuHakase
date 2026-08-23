@@ -253,7 +253,10 @@ struct CardFaceView: View {
         HStack(spacing: metrics.spacing * 0.75) {
             Text(card.category.emoji)
                 .font(.system(size: metrics.categorySize))
-            if let prefecture {
+            // A world flag already carries the country as its title plate.
+            // Original cards need it here because the world book is one
+            // acquisition-order grid with no country section headings.
+            if let prefecture, card.category != .flag {
                 Text(prefecture.displayName(mode))
                     .font(AppFont.heading(metrics.prefectureSize, relativeTo: .subheadline))
                     .foregroundStyle(Palette.ink)

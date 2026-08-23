@@ -52,7 +52,11 @@ nonisolated enum MapDataLoader {
             }
             return MapData(width: file.mapWidth,
                            height: file.mapHeight,
-                           okinawaInset: rect(from: file.okinawaInset) ?? .zero,
+                           // The wire's `okinawaInset` means "code 47 sits
+                           // enlarged in this dashed box" (CLAUDE.md §3);
+                           // it becomes the one entry in the generalised list.
+                           insets: rect(from: file.okinawaInset)
+                               .map { [MapInset(code: 47, frame: $0)] } ?? [],
                            prefectures: prefectures.sorted { $0.code < $1.code })
         } catch {
             log.error("map data load failed: \(error.localizedDescription, privacy: .public)")

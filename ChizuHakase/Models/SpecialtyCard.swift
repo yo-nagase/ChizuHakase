@@ -1,9 +1,14 @@
 import Foundation
 
-/// A collectible specialty of one prefecture. 47 x 3 = 141 total.
+/// A collectible card belonging to one region of one atlas. Japan deals a
+/// prefecture's specialties (47 x 3 = 141); the world deals per-country cards,
+/// flag first (167 flags + 167 country originals today).
 nonisolated struct SpecialtyCard: Identifiable, Sendable, Hashable, Codable {
     enum Category: String, Sendable, Codable, CaseIterable {
         case food, landmark, nature, craft
+        /// World atlas only: the country's flag card. Japan's catalog never
+        /// uses it, so the japan card book shows no flag filter chip.
+        case flag
 
         /// Label for the card book filter row.
         var kanaLabel: String {
@@ -12,6 +17,7 @@ nonisolated struct SpecialtyCard: Identifiable, Sendable, Hashable, Codable {
             case .landmark: "めいしょ"
             case .nature: "しぜん"
             case .craft: "つくるもの"
+            case .flag: "こっき"
             }
         }
 
@@ -21,12 +27,14 @@ nonisolated struct SpecialtyCard: Identifiable, Sendable, Hashable, Codable {
             case .landmark: "🏯"
             case .nature: "🌲"
             case .craft: "🎨"
+            case .flag: "🚩"
             }
         }
     }
 
-    /// "{2-digit prefecture code}-{1...3}". Save-data key — never change it
-    /// for a card that has shipped.
+    /// Japan: "{2-digit prefecture code}-{1...3}". World: "{ISO numeric}-{連番}"
+    /// (unpadded, the same integer the save's mastery keys use). Save-data
+    /// key — never change it for a card that has shipped.
     let id: String
     let prefectureCode: Int
     let emoji: String
@@ -48,10 +56,15 @@ nonisolated struct CardCatalog: Sendable {
 
     init(cards: [SpecialtyCard]) {
         self.all = cards
+        // Dictionary(grouping:) keeps each group in source order — load-bearing:
+        // the world draw gate (GameRules.DrawPolicy.flagFirstSilverGate) takes
+        // "the first card is the flag" from this order, and WorldCards.json
+        // lists the flag first on that promise. Never re-sort these groups.
         self.byPrefecture = Dictionary(grouping: cards, by: \.prefectureCode)
         self.byID = Dictionary(cards.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
     }
 
+    /// One prefecture's (or country's) cards, in catalog order.
     func cards(for prefectureCode: Int) -> [SpecialtyCard] {
         byPrefecture[prefectureCode] ?? []
     }

@@ -1,0 +1,3177 @@
+{
+  "cards": [
+    {
+      "id": "4-1",
+      "prefectureCode": 4,
+      "emoji": "🇦🇫",
+      "nameKana": "あふがにすたん",
+      "nameKanji": "アフガニスタン",
+      "category": "flag",
+      "description": "あふがにすたんの こっきだよ"
+    },
+    {
+      "id": "4-2",
+      "prefectureCode": 4,
+      "emoji": "💎",
+      "nameKana": "らぴすらずり",
+      "nameKanji": "ラピスラズリ",
+      "category": "nature",
+      "description": "あおく かがやく うつくしい いしだよ",
+      "art": "world-card-4-2"
+    },
+    {
+      "id": "8-1",
+      "prefectureCode": 8,
+      "emoji": "🇦🇱",
+      "nameKana": "あるばにあ",
+      "nameKanji": "アルバニア",
+      "category": "flag",
+      "description": "あるばにあの こっきだよ"
+    },
+    {
+      "id": "8-2",
+      "prefectureCode": 8,
+      "emoji": "🏘️",
+      "nameKana": "べらとの まちなみ",
+      "nameKanji": "ベラトの街並み",
+      "category": "landmark",
+      "description": "しろい いえが おかに ならぶ まちだよ",
+      "art": "world-card-8-2"
+    },
+    {
+      "id": "12-1",
+      "prefectureCode": 12,
+      "emoji": "🇩🇿",
+      "nameKana": "あるじぇりあ",
+      "nameKanji": "アルジェリア",
+      "category": "flag",
+      "description": "あるじぇりあの こっきだよ"
+    },
+    {
+      "id": "12-2",
+      "prefectureCode": 12,
+      "emoji": "🏜️",
+      "nameKana": "さはらさばく",
+      "nameKanji": "サハラ砂漠",
+      "category": "nature",
+      "description": "すなが どこまでも ひろがる さばくだよ",
+      "art": "world-card-12-2"
+    },
+    {
+      "id": "24-1",
+      "prefectureCode": 24,
+      "emoji": "🇦🇴",
+      "nameKana": "あんごら",
+      "nameKanji": "アンゴラ",
+      "category": "flag",
+      "description": "あんごらの こっきだよ"
+    },
+    {
+      "id": "24-2",
+      "prefectureCode": 24,
+      "emoji": "🦌",
+      "nameKana": "おおせーぶるあんてろーぷ",
+      "nameKanji": "オオセーブルアンテロープ",
+      "category": "nature",
+      "description": "ながい つのを もつ めずらしい どうぶつだよ",
+      "art": "world-card-24-2"
+    },
+    {
+      "id": "31-1",
+      "prefectureCode": 31,
+      "emoji": "🇦🇿",
+      "nameKana": "あぜるばいじゃん",
+      "nameKanji": "アゼルバイジャン",
+      "category": "flag",
+      "description": "あぜるばいじゃんの こっきだよ"
+    },
+    {
+      "id": "31-2",
+      "prefectureCode": 31,
+      "emoji": "🌋",
+      "nameKana": "でいかざん",
+      "nameKanji": "泥火山",
+      "category": "nature",
+      "description": "どろと ガスが ふきだす ふしぎな おかだよ",
+      "art": "world-card-31-2"
+    },
+    {
+      "id": "32-1",
+      "prefectureCode": 32,
+      "emoji": "🇦🇷",
+      "nameKana": "あるぜんちん",
+      "nameKanji": "アルゼンチン",
+      "category": "flag",
+      "description": "あるぜんちんの こっきだよ"
+    },
+    {
+      "id": "32-2",
+      "prefectureCode": 32,
+      "emoji": "🥟",
+      "nameKana": "えんぱなーだ",
+      "nameKanji": "エンパナーダ",
+      "category": "food",
+      "description": "ぐを かわで つつんで やいた りょうりだよ",
+      "art": "world-card-32-2"
+    },
+    {
+      "id": "36-1",
+      "prefectureCode": 36,
+      "emoji": "🇦🇺",
+      "nameKana": "おーすとらりあ",
+      "nameKanji": "オーストラリア",
+      "category": "flag",
+      "description": "おーすとらりあの こっきだよ"
+    },
+    {
+      "id": "36-2",
+      "prefectureCode": 36,
+      "emoji": "🪸",
+      "nameKana": "ぐれーとばりありーふ",
+      "nameKanji": "グレートバリアリーフ",
+      "category": "nature",
+      "description": "さんごしょうが ながく つづく うみだよ",
+      "art": "world-card-36-2"
+    },
+    {
+      "id": "40-1",
+      "prefectureCode": 40,
+      "emoji": "🇦🇹",
+      "nameKana": "おーすとりあ",
+      "nameKanji": "オーストリア",
+      "category": "flag",
+      "description": "おーすとりあの こっきだよ"
+    },
+    {
+      "id": "40-2",
+      "prefectureCode": 40,
+      "emoji": "🍰",
+      "nameKana": "ざっはとるて",
+      "nameKanji": "ザッハトルテ",
+      "category": "food",
+      "description": "ちょこれーとを つかった あまい けーきだよ",
+      "art": "world-card-40-2"
+    },
+    {
+      "id": "44-1",
+      "prefectureCode": 44,
+      "emoji": "🇧🇸",
+      "nameKana": "ばはま",
+      "nameKanji": "バハマ",
+      "category": "flag",
+      "description": "ばはまの こっきだよ"
+    },
+    {
+      "id": "44-2",
+      "prefectureCode": 44,
+      "emoji": "🐚",
+      "nameKana": "ぴんくの かいがら",
+      "nameKanji": "ピンクの貝殻",
+      "category": "nature",
+      "description": "うすい ぴんくいろの おおきな かいだよ",
+      "art": "world-card-44-2"
+    },
+    {
+      "id": "50-1",
+      "prefectureCode": 50,
+      "emoji": "🇧🇩",
+      "nameKana": "ばんぐらでしゅ",
+      "nameKanji": "バングラデシュ",
+      "category": "flag",
+      "description": "ばんぐらでしゅの こっきだよ"
+    },
+    {
+      "id": "50-2",
+      "prefectureCode": 50,
+      "emoji": "🐅",
+      "nameKana": "べんがるとら",
+      "nameKanji": "ベンガルトラ",
+      "category": "nature",
+      "description": "しまもようで もりに くらす おおきな とらだよ",
+      "art": "world-card-50-2"
+    },
+    {
+      "id": "51-1",
+      "prefectureCode": 51,
+      "emoji": "🇦🇲",
+      "nameKana": "あるめにあ",
+      "nameKanji": "アルメニア",
+      "category": "flag",
+      "description": "あるめにあの こっきだよ"
+    },
+    {
+      "id": "51-2",
+      "prefectureCode": 51,
+      "emoji": "🫓",
+      "nameKana": "らゔぁしゅ",
+      "nameKanji": "ラヴァシュ",
+      "category": "food",
+      "description": "うすく のばして やく ぱんだよ",
+      "art": "world-card-51-2"
+    },
+    {
+      "id": "56-1",
+      "prefectureCode": 56,
+      "emoji": "🇧🇪",
+      "nameKana": "べるぎー",
+      "nameKanji": "ベルギー",
+      "category": "flag",
+      "description": "べるぎーの こっきだよ"
+    },
+    {
+      "id": "56-2",
+      "prefectureCode": 56,
+      "emoji": "🧇",
+      "nameKana": "べるぎーわっふる",
+      "nameKanji": "ベルギーワッフル",
+      "category": "food",
+      "description": "あみめの かたちに やいた おかしだよ",
+      "art": "world-card-56-2"
+    },
+    {
+      "id": "64-1",
+      "prefectureCode": 64,
+      "emoji": "🇧🇹",
+      "nameKana": "ぶーたん",
+      "nameKanji": "ブータン",
+      "category": "flag",
+      "description": "ぶーたんの こっきだよ"
+    },
+    {
+      "id": "64-2",
+      "prefectureCode": 64,
+      "emoji": "🐐",
+      "nameKana": "たーきん",
+      "nameKanji": "ターキン",
+      "category": "nature",
+      "description": "やまの もりに くらす ひづめの どうぶつだよ",
+      "art": "world-card-64-2"
+    },
+    {
+      "id": "68-1",
+      "prefectureCode": 68,
+      "emoji": "🇧🇴",
+      "nameKana": "ぼりびあ",
+      "nameKanji": "ボリビア",
+      "category": "flag",
+      "description": "ぼりびあの こっきだよ"
+    },
+    {
+      "id": "68-2",
+      "prefectureCode": 68,
+      "emoji": "🪞",
+      "nameKana": "うゆにえんこ",
+      "nameKanji": "ウユニ塩湖",
+      "category": "nature",
+      "description": "あめの あとは そらを うつす しおの だいちだよ",
+      "art": "world-card-68-2"
+    },
+    {
+      "id": "70-1",
+      "prefectureCode": 70,
+      "emoji": "🇧🇦",
+      "nameKana": "ぼすにあへるつぇごびな",
+      "nameKanji": "ボスニア・ヘルツェゴビナ",
+      "category": "flag",
+      "description": "ぼすにあへるつぇごびなの こっきだよ"
+    },
+    {
+      "id": "70-2",
+      "prefectureCode": 70,
+      "emoji": "🌉",
+      "nameKana": "もすたるの ふるいはし",
+      "nameKanji": "モスタルの古い橋",
+      "category": "landmark",
+      "description": "いしで できた おおきな あーちの はしだよ",
+      "art": "world-card-70-2"
+    },
+    {
+      "id": "72-1",
+      "prefectureCode": 72,
+      "emoji": "🇧🇼",
+      "nameKana": "ぼつわな",
+      "nameKanji": "ボツワナ",
+      "category": "flag",
+      "description": "ぼつわなの こっきだよ"
+    },
+    {
+      "id": "72-2",
+      "prefectureCode": 72,
+      "emoji": "🐘",
+      "nameKana": "おかばんごでるた",
+      "nameKanji": "オカバンゴ・デルタ",
+      "category": "nature",
+      "description": "さばくの なかに ひろがる みずべだよ",
+      "art": "world-card-72-2"
+    },
+    {
+      "id": "76-1",
+      "prefectureCode": 76,
+      "emoji": "🇧🇷",
+      "nameKana": "ぶらじる",
+      "nameKanji": "ブラジル",
+      "category": "flag",
+      "description": "ぶらじるの こっきだよ"
+    },
+    {
+      "id": "76-2",
+      "prefectureCode": 76,
+      "emoji": "🦜",
+      "nameKana": "あまぞんの もり",
+      "nameKanji": "アマゾンの森",
+      "category": "nature",
+      "description": "おおきな かわと みどりが ひろがる もりだよ",
+      "art": "world-card-76-2"
+    },
+    {
+      "id": "84-1",
+      "prefectureCode": 84,
+      "emoji": "🇧🇿",
+      "nameKana": "べりーず",
+      "nameKanji": "ベリーズ",
+      "category": "flag",
+      "description": "べりーずの こっきだよ"
+    },
+    {
+      "id": "84-2",
+      "prefectureCode": 84,
+      "emoji": "🌊",
+      "nameKana": "ぐれーとぶるーほーる",
+      "nameKanji": "グレート・ブルーホール",
+      "category": "nature",
+      "description": "うみに まるく ひらいた ふかい あなだよ",
+      "art": "world-card-84-2"
+    },
+    {
+      "id": "96-1",
+      "prefectureCode": 96,
+      "emoji": "🇧🇳",
+      "nameKana": "ぶるねい",
+      "nameKanji": "ブルネイ",
+      "category": "flag",
+      "description": "ぶるねいの こっきだよ"
+    },
+    {
+      "id": "96-2",
+      "prefectureCode": 96,
+      "emoji": "🛶",
+      "nameKana": "かんぽんあいる",
+      "nameKanji": "カンポン・アイール",
+      "category": "landmark",
+      "description": "みずの うえに いえが ならぶ むらだよ",
+      "art": "world-card-96-2"
+    },
+    {
+      "id": "100-1",
+      "prefectureCode": 100,
+      "emoji": "🇧🇬",
+      "nameKana": "ぶるがりあ",
+      "nameKanji": "ブルガリア",
+      "category": "flag",
+      "description": "ぶるがりあの こっきだよ"
+    },
+    {
+      "id": "100-2",
+      "prefectureCode": 100,
+      "emoji": "🌹",
+      "nameKana": "ばら",
+      "nameKanji": "バラ",
+      "category": "nature",
+      "description": "かおりの よい はなが たくさん そだつよ",
+      "art": "world-card-100-2"
+    },
+    {
+      "id": "104-1",
+      "prefectureCode": 104,
+      "emoji": "🇲🇲",
+      "nameKana": "みゃんまー",
+      "nameKanji": "ミャンマー",
+      "category": "flag",
+      "description": "みゃんまーの こっきだよ"
+    },
+    {
+      "id": "104-2",
+      "prefectureCode": 104,
+      "emoji": "🥣",
+      "nameKana": "うるしき",
+      "nameKanji": "漆器",
+      "category": "craft",
+      "description": "うるしを ぬって つやを だす うつわだよ",
+      "art": "world-card-104-2"
+    },
+    {
+      "id": "108-1",
+      "prefectureCode": 108,
+      "emoji": "🇧🇮",
+      "nameKana": "ぶるんじ",
+      "nameKanji": "ブルンジ",
+      "category": "flag",
+      "description": "ぶるんじの こっきだよ"
+    },
+    {
+      "id": "108-2",
+      "prefectureCode": 108,
+      "emoji": "🥁",
+      "nameKana": "ぶるんじの たいこ",
+      "nameKanji": "ブルンジの太鼓",
+      "category": "craft",
+      "description": "おおぜいで かなでる おおきな たいこだよ",
+      "art": "world-card-108-2"
+    },
+    {
+      "id": "112-1",
+      "prefectureCode": 112,
+      "emoji": "🇧🇾",
+      "nameKana": "べらるーし",
+      "nameKanji": "ベラルーシ",
+      "category": "flag",
+      "description": "べらるーしの こっきだよ"
+    },
+    {
+      "id": "112-2",
+      "prefectureCode": 112,
+      "emoji": "🦬",
+      "nameKana": "よーろっぱばいそん",
+      "nameKanji": "ヨーロッパバイソン",
+      "category": "nature",
+      "description": "もりに くらす からだの おおきな うしだよ",
+      "art": "world-card-112-2"
+    },
+    {
+      "id": "116-1",
+      "prefectureCode": 116,
+      "emoji": "🇰🇭",
+      "nameKana": "かんぼじあ",
+      "nameKanji": "カンボジア",
+      "category": "flag",
+      "description": "かんぼじあの こっきだよ"
+    },
+    {
+      "id": "116-2",
+      "prefectureCode": 116,
+      "emoji": "🛕",
+      "nameKana": "あんこーるわっと",
+      "nameKanji": "アンコール・ワット",
+      "category": "landmark",
+      "description": "いしの とうが ならぶ おおきな いせきだよ",
+      "art": "world-card-116-2"
+    },
+    {
+      "id": "120-1",
+      "prefectureCode": 120,
+      "emoji": "🇨🇲",
+      "nameKana": "かめるーん",
+      "nameKanji": "カメルーン",
+      "category": "flag",
+      "description": "かめるーんの こっきだよ"
+    },
+    {
+      "id": "120-2",
+      "prefectureCode": 120,
+      "emoji": "🌋",
+      "nameKana": "かめるーんざん",
+      "nameKanji": "カメルーン山",
+      "category": "nature",
+      "description": "うみの ちかくに そびえる かざんだよ",
+      "art": "world-card-120-2"
+    },
+    {
+      "id": "124-1",
+      "prefectureCode": 124,
+      "emoji": "🇨🇦",
+      "nameKana": "かなだ",
+      "nameKanji": "カナダ",
+      "category": "flag",
+      "description": "かなだの こっきだよ"
+    },
+    {
+      "id": "124-2",
+      "prefectureCode": 124,
+      "emoji": "🍁",
+      "nameKana": "さとうかえで",
+      "nameKanji": "サトウカエデ",
+      "category": "nature",
+      "description": "あきに はっぱが あかく そまる きだよ",
+      "art": "world-card-124-2"
+    },
+    {
+      "id": "140-1",
+      "prefectureCode": 140,
+      "emoji": "🇨🇫",
+      "nameKana": "ちゅうおうあふりか",
+      "nameKanji": "中央アフリカ共和国",
+      "category": "flag",
+      "description": "ちゅうおうあふりかの こっきだよ"
+    },
+    {
+      "id": "140-2",
+      "prefectureCode": 140,
+      "emoji": "🦍",
+      "nameKana": "にしろーらんどごりら",
+      "nameKanji": "ニシローランドゴリラ",
+      "category": "nature",
+      "description": "あつい もりに くらす おおきな さるだよ",
+      "art": "world-card-140-2"
+    },
+    {
+      "id": "144-1",
+      "prefectureCode": 144,
+      "emoji": "🇱🇰",
+      "nameKana": "すりらんか",
+      "nameKanji": "スリランカ",
+      "category": "flag",
+      "description": "すりらんかの こっきだよ"
+    },
+    {
+      "id": "144-2",
+      "prefectureCode": 144,
+      "emoji": "🍵",
+      "nameKana": "せいろんてぃー",
+      "nameKanji": "セイロンティー",
+      "category": "food",
+      "description": "こうちで そだつ かおりの よい おちゃだよ",
+      "art": "world-card-144-2"
+    },
+    {
+      "id": "148-1",
+      "prefectureCode": 148,
+      "emoji": "🇹🇩",
+      "nameKana": "ちゃど",
+      "nameKanji": "チャド",
+      "category": "flag",
+      "description": "ちゃどの こっきだよ"
+    },
+    {
+      "id": "148-2",
+      "prefectureCode": 148,
+      "emoji": "🪨",
+      "nameKana": "えねでぃの いわ",
+      "nameKanji": "エネディの岩",
+      "category": "nature",
+      "description": "かぜが つくった あーちの いわだよ",
+      "art": "world-card-148-2"
+    },
+    {
+      "id": "152-1",
+      "prefectureCode": 152,
+      "emoji": "🇨🇱",
+      "nameKana": "ちり",
+      "nameKanji": "チリ",
+      "category": "flag",
+      "description": "ちりの こっきだよ"
+    },
+    {
+      "id": "152-2",
+      "prefectureCode": 152,
+      "emoji": "🗿",
+      "nameKana": "もあい",
+      "nameKanji": "モアイ",
+      "category": "landmark",
+      "description": "しまに ならぶ おおきな いしの ぞうだよ",
+      "art": "world-card-152-2"
+    },
+    {
+      "id": "156-1",
+      "prefectureCode": 156,
+      "emoji": "🇨🇳",
+      "nameKana": "ちゅうごく",
+      "nameKanji": "中華人民共和国",
+      "category": "flag",
+      "description": "ちゅうごくの こっきだよ"
+    },
+    {
+      "id": "156-2",
+      "prefectureCode": 156,
+      "emoji": "🧱",
+      "nameKana": "ばんりのちょうじょう",
+      "nameKanji": "万里の長城",
+      "category": "landmark",
+      "description": "やまに そって ながく つづく かべだよ",
+      "art": "world-card-156-2"
+    },
+    {
+      "id": "158-1",
+      "prefectureCode": 158,
+      "emoji": "🇹🇼",
+      "nameKana": "たいわん",
+      "nameKanji": "台湾",
+      "category": "flag",
+      "description": "たいわんの こっきだよ"
+    },
+    {
+      "id": "158-2",
+      "prefectureCode": 158,
+      "emoji": "🧋",
+      "nameKana": "たぴおかみるくてぃー",
+      "nameKanji": "タピオカミルクティー",
+      "category": "food",
+      "description": "もちもちの つぶが はいった おちゃだよ",
+      "art": "world-card-158-2"
+    },
+    {
+      "id": "170-1",
+      "prefectureCode": 170,
+      "emoji": "🇨🇴",
+      "nameKana": "ころんびあ",
+      "nameKanji": "コロンビア",
+      "category": "flag",
+      "description": "ころんびあの こっきだよ"
+    },
+    {
+      "id": "170-2",
+      "prefectureCode": 170,
+      "emoji": "☕",
+      "nameKana": "こーひー",
+      "nameKanji": "コーヒー",
+      "category": "food",
+      "description": "やまの はたけで かおりの よい まめが そだつよ",
+      "art": "world-card-170-2"
+    },
+    {
+      "id": "178-1",
+      "prefectureCode": 178,
+      "emoji": "🇨🇬",
+      "nameKana": "こんごきょうわこく",
+      "nameKanji": "コンゴ共和国",
+      "category": "flag",
+      "description": "こんごきょうわこくの こっきだよ"
+    },
+    {
+      "id": "178-2",
+      "prefectureCode": 178,
+      "emoji": "🦍",
+      "nameKana": "にしろーらんどごりら",
+      "nameKanji": "ニシローランドゴリラ",
+      "category": "nature",
+      "description": "あつい もりに くらす おおきな さるだよ",
+      "art": "world-card-178-2"
+    },
+    {
+      "id": "180-1",
+      "prefectureCode": 180,
+      "emoji": "🇨🇩",
+      "nameKana": "こんごみんしゅきょうわこく",
+      "nameKanji": "コンゴ民主共和国",
+      "category": "flag",
+      "description": "こんごみんしゅきょうわこくの こっきだよ"
+    },
+    {
+      "id": "180-2",
+      "prefectureCode": 180,
+      "emoji": "🦓",
+      "nameKana": "おかぴ",
+      "nameKanji": "オカピ",
+      "category": "nature",
+      "description": "あしに しまもようが ある もりの どうぶつだよ",
+      "art": "world-card-180-2"
+    },
+    {
+      "id": "188-1",
+      "prefectureCode": 188,
+      "emoji": "🇨🇷",
+      "nameKana": "こすたりか",
+      "nameKanji": "コスタリカ",
+      "category": "flag",
+      "description": "こすたりかの こっきだよ"
+    },
+    {
+      "id": "188-2",
+      "prefectureCode": 188,
+      "emoji": "🦥",
+      "nameKana": "なまけもの",
+      "nameKanji": "ナマケモノ",
+      "category": "nature",
+      "description": "きの うえで ゆっくり くらす どうぶつだよ",
+      "art": "world-card-188-2"
+    },
+    {
+      "id": "191-1",
+      "prefectureCode": 191,
+      "emoji": "🇭🇷",
+      "nameKana": "くろあちあ",
+      "nameKanji": "クロアチア",
+      "category": "flag",
+      "description": "くろあちあの こっきだよ"
+    },
+    {
+      "id": "191-2",
+      "prefectureCode": 191,
+      "emoji": "🏞️",
+      "nameKana": "ぷりとゔぃつぇこぐん",
+      "nameKanji": "プリトヴィツェ湖群",
+      "category": "nature",
+      "description": "たきと みずうみが つながる もりだよ",
+      "art": "world-card-191-2"
+    },
+    {
+      "id": "192-1",
+      "prefectureCode": 192,
+      "emoji": "🇨🇺",
+      "nameKana": "きゅーば",
+      "nameKanji": "キューバ",
+      "category": "flag",
+      "description": "きゅーばの こっきだよ"
+    },
+    {
+      "id": "192-2",
+      "prefectureCode": 192,
+      "emoji": "🚗",
+      "nameKana": "くらしっくかー",
+      "nameKanji": "クラシックカー",
+      "category": "craft",
+      "description": "いろあざやかな むかしの くるまだよ",
+      "art": "world-card-192-2"
+    },
+    {
+      "id": "196-1",
+      "prefectureCode": 196,
+      "emoji": "🇨🇾",
+      "nameKana": "きぷろす",
+      "nameKanji": "キプロス",
+      "category": "flag",
+      "description": "きぷろすの こっきだよ"
+    },
+    {
+      "id": "196-2",
+      "prefectureCode": 196,
+      "emoji": "🧀",
+      "nameKana": "はるみちーず",
+      "nameKanji": "ハルミチーズ",
+      "category": "food",
+      "description": "やいても とけにくい しおあじの ちーずだよ",
+      "art": "world-card-196-2"
+    },
+    {
+      "id": "203-1",
+      "prefectureCode": 203,
+      "emoji": "🇨🇿",
+      "nameKana": "ちぇこ",
+      "nameKanji": "チェコ",
+      "category": "flag",
+      "description": "ちぇこの こっきだよ"
+    },
+    {
+      "id": "203-2",
+      "prefectureCode": 203,
+      "emoji": "🕰️",
+      "nameKana": "てんもんどけい",
+      "nameKanji": "天文時計",
+      "category": "landmark",
+      "description": "ほしや たいようの うごきも しめす とけいだよ",
+      "art": "world-card-203-2"
+    },
+    {
+      "id": "204-1",
+      "prefectureCode": 204,
+      "emoji": "🇧🇯",
+      "nameKana": "べなん",
+      "nameKanji": "ベナン",
+      "category": "flag",
+      "description": "べなんの こっきだよ"
+    },
+    {
+      "id": "204-2",
+      "prefectureCode": 204,
+      "emoji": "🗿",
+      "nameKana": "ぶろんずちょうこく",
+      "nameKanji": "ブロンズ彫刻",
+      "category": "craft",
+      "description": "きんぞくを とかして つくる ぞうだよ",
+      "art": "world-card-204-2"
+    },
+    {
+      "id": "208-1",
+      "prefectureCode": 208,
+      "emoji": "🇩🇰",
+      "nameKana": "でんまーく",
+      "nameKanji": "デンマーク",
+      "category": "flag",
+      "description": "でんまーくの こっきだよ"
+    },
+    {
+      "id": "208-2",
+      "prefectureCode": 208,
+      "emoji": "🧜",
+      "nameKana": "にんぎょひめの ぞう",
+      "nameKanji": "人魚姫の像",
+      "category": "landmark",
+      "description": "うみべの いわに すわる ちいさな ぞうだよ",
+      "art": "world-card-208-2"
+    },
+    {
+      "id": "214-1",
+      "prefectureCode": 214,
+      "emoji": "🇩🇴",
+      "nameKana": "どみにかきょうわこく",
+      "nameKanji": "ドミニカ共和国",
+      "category": "flag",
+      "description": "どみにかきょうわこくの こっきだよ"
+    },
+    {
+      "id": "214-2",
+      "prefectureCode": 214,
+      "emoji": "🍫",
+      "nameKana": "かかお",
+      "nameKanji": "カカオ",
+      "category": "food",
+      "description": "ちょこれーとの もとに なる みが そだつよ",
+      "art": "world-card-214-2"
+    },
+    {
+      "id": "218-1",
+      "prefectureCode": 218,
+      "emoji": "🇪🇨",
+      "nameKana": "えくあどる",
+      "nameKanji": "エクアドル",
+      "category": "flag",
+      "description": "えくあどるの こっきだよ"
+    },
+    {
+      "id": "218-2",
+      "prefectureCode": 218,
+      "emoji": "🐢",
+      "nameKana": "がらぱごすぞうがめ",
+      "nameKanji": "ガラパゴスゾウガメ",
+      "category": "nature",
+      "description": "しまに くらす とても おおきな かめだよ",
+      "art": "world-card-218-2"
+    },
+    {
+      "id": "222-1",
+      "prefectureCode": 222,
+      "emoji": "🇸🇻",
+      "nameKana": "えるさるばどる",
+      "nameKanji": "エルサルバドル",
+      "category": "flag",
+      "description": "えるさるばどるの こっきだよ"
+    },
+    {
+      "id": "222-2",
+      "prefectureCode": 222,
+      "emoji": "🫓",
+      "nameKana": "ぷぷさ",
+      "nameKanji": "ププサ",
+      "category": "food",
+      "description": "とうもろこしの きじで ぐを つつむよ",
+      "art": "world-card-222-2"
+    },
+    {
+      "id": "226-1",
+      "prefectureCode": 226,
+      "emoji": "🇬🇶",
+      "nameKana": "せきどうぎにあ",
+      "nameKanji": "赤道ギニア",
+      "category": "flag",
+      "description": "せきどうぎにあの こっきだよ"
+    },
+    {
+      "id": "226-2",
+      "prefectureCode": 226,
+      "emoji": "🍫",
+      "nameKana": "かかお",
+      "nameKanji": "カカオ",
+      "category": "food",
+      "description": "あつい もりで ちょこれーとの みが そだつよ",
+      "art": "world-card-226-2"
+    },
+    {
+      "id": "231-1",
+      "prefectureCode": 231,
+      "emoji": "🇪🇹",
+      "nameKana": "えちおぴあ",
+      "nameKanji": "エチオピア",
+      "category": "flag",
+      "description": "えちおぴあの こっきだよ"
+    },
+    {
+      "id": "231-2",
+      "prefectureCode": 231,
+      "emoji": "☕",
+      "nameKana": "こーひーせれもにー",
+      "nameKanji": "コーヒーセレモニー",
+      "category": "food",
+      "description": "まめを いって ゆっくり おちゃを いれるよ",
+      "art": "world-card-231-2"
+    },
+    {
+      "id": "232-1",
+      "prefectureCode": 232,
+      "emoji": "🇪🇷",
+      "nameKana": "えりとりあ",
+      "nameKanji": "エリトリア",
+      "category": "flag",
+      "description": "えりとりあの こっきだよ"
+    },
+    {
+      "id": "232-2",
+      "prefectureCode": 232,
+      "emoji": "🪸",
+      "nameKana": "こうかいの さんご",
+      "nameKanji": "紅海のサンゴ",
+      "category": "nature",
+      "description": "あたたかい うみに さんごが ひろがるよ",
+      "art": "world-card-232-2"
+    },
+    {
+      "id": "233-1",
+      "prefectureCode": 233,
+      "emoji": "🇪🇪",
+      "nameKana": "えすとにあ",
+      "nameKanji": "エストニア",
+      "category": "flag",
+      "description": "えすとにあの こっきだよ"
+    },
+    {
+      "id": "233-2",
+      "prefectureCode": 233,
+      "emoji": "🌿",
+      "nameKana": "しつげん",
+      "nameKanji": "湿原",
+      "category": "nature",
+      "description": "みずと こけが ひろがる しずかな のはらだよ",
+      "art": "world-card-233-2"
+    },
+    {
+      "id": "242-1",
+      "prefectureCode": 242,
+      "emoji": "🇫🇯",
+      "nameKana": "ふぃじー",
+      "nameKanji": "フィジー",
+      "category": "flag",
+      "description": "ふぃじーの こっきだよ"
+    },
+    {
+      "id": "242-2",
+      "prefectureCode": 242,
+      "emoji": "🪸",
+      "nameKana": "さんごしょう",
+      "nameKanji": "サンゴ礁",
+      "category": "nature",
+      "description": "あたたかい うみに いろとりどりの さんごが そだつよ",
+      "art": "world-card-242-2"
+    },
+    {
+      "id": "246-1",
+      "prefectureCode": 246,
+      "emoji": "🇫🇮",
+      "nameKana": "ふぃんらんど",
+      "nameKanji": "フィンランド",
+      "category": "flag",
+      "description": "ふぃんらんどの こっきだよ"
+    },
+    {
+      "id": "246-2",
+      "prefectureCode": 246,
+      "emoji": "🧖",
+      "nameKana": "さうな",
+      "nameKanji": "サウナ",
+      "category": "craft",
+      "description": "あつい へやで からだを あたためるよ",
+      "art": "world-card-246-2"
+    },
+    {
+      "id": "250-1",
+      "prefectureCode": 250,
+      "emoji": "🇫🇷",
+      "nameKana": "ふらんす",
+      "nameKanji": "フランス",
+      "category": "flag",
+      "description": "ふらんすの こっきだよ"
+    },
+    {
+      "id": "250-2",
+      "prefectureCode": 250,
+      "emoji": "🗼",
+      "nameKana": "えっふぇるとう",
+      "nameKanji": "エッフェル塔",
+      "category": "landmark",
+      "description": "てつで できた たかい とうだよ",
+      "art": "world-card-250-2"
+    },
+    {
+      "id": "262-1",
+      "prefectureCode": 262,
+      "emoji": "🇩🇯",
+      "nameKana": "じぶち",
+      "nameKanji": "ジブチ",
+      "category": "flag",
+      "description": "じぶちの こっきだよ"
+    },
+    {
+      "id": "262-2",
+      "prefectureCode": 262,
+      "emoji": "🧂",
+      "nameKana": "あっさるこ",
+      "nameKanji": "アッサル湖",
+      "category": "nature",
+      "description": "しおが しろく ひろがる みずうみだよ",
+      "art": "world-card-262-2"
+    },
+    {
+      "id": "266-1",
+      "prefectureCode": 266,
+      "emoji": "🇬🇦",
+      "nameKana": "がぼん",
+      "nameKanji": "ガボン",
+      "category": "flag",
+      "description": "がぼんの こっきだよ"
+    },
+    {
+      "id": "266-2",
+      "prefectureCode": 266,
+      "emoji": "🐘",
+      "nameKana": "まるみみぞう",
+      "nameKanji": "マルミミゾウ",
+      "category": "nature",
+      "description": "あつい もりを あるく ちいさめの ぞうだよ",
+      "art": "world-card-266-2"
+    },
+    {
+      "id": "268-1",
+      "prefectureCode": 268,
+      "emoji": "🇬🇪",
+      "nameKana": "じょーじあ",
+      "nameKanji": "ジョージア",
+      "category": "flag",
+      "description": "じょーじあの こっきだよ"
+    },
+    {
+      "id": "268-2",
+      "prefectureCode": 268,
+      "emoji": "🫓",
+      "nameKana": "はちゃぷり",
+      "nameKanji": "ハチャプリ",
+      "category": "food",
+      "description": "ぱんに ちーずを のせて やく りょうりだよ",
+      "art": "world-card-268-2"
+    },
+    {
+      "id": "270-1",
+      "prefectureCode": 270,
+      "emoji": "🇬🇲",
+      "nameKana": "がんびあ",
+      "nameKanji": "ガンビア",
+      "category": "flag",
+      "description": "がんびあの こっきだよ"
+    },
+    {
+      "id": "270-2",
+      "prefectureCode": 270,
+      "emoji": "🌊",
+      "nameKana": "がんびあがわ",
+      "nameKanji": "ガンビア川",
+      "category": "nature",
+      "description": "くにの なかを ながく ながれる かわだよ",
+      "art": "world-card-270-2"
+    },
+    {
+      "id": "276-1",
+      "prefectureCode": 276,
+      "emoji": "🇩🇪",
+      "nameKana": "どいつ",
+      "nameKanji": "ドイツ",
+      "category": "flag",
+      "description": "どいつの こっきだよ"
+    },
+    {
+      "id": "276-2",
+      "prefectureCode": 276,
+      "emoji": "🥨",
+      "nameKana": "ぷれっつぇる",
+      "nameKanji": "プレッツェル",
+      "category": "food",
+      "description": "むすんだ かたちの こうばしい ぱんだよ",
+      "art": "world-card-276-2"
+    },
+    {
+      "id": "288-1",
+      "prefectureCode": 288,
+      "emoji": "🇬🇭",
+      "nameKana": "がーな",
+      "nameKanji": "ガーナ",
+      "category": "flag",
+      "description": "がーなの こっきだよ"
+    },
+    {
+      "id": "288-2",
+      "prefectureCode": 288,
+      "emoji": "🧵",
+      "nameKana": "けんて",
+      "nameKanji": "ケンテ",
+      "category": "craft",
+      "description": "あざやかな いろを おった ぬのだよ",
+      "art": "world-card-288-2"
+    },
+    {
+      "id": "300-1",
+      "prefectureCode": 300,
+      "emoji": "🇬🇷",
+      "nameKana": "ぎりしゃ",
+      "nameKanji": "ギリシャ",
+      "category": "flag",
+      "description": "ぎりしゃの こっきだよ"
+    },
+    {
+      "id": "300-2",
+      "prefectureCode": 300,
+      "emoji": "🏛️",
+      "nameKana": "ぱるてのんしんでん",
+      "nameKanji": "パルテノン神殿",
+      "category": "landmark",
+      "description": "おかの うえに たつ いしの しんでんだよ",
+      "art": "world-card-300-2"
+    },
+    {
+      "id": "320-1",
+      "prefectureCode": 320,
+      "emoji": "🇬🇹",
+      "nameKana": "ぐあてまら",
+      "nameKanji": "グアテマラ",
+      "category": "flag",
+      "description": "ぐあてまらの こっきだよ"
+    },
+    {
+      "id": "320-2",
+      "prefectureCode": 320,
+      "emoji": "🐦",
+      "nameKana": "けつぁーる",
+      "nameKanji": "ケツァール",
+      "category": "nature",
+      "description": "ながい おとばねを もつ みどりの とりだよ",
+      "art": "world-card-320-2"
+    },
+    {
+      "id": "324-1",
+      "prefectureCode": 324,
+      "emoji": "🇬🇳",
+      "nameKana": "ぎにあ",
+      "nameKanji": "ギニア",
+      "category": "flag",
+      "description": "ぎにあの こっきだよ"
+    },
+    {
+      "id": "324-2",
+      "prefectureCode": 324,
+      "emoji": "🪘",
+      "nameKana": "じゃんべ",
+      "nameKanji": "ジャンベ",
+      "category": "craft",
+      "description": "てで たたいて ならす さかずきがたの たいこだよ",
+      "art": "world-card-324-2"
+    },
+    {
+      "id": "328-1",
+      "prefectureCode": 328,
+      "emoji": "🇬🇾",
+      "nameKana": "がいあな",
+      "nameKanji": "ガイアナ",
+      "category": "flag",
+      "description": "がいあなの こっきだよ"
+    },
+    {
+      "id": "328-2",
+      "prefectureCode": 328,
+      "emoji": "💧",
+      "nameKana": "かいえとぅーるの たき",
+      "nameKanji": "カイエトゥールの滝",
+      "category": "nature",
+      "description": "もりの なかを いっきに おちる おおきな たきだよ",
+      "art": "world-card-328-2"
+    },
+    {
+      "id": "332-1",
+      "prefectureCode": 332,
+      "emoji": "🇭🇹",
+      "nameKana": "はいち",
+      "nameKanji": "ハイチ",
+      "category": "flag",
+      "description": "はいちの こっきだよ"
+    },
+    {
+      "id": "332-2",
+      "prefectureCode": 332,
+      "emoji": "🔨",
+      "nameKana": "ぶりきあーと",
+      "nameKanji": "ブリキアート",
+      "category": "craft",
+      "description": "きんぞくを きって もようを つくる こうげいだよ",
+      "art": "world-card-332-2"
+    },
+    {
+      "id": "340-1",
+      "prefectureCode": 340,
+      "emoji": "🇭🇳",
+      "nameKana": "ほんじゅらす",
+      "nameKanji": "ホンジュラス",
+      "category": "flag",
+      "description": "ほんじゅらすの こっきだよ"
+    },
+    {
+      "id": "340-2",
+      "prefectureCode": 340,
+      "emoji": "🗿",
+      "nameKana": "こぱんいせき",
+      "nameKanji": "コパン遺跡",
+      "category": "landmark",
+      "description": "もじを きざんだ いしの ぞうが ならぶよ",
+      "art": "world-card-340-2"
+    },
+    {
+      "id": "348-1",
+      "prefectureCode": 348,
+      "emoji": "🇭🇺",
+      "nameKana": "はんがりー",
+      "nameKanji": "ハンガリー",
+      "category": "flag",
+      "description": "はんがりーの こっきだよ"
+    },
+    {
+      "id": "348-2",
+      "prefectureCode": 348,
+      "emoji": "🍲",
+      "nameKana": "ぐやーしゅ",
+      "nameKanji": "グヤーシュ",
+      "category": "food",
+      "description": "にくと やさいを にこんだ あたたかい すーぷだよ",
+      "art": "world-card-348-2"
+    },
+    {
+      "id": "352-1",
+      "prefectureCode": 352,
+      "emoji": "🇮🇸",
+      "nameKana": "あいすらんど",
+      "nameKanji": "アイスランド",
+      "category": "flag",
+      "description": "あいすらんどの こっきだよ"
+    },
+    {
+      "id": "352-2",
+      "prefectureCode": 352,
+      "emoji": "♨️",
+      "nameKana": "げいしーる",
+      "nameKanji": "ゲイシール",
+      "category": "nature",
+      "description": "じめんから あつい みずが ふきあがるよ",
+      "art": "world-card-352-2"
+    },
+    {
+      "id": "356-1",
+      "prefectureCode": 356,
+      "emoji": "🇮🇳",
+      "nameKana": "いんど",
+      "nameKanji": "インド",
+      "category": "flag",
+      "description": "いんどの こっきだよ"
+    },
+    {
+      "id": "356-2",
+      "prefectureCode": 356,
+      "emoji": "🕌",
+      "nameKana": "たーじまはる",
+      "nameKanji": "タージ・マハル",
+      "category": "landmark",
+      "description": "しろい いしで できた おおきな たてものだよ",
+      "art": "world-card-356-2"
+    },
+    {
+      "id": "360-1",
+      "prefectureCode": 360,
+      "emoji": "🇮🇩",
+      "nameKana": "いんどねしあ",
+      "nameKanji": "インドネシア",
+      "category": "flag",
+      "description": "いんどねしあの こっきだよ"
+    },
+    {
+      "id": "360-2",
+      "prefectureCode": 360,
+      "emoji": "🦎",
+      "nameKana": "こもどおおとかげ",
+      "nameKanji": "コモドオオトカゲ",
+      "category": "nature",
+      "description": "しまに くらす からだの おおきな とかげだよ",
+      "art": "world-card-360-2"
+    },
+    {
+      "id": "364-1",
+      "prefectureCode": 364,
+      "emoji": "🇮🇷",
+      "nameKana": "いらん",
+      "nameKanji": "イラン",
+      "category": "flag",
+      "description": "いらんの こっきだよ"
+    },
+    {
+      "id": "364-2",
+      "prefectureCode": 364,
+      "emoji": "🧶",
+      "nameKana": "ぺるしゃじゅうたん",
+      "nameKanji": "ペルシャ絨毯",
+      "category": "craft",
+      "description": "こまかな もようを おりこんだ じゅうたんだよ",
+      "art": "world-card-364-2"
+    },
+    {
+      "id": "368-1",
+      "prefectureCode": 368,
+      "emoji": "🇮🇶",
+      "nameKana": "いらく",
+      "nameKanji": "イラク",
+      "category": "flag",
+      "description": "いらくの こっきだよ"
+    },
+    {
+      "id": "368-2",
+      "prefectureCode": 368,
+      "emoji": "🌴",
+      "nameKana": "でーつ",
+      "nameKanji": "デーツ",
+      "category": "food",
+      "description": "なつめやしに なる あまい みだよ",
+      "art": "world-card-368-2"
+    },
+    {
+      "id": "372-1",
+      "prefectureCode": 372,
+      "emoji": "🇮🇪",
+      "nameKana": "あいるらんど",
+      "nameKanji": "アイルランド",
+      "category": "flag",
+      "description": "あいるらんどの こっきだよ"
+    },
+    {
+      "id": "372-2",
+      "prefectureCode": 372,
+      "emoji": "🎵",
+      "nameKana": "あいるらんどの はーぷ",
+      "nameKanji": "アイリッシュハープ",
+      "category": "craft",
+      "description": "たくさんの いとを ゆびで はじく がっきだよ",
+      "art": "world-card-372-2"
+    },
+    {
+      "id": "376-1",
+      "prefectureCode": 376,
+      "emoji": "🇮🇱",
+      "nameKana": "いすらえる",
+      "nameKanji": "イスラエル",
+      "category": "flag",
+      "description": "いすらえるの こっきだよ"
+    },
+    {
+      "id": "376-2",
+      "prefectureCode": 376,
+      "emoji": "🧂",
+      "nameKana": "しかい",
+      "nameKanji": "死海",
+      "category": "nature",
+      "description": "しおが おおくて からだが うきやすい みずうみだよ",
+      "art": "world-card-376-2"
+    },
+    {
+      "id": "380-1",
+      "prefectureCode": 380,
+      "emoji": "🇮🇹",
+      "nameKana": "いたりあ",
+      "nameKanji": "イタリア",
+      "category": "flag",
+      "description": "いたりあの こっきだよ"
+    },
+    {
+      "id": "380-2",
+      "prefectureCode": 380,
+      "emoji": "🏛️",
+      "nameKana": "ころっせお",
+      "nameKanji": "コロッセオ",
+      "category": "landmark",
+      "description": "むかしの ひとが あつまった まるい たてものだよ",
+      "art": "world-card-380-2"
+    },
+    {
+      "id": "384-1",
+      "prefectureCode": 384,
+      "emoji": "🇨🇮",
+      "nameKana": "こーとじぼわーる",
+      "nameKanji": "コートジボワール",
+      "category": "flag",
+      "description": "こーとじぼわーるの こっきだよ"
+    },
+    {
+      "id": "384-2",
+      "prefectureCode": 384,
+      "emoji": "🍫",
+      "nameKana": "かかお",
+      "nameKanji": "カカオ",
+      "category": "food",
+      "description": "ちょこれーとの もとに なる みが たくさん そだつよ",
+      "art": "world-card-384-2"
+    },
+    {
+      "id": "388-1",
+      "prefectureCode": 388,
+      "emoji": "🇯🇲",
+      "nameKana": "じゃまいか",
+      "nameKanji": "ジャマイカ",
+      "category": "flag",
+      "description": "じゃまいかの こっきだよ"
+    },
+    {
+      "id": "388-2",
+      "prefectureCode": 388,
+      "emoji": "☕",
+      "nameKana": "ぶるーまうんてんこーひー",
+      "nameKanji": "ブルーマウンテンコーヒー",
+      "category": "food",
+      "description": "やまの はたけで かおりの よい まめが そだつよ",
+      "art": "world-card-388-2"
+    },
+    {
+      "id": "392-1",
+      "prefectureCode": 392,
+      "emoji": "🇯🇵",
+      "nameKana": "にほん",
+      "nameKanji": "日本",
+      "category": "flag",
+      "description": "にほんの こっきだよ"
+    },
+    {
+      "id": "392-2",
+      "prefectureCode": 392,
+      "emoji": "🗻",
+      "nameKana": "ふじさん",
+      "nameKanji": "富士山",
+      "category": "nature",
+      "description": "くにで いちばん たかい やまだよ",
+      "art": "world-card-392-2"
+    },
+    {
+      "id": "398-1",
+      "prefectureCode": 398,
+      "emoji": "🇰🇿",
+      "nameKana": "かざふすたん",
+      "nameKanji": "カザフスタン",
+      "category": "flag",
+      "description": "かざふすたんの こっきだよ"
+    },
+    {
+      "id": "398-2",
+      "prefectureCode": 398,
+      "emoji": "🍎",
+      "nameKana": "りんご",
+      "nameKanji": "リンゴ",
+      "category": "food",
+      "description": "ひろい だいちで あかい みが そだつよ",
+      "art": "world-card-398-2"
+    },
+    {
+      "id": "400-1",
+      "prefectureCode": 400,
+      "emoji": "🇯🇴",
+      "nameKana": "よるだん",
+      "nameKanji": "ヨルダン",
+      "category": "flag",
+      "description": "よるだんの こっきだよ"
+    },
+    {
+      "id": "400-2",
+      "prefectureCode": 400,
+      "emoji": "🏜️",
+      "nameKana": "ぺとらいせき",
+      "nameKanji": "ペトラ遺跡",
+      "category": "landmark",
+      "description": "あかい いわを けずって つくった まちだよ",
+      "art": "world-card-400-2"
+    },
+    {
+      "id": "404-1",
+      "prefectureCode": 404,
+      "emoji": "🇰🇪",
+      "nameKana": "けにあ",
+      "nameKanji": "ケニア",
+      "category": "flag",
+      "description": "けにあの こっきだよ"
+    },
+    {
+      "id": "404-2",
+      "prefectureCode": 404,
+      "emoji": "🦒",
+      "nameKana": "きりん",
+      "nameKanji": "キリン",
+      "category": "nature",
+      "description": "そうげんで たかい きの はを たべるよ",
+      "art": "world-card-404-2"
+    },
+    {
+      "id": "408-1",
+      "prefectureCode": 408,
+      "emoji": "🇰🇵",
+      "nameKana": "きたちょうせん",
+      "nameKanji": "北朝鮮",
+      "category": "flag",
+      "description": "きたちょうせんの こっきだよ"
+    },
+    {
+      "id": "408-2",
+      "prefectureCode": 408,
+      "emoji": "🍜",
+      "nameKana": "れいめん",
+      "nameKanji": "冷麺",
+      "category": "food",
+      "description": "つめたい スープの つるつる めんだよ",
+      "art": "world-card-408-2"
+    },
+    {
+      "id": "410-1",
+      "prefectureCode": 410,
+      "emoji": "🇰🇷",
+      "nameKana": "かんこく",
+      "nameKanji": "大韓民国",
+      "category": "flag",
+      "description": "かんこくの こっきだよ"
+    },
+    {
+      "id": "410-2",
+      "prefectureCode": 410,
+      "emoji": "🥬",
+      "nameKana": "きむち",
+      "nameKanji": "キムチ",
+      "category": "food",
+      "description": "はくさいを からく つけた おかずだよ",
+      "art": "world-card-410-2"
+    },
+    {
+      "id": "414-1",
+      "prefectureCode": 414,
+      "emoji": "🇰🇼",
+      "nameKana": "くうぇーと",
+      "nameKanji": "クウェート",
+      "category": "flag",
+      "description": "くうぇーとの こっきだよ"
+    },
+    {
+      "id": "414-2",
+      "prefectureCode": 414,
+      "emoji": "⛵",
+      "nameKana": "だうせん",
+      "nameKanji": "ダウ船",
+      "category": "craft",
+      "description": "さんかくの ほを はった きの ふねだよ",
+      "art": "world-card-414-2"
+    },
+    {
+      "id": "417-1",
+      "prefectureCode": 417,
+      "emoji": "🇰🇬",
+      "nameKana": "きるぎす",
+      "nameKanji": "キルギス",
+      "category": "flag",
+      "description": "きるぎすの こっきだよ"
+    },
+    {
+      "id": "417-2",
+      "prefectureCode": 417,
+      "emoji": "🧶",
+      "nameKana": "ふぇるとの じゅうたん",
+      "nameKanji": "フェルトの絨毯",
+      "category": "craft",
+      "description": "ひつじの けを かためて もようを つけるよ",
+      "art": "world-card-417-2"
+    },
+    {
+      "id": "418-1",
+      "prefectureCode": 418,
+      "emoji": "🇱🇦",
+      "nameKana": "らおす",
+      "nameKanji": "ラオス",
+      "category": "flag",
+      "description": "らおすの こっきだよ"
+    },
+    {
+      "id": "418-2",
+      "prefectureCode": 418,
+      "emoji": "🍚",
+      "nameKana": "かおにゃお",
+      "nameKanji": "カオニャオ",
+      "category": "food",
+      "description": "もちごめを むして てで まるめて たべるよ",
+      "art": "world-card-418-2"
+    },
+    {
+      "id": "422-1",
+      "prefectureCode": 422,
+      "emoji": "🇱🇧",
+      "nameKana": "ればのん",
+      "nameKanji": "レバノン",
+      "category": "flag",
+      "description": "ればのんの こっきだよ"
+    },
+    {
+      "id": "422-2",
+      "prefectureCode": 422,
+      "emoji": "🌲",
+      "nameKana": "ればのんすぎ",
+      "nameKanji": "レバノンスギ",
+      "category": "nature",
+      "description": "えだを よこに ひろげる おおきな きだよ",
+      "art": "world-card-422-2"
+    },
+    {
+      "id": "426-1",
+      "prefectureCode": 426,
+      "emoji": "🇱🇸",
+      "nameKana": "れそと",
+      "nameKanji": "レソト",
+      "category": "flag",
+      "description": "れそとの こっきだよ"
+    },
+    {
+      "id": "426-2",
+      "prefectureCode": 426,
+      "emoji": "🧣",
+      "nameKana": "ばそとぶらんけっと",
+      "nameKanji": "バソトブランケット",
+      "category": "craft",
+      "description": "あつでで もようの ある あたたかい ぬのだよ",
+      "art": "world-card-426-2"
+    },
+    {
+      "id": "428-1",
+      "prefectureCode": 428,
+      "emoji": "🇱🇻",
+      "nameKana": "らとびあ",
+      "nameKanji": "ラトビア",
+      "category": "flag",
+      "description": "らとびあの こっきだよ"
+    },
+    {
+      "id": "428-2",
+      "prefectureCode": 428,
+      "emoji": "💎",
+      "nameKana": "こはく",
+      "nameKanji": "琥珀",
+      "category": "nature",
+      "description": "むかしの きの しずくが かたまった いしだよ",
+      "art": "world-card-428-2"
+    },
+    {
+      "id": "430-1",
+      "prefectureCode": 430,
+      "emoji": "🇱🇷",
+      "nameKana": "りべりあ",
+      "nameKanji": "リベリア",
+      "category": "flag",
+      "description": "りべりあの こっきだよ"
+    },
+    {
+      "id": "430-2",
+      "prefectureCode": 430,
+      "emoji": "🦛",
+      "nameKana": "こびとかば",
+      "nameKanji": "コビトカバ",
+      "category": "nature",
+      "description": "もりの みずべに くらす ちいさな かばだよ",
+      "art": "world-card-430-2"
+    },
+    {
+      "id": "434-1",
+      "prefectureCode": 434,
+      "emoji": "🇱🇾",
+      "nameKana": "りびあ",
+      "nameKanji": "リビア",
+      "category": "flag",
+      "description": "りびあの こっきだよ"
+    },
+    {
+      "id": "434-2",
+      "prefectureCode": 434,
+      "emoji": "🏛️",
+      "nameKana": "れぷてぃすまぐないせき",
+      "nameKanji": "レプティス・マグナ遺跡",
+      "category": "landmark",
+      "description": "うみの ちかくに のこる いしの まちだよ",
+      "art": "world-card-434-2"
+    },
+    {
+      "id": "440-1",
+      "prefectureCode": 440,
+      "emoji": "🇱🇹",
+      "nameKana": "りとあにあ",
+      "nameKanji": "リトアニア",
+      "category": "flag",
+      "description": "りとあにあの こっきだよ"
+    },
+    {
+      "id": "440-2",
+      "prefectureCode": 440,
+      "emoji": "🍞",
+      "nameKana": "らいむぎぱん",
+      "nameKanji": "ライ麦パン",
+      "category": "food",
+      "description": "らいむぎで つくる くろっぽい ぱんだよ",
+      "art": "world-card-440-2"
+    },
+    {
+      "id": "442-1",
+      "prefectureCode": 442,
+      "emoji": "🇱🇺",
+      "nameKana": "るくせんぶるく",
+      "nameKanji": "ルクセンブルク",
+      "category": "flag",
+      "description": "るくせんぶるくの こっきだよ"
+    },
+    {
+      "id": "442-2",
+      "prefectureCode": 442,
+      "emoji": "🏰",
+      "nameKana": "ゔぃあんでんじょう",
+      "nameKanji": "ヴィアンデン城",
+      "category": "landmark",
+      "description": "もりの おかに たつ おおきな しろだよ",
+      "art": "world-card-442-2"
+    },
+    {
+      "id": "450-1",
+      "prefectureCode": 450,
+      "emoji": "🇲🇬",
+      "nameKana": "まだがすかる",
+      "nameKanji": "マダガスカル",
+      "category": "flag",
+      "description": "まだがすかるの こっきだよ"
+    },
+    {
+      "id": "450-2",
+      "prefectureCode": 450,
+      "emoji": "🌳",
+      "nameKana": "ばおばぶ",
+      "nameKanji": "バオバブ",
+      "category": "nature",
+      "description": "ふとい みきに みずを ためる おおきな きだよ",
+      "art": "world-card-450-2"
+    },
+    {
+      "id": "454-1",
+      "prefectureCode": 454,
+      "emoji": "🇲🇼",
+      "nameKana": "まらうい",
+      "nameKanji": "マラウイ",
+      "category": "flag",
+      "description": "まらういの こっきだよ"
+    },
+    {
+      "id": "454-2",
+      "prefectureCode": 454,
+      "emoji": "🐟",
+      "nameKana": "しくりっど",
+      "nameKanji": "シクリッド",
+      "category": "nature",
+      "description": "みずうみに いろとりどりの さかなが くらすよ",
+      "art": "world-card-454-2"
+    },
+    {
+      "id": "458-1",
+      "prefectureCode": 458,
+      "emoji": "🇲🇾",
+      "nameKana": "まれーしあ",
+      "nameKanji": "マレーシア",
+      "category": "flag",
+      "description": "まれーしあの こっきだよ"
+    },
+    {
+      "id": "458-2",
+      "prefectureCode": 458,
+      "emoji": "🏙️",
+      "nameKana": "ぺとろなすついんたわー",
+      "nameKanji": "ペトロナスツインタワー",
+      "category": "landmark",
+      "description": "ふたつの たかい とうが はしで つながるよ",
+      "art": "world-card-458-2"
+    },
+    {
+      "id": "462-1",
+      "prefectureCode": 462,
+      "emoji": "🇲🇻",
+      "nameKana": "もるでぃぶ",
+      "nameKanji": "モルディブ",
+      "category": "flag",
+      "description": "もるでぃぶの こっきだよ"
+    },
+    {
+      "id": "462-2",
+      "prefectureCode": 462,
+      "emoji": "🪸",
+      "nameKana": "さんごの かんしょう",
+      "nameKanji": "サンゴの環礁",
+      "category": "nature",
+      "description": "さんごの しまが わの ように ならぶよ",
+      "art": "world-card-462-2"
+    },
+    {
+      "id": "466-1",
+      "prefectureCode": 466,
+      "emoji": "🇲🇱",
+      "nameKana": "まり",
+      "nameKanji": "マリ共和国",
+      "category": "flag",
+      "description": "まりの こっきだよ"
+    },
+    {
+      "id": "466-2",
+      "prefectureCode": 466,
+      "emoji": "🧵",
+      "nameKana": "ぼごらんふぃに",
+      "nameKanji": "ボゴランフィニ",
+      "category": "craft",
+      "description": "どろで もようを そめる めんの ぬのだよ",
+      "art": "world-card-466-2"
+    },
+    {
+      "id": "470-1",
+      "prefectureCode": 470,
+      "emoji": "🇲🇹",
+      "nameKana": "まるた",
+      "nameKanji": "マルタ",
+      "category": "flag",
+      "description": "まるたの こっきだよ"
+    },
+    {
+      "id": "470-2",
+      "prefectureCode": 470,
+      "emoji": "⛵",
+      "nameKana": "るっつ",
+      "nameKanji": "ルッツ",
+      "category": "craft",
+      "description": "めの もようを えがいた いろあざやかな ふねだよ",
+      "art": "world-card-470-2"
+    },
+    {
+      "id": "478-1",
+      "prefectureCode": 478,
+      "emoji": "🇲🇷",
+      "nameKana": "もーりたにあ",
+      "nameKanji": "モーリタニア",
+      "category": "flag",
+      "description": "もーりたにあの こっきだよ"
+    },
+    {
+      "id": "478-2",
+      "prefectureCode": 478,
+      "emoji": "🌀",
+      "nameKana": "りしゃっとこうぞう",
+      "nameKanji": "リシャット構造",
+      "category": "nature",
+      "description": "さばくに ひろがる おおきな わの もようだよ",
+      "art": "world-card-478-2"
+    },
+    {
+      "id": "484-1",
+      "prefectureCode": 484,
+      "emoji": "🇲🇽",
+      "nameKana": "めきしこ",
+      "nameKanji": "メキシコ",
+      "category": "flag",
+      "description": "めきしこの こっきだよ"
+    },
+    {
+      "id": "484-2",
+      "prefectureCode": 484,
+      "emoji": "🌮",
+      "nameKana": "たこす",
+      "nameKanji": "タコス",
+      "category": "food",
+      "description": "うすい きじで にくや やさいを つつむよ",
+      "art": "world-card-484-2"
+    },
+    {
+      "id": "496-1",
+      "prefectureCode": 496,
+      "emoji": "🇲🇳",
+      "nameKana": "もんごる",
+      "nameKanji": "モンゴル国",
+      "category": "flag",
+      "description": "もんごるの こっきだよ"
+    },
+    {
+      "id": "496-2",
+      "prefectureCode": 496,
+      "emoji": "⛺",
+      "nameKana": "げる",
+      "nameKanji": "ゲル",
+      "category": "craft",
+      "description": "はこんで たてられる まるい いえだよ",
+      "art": "world-card-496-2"
+    },
+    {
+      "id": "498-1",
+      "prefectureCode": 498,
+      "emoji": "🇲🇩",
+      "nameKana": "もるどば",
+      "nameKanji": "モルドバ",
+      "category": "flag",
+      "description": "もるどばの こっきだよ"
+    },
+    {
+      "id": "498-2",
+      "prefectureCode": 498,
+      "emoji": "🍇",
+      "nameKana": "ぶどう",
+      "nameKanji": "ブドウ",
+      "category": "food",
+      "description": "ひあたりの よい おかで あまい みが そだつよ",
+      "art": "world-card-498-2"
+    },
+    {
+      "id": "499-1",
+      "prefectureCode": 499,
+      "emoji": "🇲🇪",
+      "nameKana": "もんてねぐろ",
+      "nameKanji": "モンテネグロ",
+      "category": "flag",
+      "description": "もんてねぐろの こっきだよ"
+    },
+    {
+      "id": "499-2",
+      "prefectureCode": 499,
+      "emoji": "⛰️",
+      "nameKana": "ことるわん",
+      "nameKanji": "コトル湾",
+      "category": "nature",
+      "description": "たかい やまに かこまれた ほそながい いりえだよ",
+      "art": "world-card-499-2"
+    },
+    {
+      "id": "504-1",
+      "prefectureCode": 504,
+      "emoji": "🇲🇦",
+      "nameKana": "もろっこ",
+      "nameKanji": "モロッコ",
+      "category": "flag",
+      "description": "もろっこの こっきだよ"
+    },
+    {
+      "id": "504-2",
+      "prefectureCode": 504,
+      "emoji": "🍲",
+      "nameKana": "たじん",
+      "nameKanji": "タジン",
+      "category": "food",
+      "description": "とんがりぼうしの なべで むしにする りょうりだよ",
+      "art": "world-card-504-2"
+    },
+    {
+      "id": "508-1",
+      "prefectureCode": 508,
+      "emoji": "🇲🇿",
+      "nameKana": "もざんびーく",
+      "nameKanji": "モザンビーク",
+      "category": "flag",
+      "description": "もざんびーくの こっきだよ"
+    },
+    {
+      "id": "508-2",
+      "prefectureCode": 508,
+      "emoji": "🌰",
+      "nameKana": "かしゅーなっつ",
+      "nameKanji": "カシューナッツ",
+      "category": "food",
+      "description": "まがった かたちの こうばしい きのみだよ",
+      "art": "world-card-508-2"
+    },
+    {
+      "id": "512-1",
+      "prefectureCode": 512,
+      "emoji": "🇴🇲",
+      "nameKana": "おまーん",
+      "nameKanji": "オマーン",
+      "category": "flag",
+      "description": "おまーんの こっきだよ"
+    },
+    {
+      "id": "512-2",
+      "prefectureCode": 512,
+      "emoji": "🕯️",
+      "nameKana": "にゅうこう",
+      "nameKanji": "乳香",
+      "category": "nature",
+      "description": "きの しるを かためた かおりの よい かたまりだよ",
+      "art": "world-card-512-2"
+    },
+    {
+      "id": "516-1",
+      "prefectureCode": 516,
+      "emoji": "🇳🇦",
+      "nameKana": "なみびあ",
+      "nameKanji": "ナミビア",
+      "category": "flag",
+      "description": "なみびあの こっきだよ"
+    },
+    {
+      "id": "516-2",
+      "prefectureCode": 516,
+      "emoji": "🏜️",
+      "nameKana": "なみぶさばく",
+      "nameKanji": "ナミブ砂漠",
+      "category": "nature",
+      "description": "あかい すなのおかが うみまで つづくよ",
+      "art": "world-card-516-2"
+    },
+    {
+      "id": "524-1",
+      "prefectureCode": 524,
+      "emoji": "🇳🇵",
+      "nameKana": "ねぱーる",
+      "nameKanji": "ネパール",
+      "category": "flag",
+      "description": "ねぱーるの こっきだよ"
+    },
+    {
+      "id": "524-2",
+      "prefectureCode": 524,
+      "emoji": "🏔️",
+      "nameKana": "ひまらやさんみゃく",
+      "nameKanji": "ヒマラヤ山脈",
+      "category": "nature",
+      "description": "せかいで いちばん たかい やまが あるよ",
+      "art": "world-card-524-2"
+    },
+    {
+      "id": "528-1",
+      "prefectureCode": 528,
+      "emoji": "🇳🇱",
+      "nameKana": "おらんだ",
+      "nameKanji": "オランダ",
+      "category": "flag",
+      "description": "おらんだの こっきだよ"
+    },
+    {
+      "id": "528-2",
+      "prefectureCode": 528,
+      "emoji": "🌬️",
+      "nameKana": "ふうしゃ",
+      "nameKanji": "風車",
+      "category": "landmark",
+      "description": "おおきな はねを かぜで まわす たてものだよ",
+      "art": "world-card-528-2"
+    },
+    {
+      "id": "554-1",
+      "prefectureCode": 554,
+      "emoji": "🇳🇿",
+      "nameKana": "にゅーじーらんど",
+      "nameKanji": "ニュージーランド",
+      "category": "flag",
+      "description": "にゅーじーらんどの こっきだよ"
+    },
+    {
+      "id": "554-2",
+      "prefectureCode": 554,
+      "emoji": "🐦",
+      "nameKana": "きーうぃ",
+      "nameKanji": "キーウィ",
+      "category": "nature",
+      "description": "じめんを あるく つばさの ちいさな とりだよ",
+      "art": "world-card-554-2"
+    },
+    {
+      "id": "558-1",
+      "prefectureCode": 558,
+      "emoji": "🇳🇮",
+      "nameKana": "にからぐあ",
+      "nameKanji": "ニカラグア",
+      "category": "flag",
+      "description": "にからぐあの こっきだよ"
+    },
+    {
+      "id": "558-2",
+      "prefectureCode": 558,
+      "emoji": "🌋",
+      "nameKana": "ももとんぼかざん",
+      "nameKanji": "モモトンボ火山",
+      "category": "nature",
+      "description": "みずうみの そばに そびえる かざんだよ",
+      "art": "world-card-558-2"
+    },
+    {
+      "id": "562-1",
+      "prefectureCode": 562,
+      "emoji": "🇳🇪",
+      "nameKana": "にじぇーる",
+      "nameKanji": "ニジェール",
+      "category": "flag",
+      "description": "にじぇーるの こっきだよ"
+    },
+    {
+      "id": "562-2",
+      "prefectureCode": 562,
+      "emoji": "🦒",
+      "nameKana": "にしあふりかきりん",
+      "nameKanji": "ニシアフリカキリン",
+      "category": "nature",
+      "description": "しろっぽい からだに あみめが ある きりんだよ",
+      "art": "world-card-562-2"
+    },
+    {
+      "id": "566-1",
+      "prefectureCode": 566,
+      "emoji": "🇳🇬",
+      "nameKana": "ないじぇりあ",
+      "nameKanji": "ナイジェリア",
+      "category": "flag",
+      "description": "ないじぇりあの こっきだよ"
+    },
+    {
+      "id": "566-2",
+      "prefectureCode": 566,
+      "emoji": "🗿",
+      "nameKana": "のくの どぐう",
+      "nameKanji": "ノクの土偶",
+      "category": "craft",
+      "description": "つちを やいて つくった むかしの ぞうだよ",
+      "art": "world-card-566-2"
+    },
+    {
+      "id": "578-1",
+      "prefectureCode": 578,
+      "emoji": "🇳🇴",
+      "nameKana": "のるうぇー",
+      "nameKanji": "ノルウェー",
+      "category": "flag",
+      "description": "のるうぇーの こっきだよ"
+    },
+    {
+      "id": "578-2",
+      "prefectureCode": 578,
+      "emoji": "⛰️",
+      "nameKana": "ふぃよるど",
+      "nameKanji": "フィヨルド",
+      "category": "nature",
+      "description": "こおりが けずった ふかい いりえだよ",
+      "art": "world-card-578-2"
+    },
+    {
+      "id": "586-1",
+      "prefectureCode": 586,
+      "emoji": "🇵🇰",
+      "nameKana": "ぱきすたん",
+      "nameKanji": "パキスタン",
+      "category": "flag",
+      "description": "ぱきすたんの こっきだよ"
+    },
+    {
+      "id": "586-2",
+      "prefectureCode": 586,
+      "emoji": "🏔️",
+      "nameKana": "けーつー",
+      "nameKanji": "ケーツー",
+      "category": "nature",
+      "description": "ゆきと こおりに おおわれた とても たかい やまだよ",
+      "art": "world-card-586-2"
+    },
+    {
+      "id": "591-1",
+      "prefectureCode": 591,
+      "emoji": "🇵🇦",
+      "nameKana": "ぱなま",
+      "nameKanji": "パナマ",
+      "category": "flag",
+      "description": "ぱなまの こっきだよ"
+    },
+    {
+      "id": "591-2",
+      "prefectureCode": 591,
+      "emoji": "🚢",
+      "nameKana": "ぱなまうんが",
+      "nameKanji": "パナマ運河",
+      "category": "landmark",
+      "description": "ふたつの うみを つなぐ ふねの みちだよ",
+      "art": "world-card-591-2"
+    },
+    {
+      "id": "598-1",
+      "prefectureCode": 598,
+      "emoji": "🇵🇬",
+      "nameKana": "ぱぷあにゅーぎにあ",
+      "nameKanji": "パプアニューギニア",
+      "category": "flag",
+      "description": "ぱぷあにゅーぎにあの こっきだよ"
+    },
+    {
+      "id": "598-2",
+      "prefectureCode": 598,
+      "emoji": "🐦",
+      "nameKana": "ごくらくちょう",
+      "nameKanji": "ゴクラクチョウ",
+      "category": "nature",
+      "description": "あざやかな かざりばねを もつ とりだよ",
+      "art": "world-card-598-2"
+    },
+    {
+      "id": "600-1",
+      "prefectureCode": 600,
+      "emoji": "🇵🇾",
+      "nameKana": "ぱらぐあい",
+      "nameKanji": "パラグアイ",
+      "category": "flag",
+      "description": "ぱらぐあいの こっきだよ"
+    },
+    {
+      "id": "600-2",
+      "prefectureCode": 600,
+      "emoji": "🧉",
+      "nameKana": "てれれ",
+      "nameKanji": "テレレ",
+      "category": "food",
+      "description": "つめたい みずで いれる はっぱの のみものだよ",
+      "art": "world-card-600-2"
+    },
+    {
+      "id": "604-1",
+      "prefectureCode": 604,
+      "emoji": "🇵🇪",
+      "nameKana": "ぺるー",
+      "nameKanji": "ペルー",
+      "category": "flag",
+      "description": "ぺるーの こっきだよ"
+    },
+    {
+      "id": "604-2",
+      "prefectureCode": 604,
+      "emoji": "🏔️",
+      "nameKana": "まちゅぴちゅ",
+      "nameKanji": "マチュ・ピチュ",
+      "category": "landmark",
+      "description": "たかい やまの うえに のこる いしの まちだよ",
+      "art": "world-card-604-2"
+    },
+    {
+      "id": "608-1",
+      "prefectureCode": 608,
+      "emoji": "🇵🇭",
+      "nameKana": "ふぃりぴん",
+      "nameKanji": "フィリピン",
+      "category": "flag",
+      "description": "ふぃりぴんの こっきだよ"
+    },
+    {
+      "id": "608-2",
+      "prefectureCode": 608,
+      "emoji": "🚌",
+      "nameKana": "じーぷにー",
+      "nameKanji": "ジープニー",
+      "category": "craft",
+      "description": "いろあざやかに かざった のりあいぐるまだよ",
+      "art": "world-card-608-2"
+    },
+    {
+      "id": "616-1",
+      "prefectureCode": 616,
+      "emoji": "🇵🇱",
+      "nameKana": "ぽーらんど",
+      "nameKanji": "ポーランド",
+      "category": "flag",
+      "description": "ぽーらんどの こっきだよ"
+    },
+    {
+      "id": "616-2",
+      "prefectureCode": 616,
+      "emoji": "🥟",
+      "nameKana": "ぴえろぎ",
+      "nameKanji": "ピエロギ",
+      "category": "food",
+      "description": "かわで じゃがいもなどを つつむ りょうりだよ",
+      "art": "world-card-616-2"
+    },
+    {
+      "id": "620-1",
+      "prefectureCode": 620,
+      "emoji": "🇵🇹",
+      "nameKana": "ぽるとがる",
+      "nameKanji": "ポルトガル",
+      "category": "flag",
+      "description": "ぽるとがるの こっきだよ"
+    },
+    {
+      "id": "620-2",
+      "prefectureCode": 620,
+      "emoji": "🟦",
+      "nameKana": "あずれーじょ",
+      "nameKanji": "アズレージョ",
+      "category": "craft",
+      "description": "たてものを かざる いろもようの たいるだよ",
+      "art": "world-card-620-2"
+    },
+    {
+      "id": "624-1",
+      "prefectureCode": 624,
+      "emoji": "🇬🇼",
+      "nameKana": "ぎにあびさう",
+      "nameKanji": "ギニアビサウ",
+      "category": "flag",
+      "description": "ぎにあびさうの こっきだよ"
+    },
+    {
+      "id": "624-2",
+      "prefectureCode": 624,
+      "emoji": "🌰",
+      "nameKana": "かしゅーなっつ",
+      "nameKanji": "カシューナッツ",
+      "category": "food",
+      "description": "あつい ちいきで こうばしい きのみが そだつよ",
+      "art": "world-card-624-2"
+    },
+    {
+      "id": "626-1",
+      "prefectureCode": 626,
+      "emoji": "🇹🇱",
+      "nameKana": "ひがしてぃもーる",
+      "nameKanji": "東ティモール",
+      "category": "flag",
+      "description": "ひがしてぃもーるの こっきだよ"
+    },
+    {
+      "id": "626-2",
+      "prefectureCode": 626,
+      "emoji": "🧵",
+      "nameKana": "たいす",
+      "nameKanji": "タイス",
+      "category": "craft",
+      "description": "いろいろな もようを おった ぬのだよ",
+      "art": "world-card-626-2"
+    },
+    {
+      "id": "634-1",
+      "prefectureCode": 634,
+      "emoji": "🇶🇦",
+      "nameKana": "かたーる",
+      "nameKanji": "カタール",
+      "category": "flag",
+      "description": "かたーるの こっきだよ"
+    },
+    {
+      "id": "634-2",
+      "prefectureCode": 634,
+      "emoji": "🦪",
+      "nameKana": "しんじゅ",
+      "nameKanji": "真珠",
+      "category": "nature",
+      "description": "かいの なかで まるく そだつ たからものだよ",
+      "art": "world-card-634-2"
+    },
+    {
+      "id": "642-1",
+      "prefectureCode": 642,
+      "emoji": "🇷🇴",
+      "nameKana": "るーまにあ",
+      "nameKanji": "ルーマニア",
+      "category": "flag",
+      "description": "るーまにあの こっきだよ"
+    },
+    {
+      "id": "642-2",
+      "prefectureCode": 642,
+      "emoji": "🥚",
+      "nameKana": "いーすたーえっぐ",
+      "nameKanji": "彩色卵",
+      "category": "craft",
+      "description": "たまごの からに こまかな もようを えがくよ",
+      "art": "world-card-642-2"
+    },
+    {
+      "id": "643-1",
+      "prefectureCode": 643,
+      "emoji": "🇷🇺",
+      "nameKana": "ろしあ",
+      "nameKanji": "ロシア",
+      "category": "flag",
+      "description": "ろしあの こっきだよ"
+    },
+    {
+      "id": "643-2",
+      "prefectureCode": 643,
+      "emoji": "🪆",
+      "nameKana": "まとりょーしか",
+      "nameKanji": "マトリョーシカ",
+      "category": "craft",
+      "description": "なかから つぎつぎ にんぎょうが でてくるよ",
+      "art": "world-card-643-2"
+    },
+    {
+      "id": "646-1",
+      "prefectureCode": 646,
+      "emoji": "🇷🇼",
+      "nameKana": "るわんだ",
+      "nameKanji": "ルワンダ",
+      "category": "flag",
+      "description": "るわんだの こっきだよ"
+    },
+    {
+      "id": "646-2",
+      "prefectureCode": 646,
+      "emoji": "🦍",
+      "nameKana": "まうんてんごりら",
+      "nameKanji": "マウンテンゴリラ",
+      "category": "nature",
+      "description": "たかい もりに くらす おおきな ごりらだよ",
+      "art": "world-card-646-2"
+    },
+    {
+      "id": "682-1",
+      "prefectureCode": 682,
+      "emoji": "🇸🇦",
+      "nameKana": "さうじあらびあ",
+      "nameKanji": "サウジアラビア",
+      "category": "flag",
+      "description": "さうじあらびあの こっきだよ"
+    },
+    {
+      "id": "682-2",
+      "prefectureCode": 682,
+      "emoji": "🌴",
+      "nameKana": "でーつ",
+      "nameKanji": "デーツ",
+      "category": "food",
+      "description": "さばくの おあしすで あまい みが そだつよ",
+      "art": "world-card-682-2"
+    },
+    {
+      "id": "686-1",
+      "prefectureCode": 686,
+      "emoji": "🇸🇳",
+      "nameKana": "せねがる",
+      "nameKanji": "セネガル",
+      "category": "flag",
+      "description": "せねがるの こっきだよ"
+    },
+    {
+      "id": "686-2",
+      "prefectureCode": 686,
+      "emoji": "🌳",
+      "nameKana": "ばおばぶ",
+      "nameKanji": "バオバブ",
+      "category": "nature",
+      "description": "ふとい みきと おおきな えだを もつ きだよ",
+      "art": "world-card-686-2"
+    },
+    {
+      "id": "688-1",
+      "prefectureCode": 688,
+      "emoji": "🇷🇸",
+      "nameKana": "せるびあ",
+      "nameKanji": "セルビア",
+      "category": "flag",
+      "description": "せるびあの こっきだよ"
+    },
+    {
+      "id": "688-2",
+      "prefectureCode": 688,
+      "emoji": "🫑",
+      "nameKana": "あいばる",
+      "nameKanji": "アイバル",
+      "category": "food",
+      "description": "あかい ぱぷりかを にこんだ ぺーすとだよ",
+      "art": "world-card-688-2"
+    },
+    {
+      "id": "694-1",
+      "prefectureCode": 694,
+      "emoji": "🇸🇱",
+      "nameKana": "しえられおね",
+      "nameKanji": "シエラレオネ",
+      "category": "flag",
+      "description": "しえられおねの こっきだよ"
+    },
+    {
+      "id": "694-2",
+      "prefectureCode": 694,
+      "emoji": "🐒",
+      "nameKana": "ちんぱんじー",
+      "nameKanji": "チンパンジー",
+      "category": "nature",
+      "description": "あつい もりで なかまと くらす さるだよ",
+      "art": "world-card-694-2"
+    },
+    {
+      "id": "702-1",
+      "prefectureCode": 702,
+      "emoji": "🇸🇬",
+      "nameKana": "しんがぽーる",
+      "nameKanji": "シンガポール",
+      "category": "flag",
+      "description": "しんがぽーるの こっきだよ"
+    },
+    {
+      "id": "702-2",
+      "prefectureCode": 702,
+      "emoji": "🦁",
+      "nameKana": "まーらいおん",
+      "nameKanji": "マーライオン",
+      "category": "landmark",
+      "description": "さかなの からだを もつ ししの ぞうだよ",
+      "art": "world-card-702-2"
+    },
+    {
+      "id": "703-1",
+      "prefectureCode": 703,
+      "emoji": "🇸🇰",
+      "nameKana": "すろばきあ",
+      "nameKanji": "スロバキア",
+      "category": "flag",
+      "description": "すろばきあの こっきだよ"
+    },
+    {
+      "id": "703-2",
+      "prefectureCode": 703,
+      "emoji": "🏰",
+      "nameKana": "すぴしゅじょう",
+      "nameKanji": "スピシュ城",
+      "category": "landmark",
+      "description": "ひろい おかの うえに のこる いしの しろだよ",
+      "art": "world-card-703-2"
+    },
+    {
+      "id": "704-1",
+      "prefectureCode": 704,
+      "emoji": "🇻🇳",
+      "nameKana": "べとなむ",
+      "nameKanji": "ベトナム",
+      "category": "flag",
+      "description": "べとなむの こっきだよ"
+    },
+    {
+      "id": "704-2",
+      "prefectureCode": 704,
+      "emoji": "🍜",
+      "nameKana": "ふぉー",
+      "nameKanji": "フォー",
+      "category": "food",
+      "description": "こめの めんを すーぷに いれた りょうりだよ",
+      "art": "world-card-704-2"
+    },
+    {
+      "id": "705-1",
+      "prefectureCode": 705,
+      "emoji": "🇸🇮",
+      "nameKana": "すろべにあ",
+      "nameKanji": "スロベニア",
+      "category": "flag",
+      "description": "すろべにあの こっきだよ"
+    },
+    {
+      "id": "705-2",
+      "prefectureCode": 705,
+      "emoji": "🏞️",
+      "nameKana": "ぶれっどこ",
+      "nameKanji": "ブレッド湖",
+      "category": "nature",
+      "description": "しまの きょうかいが みずうみに うかぶよ",
+      "art": "world-card-705-2"
+    },
+    {
+      "id": "706-1",
+      "prefectureCode": 706,
+      "emoji": "🇸🇴",
+      "nameKana": "そまりあ",
+      "nameKanji": "ソマリア",
+      "category": "flag",
+      "description": "そまりあの こっきだよ"
+    },
+    {
+      "id": "706-2",
+      "prefectureCode": 706,
+      "emoji": "🐪",
+      "nameKana": "らくだ",
+      "nameKanji": "ラクダ",
+      "category": "nature",
+      "description": "かわいた だいちで ひとや にもつを はこぶよ",
+      "art": "world-card-706-2"
+    },
+    {
+      "id": "710-1",
+      "prefectureCode": 710,
+      "emoji": "🇿🇦",
+      "nameKana": "みなみあふりか",
+      "nameKanji": "南アフリカ共和国",
+      "category": "flag",
+      "description": "みなみあふりかの こっきだよ"
+    },
+    {
+      "id": "710-2",
+      "prefectureCode": 710,
+      "emoji": "🌺",
+      "nameKana": "ぷろてあ",
+      "nameKanji": "プロテア",
+      "category": "nature",
+      "description": "おおきな はなびらの ように みえる はなだよ",
+      "art": "world-card-710-2"
+    },
+    {
+      "id": "716-1",
+      "prefectureCode": 716,
+      "emoji": "🇿🇼",
+      "nameKana": "じんばぶえ",
+      "nameKanji": "ジンバブエ",
+      "category": "flag",
+      "description": "じんばぶえの こっきだよ"
+    },
+    {
+      "id": "716-2",
+      "prefectureCode": 716,
+      "emoji": "💧",
+      "nameKana": "びくとりあの たき",
+      "nameKanji": "ビクトリアの滝",
+      "category": "nature",
+      "description": "おおきな かわから みずが いっせいに おちるよ",
+      "art": "world-card-716-2"
+    },
+    {
+      "id": "724-1",
+      "prefectureCode": 724,
+      "emoji": "🇪🇸",
+      "nameKana": "すぺいん",
+      "nameKanji": "スペイン",
+      "category": "flag",
+      "description": "すぺいんの こっきだよ"
+    },
+    {
+      "id": "724-2",
+      "prefectureCode": 724,
+      "emoji": "🥘",
+      "nameKana": "ぱえりあ",
+      "nameKanji": "パエリア",
+      "category": "food",
+      "description": "こめと うみの さちを ひらたい なべで たくよ",
+      "art": "world-card-724-2"
+    },
+    {
+      "id": "728-1",
+      "prefectureCode": 728,
+      "emoji": "🇸🇸",
+      "nameKana": "みなみすーだん",
+      "nameKanji": "南スーダン",
+      "category": "flag",
+      "description": "みなみすーだんの こっきだよ"
+    },
+    {
+      "id": "728-2",
+      "prefectureCode": 728,
+      "emoji": "🐦",
+      "nameKana": "はしびろこう",
+      "nameKanji": "ハシビロコウ",
+      "category": "nature",
+      "description": "おおきな くちばしで みずべに たつ とりだよ",
+      "art": "world-card-728-2"
+    },
+    {
+      "id": "729-1",
+      "prefectureCode": 729,
+      "emoji": "🇸🇩",
+      "nameKana": "すーだん",
+      "nameKanji": "スーダン",
+      "category": "flag",
+      "description": "すーだんの こっきだよ"
+    },
+    {
+      "id": "729-2",
+      "prefectureCode": 729,
+      "emoji": "🔺",
+      "nameKana": "めろえの ぴらみっど",
+      "nameKanji": "メロエのピラミッド",
+      "category": "landmark",
+      "description": "さばくに ちいさな ぴらみっどが ならぶよ",
+      "art": "world-card-729-2"
+    },
+    {
+      "id": "740-1",
+      "prefectureCode": 740,
+      "emoji": "🇸🇷",
+      "nameKana": "すりなむ",
+      "nameKanji": "スリナム",
+      "category": "flag",
+      "description": "すりなむの こっきだよ"
+    },
+    {
+      "id": "740-2",
+      "prefectureCode": 740,
+      "emoji": "🦜",
+      "nameKana": "ねったいうりん",
+      "nameKanji": "熱帯雨林",
+      "category": "nature",
+      "description": "おおきな かわの そばに みどりの もりが ひろがるよ",
+      "art": "world-card-740-2"
+    },
+    {
+      "id": "748-1",
+      "prefectureCode": 748,
+      "emoji": "🇸🇿",
+      "nameKana": "えすわてぃに",
+      "nameKanji": "エスワティニ",
+      "category": "flag",
+      "description": "えすわてぃにの こっきだよ"
+    },
+    {
+      "id": "748-2",
+      "prefectureCode": 748,
+      "emoji": "🦏",
+      "nameKana": "しろさい",
+      "nameKanji": "シロサイ",
+      "category": "nature",
+      "description": "そうげんに くらす おおきな つのの どうぶつだよ",
+      "art": "world-card-748-2"
+    },
+    {
+      "id": "752-1",
+      "prefectureCode": 752,
+      "emoji": "🇸🇪",
+      "nameKana": "すうぇーでん",
+      "nameKanji": "スウェーデン",
+      "category": "flag",
+      "description": "すうぇーでんの こっきだよ"
+    },
+    {
+      "id": "752-2",
+      "prefectureCode": 752,
+      "emoji": "🐴",
+      "nameKana": "だーらなほーす",
+      "nameKanji": "ダーラナホース",
+      "category": "craft",
+      "description": "あざやかな もようを えがいた きの うまだよ",
+      "art": "world-card-752-2"
+    },
+    {
+      "id": "756-1",
+      "prefectureCode": 756,
+      "emoji": "🇨🇭",
+      "nameKana": "すいす",
+      "nameKanji": "スイス",
+      "category": "flag",
+      "description": "すいすの こっきだよ"
+    },
+    {
+      "id": "756-2",
+      "prefectureCode": 756,
+      "emoji": "🧀",
+      "nameKana": "ちーず",
+      "nameKanji": "チーズ",
+      "category": "food",
+      "description": "やまの ちちから いろいろな ちーずを つくるよ",
+      "art": "world-card-756-2"
+    },
+    {
+      "id": "760-1",
+      "prefectureCode": 760,
+      "emoji": "🇸🇾",
+      "nameKana": "しりあ",
+      "nameKanji": "シリア",
+      "category": "flag",
+      "description": "しりあの こっきだよ"
+    },
+    {
+      "id": "760-2",
+      "prefectureCode": 760,
+      "emoji": "🧼",
+      "nameKana": "あれっぽせっけん",
+      "nameKanji": "アレッポ石鹸",
+      "category": "craft",
+      "description": "おりーぶの あぶらなどで つくる せっけんだよ",
+      "art": "world-card-760-2"
+    },
+    {
+      "id": "762-1",
+      "prefectureCode": 762,
+      "emoji": "🇹🇯",
+      "nameKana": "たじきすたん",
+      "nameKanji": "タジキスタン",
+      "category": "flag",
+      "description": "たじきすたんの こっきだよ"
+    },
+    {
+      "id": "762-2",
+      "prefectureCode": 762,
+      "emoji": "🏔️",
+      "nameKana": "ぱみーるこうげん",
+      "nameKanji": "パミール高原",
+      "category": "nature",
+      "description": "ゆきの やまが つづく たかい だいちだよ",
+      "art": "world-card-762-2"
+    },
+    {
+      "id": "764-1",
+      "prefectureCode": 764,
+      "emoji": "🇹🇭",
+      "nameKana": "たい",
+      "nameKanji": "タイ王国",
+      "category": "flag",
+      "description": "たいの こっきだよ"
+    },
+    {
+      "id": "764-2",
+      "prefectureCode": 764,
+      "emoji": "🛺",
+      "nameKana": "とぅくとぅく",
+      "nameKanji": "トゥクトゥク",
+      "category": "craft",
+      "description": "さんりんで まちを はしる ちいさな のりものだよ",
+      "art": "world-card-764-2"
+    },
+    {
+      "id": "768-1",
+      "prefectureCode": 768,
+      "emoji": "🇹🇬",
+      "nameKana": "とーご",
+      "nameKanji": "トーゴ",
+      "category": "flag",
+      "description": "とーごの こっきだよ"
+    },
+    {
+      "id": "768-2",
+      "prefectureCode": 768,
+      "emoji": "🛖",
+      "nameKana": "たきえんたの いえ",
+      "nameKanji": "タキエンタの家",
+      "category": "landmark",
+      "description": "つちで つくった とうの ような いえだよ",
+      "art": "world-card-768-2"
+    },
+    {
+      "id": "780-1",
+      "prefectureCode": 780,
+      "emoji": "🇹🇹",
+      "nameKana": "とりにだーどとばご",
+      "nameKanji": "トリニダード・トバゴ",
+      "category": "flag",
+      "description": "とりにだーどとばごの こっきだよ"
+    },
+    {
+      "id": "780-2",
+      "prefectureCode": 780,
+      "emoji": "🥁",
+      "nameKana": "すてぃーるぱん",
+      "nameKanji": "スティールパン",
+      "category": "craft",
+      "description": "きんぞくの うつわを たたいて かなでる がっきだよ",
+      "art": "world-card-780-2"
+    },
+    {
+      "id": "784-1",
+      "prefectureCode": 784,
+      "emoji": "🇦🇪",
+      "nameKana": "あらぶしゅちょうこくれんぽう",
+      "nameKanji": "アラブ首長国連邦",
+      "category": "flag",
+      "description": "あらぶしゅちょうこくれんぽうの こっきだよ"
+    },
+    {
+      "id": "784-2",
+      "prefectureCode": 784,
+      "emoji": "🏙️",
+      "nameKana": "ぶるじゅはりふぁ",
+      "nameKanji": "ブルジュ・ハリファ",
+      "category": "landmark",
+      "description": "くもに とどきそうな とても たかい たてものだよ",
+      "art": "world-card-784-2"
+    },
+    {
+      "id": "788-1",
+      "prefectureCode": 788,
+      "emoji": "🇹🇳",
+      "nameKana": "ちゅにじあ",
+      "nameKanji": "チュニジア",
+      "category": "flag",
+      "description": "ちゅにじあの こっきだよ"
+    },
+    {
+      "id": "788-2",
+      "prefectureCode": 788,
+      "emoji": "🧩",
+      "nameKana": "もざいく",
+      "nameKanji": "モザイク",
+      "category": "craft",
+      "description": "ちいさな いしを ならべて えや もようを つくるよ",
+      "art": "world-card-788-2"
+    },
+    {
+      "id": "792-1",
+      "prefectureCode": 792,
+      "emoji": "🇹🇷",
+      "nameKana": "とるこ",
+      "nameKanji": "トルコ",
+      "category": "flag",
+      "description": "とるこの こっきだよ"
+    },
+    {
+      "id": "792-2",
+      "prefectureCode": 792,
+      "emoji": "🎈",
+      "nameKana": "かっぱどきあ",
+      "nameKanji": "カッパドキア",
+      "category": "landmark",
+      "description": "ふしぎな いわの うえを ききゅうが とぶよ",
+      "art": "world-card-792-2"
+    },
+    {
+      "id": "795-1",
+      "prefectureCode": 795,
+      "emoji": "🇹🇲",
+      "nameKana": "とるくめにすたん",
+      "nameKanji": "トルクメニスタン",
+      "category": "flag",
+      "description": "とるくめにすたんの こっきだよ"
+    },
+    {
+      "id": "795-2",
+      "prefectureCode": 795,
+      "emoji": "🐎",
+      "nameKana": "あはるてけ",
+      "nameKanji": "アハルテケ",
+      "category": "nature",
+      "description": "きんいろに かがやく ほそみの うまだよ",
+      "art": "world-card-795-2"
+    },
+    {
+      "id": "800-1",
+      "prefectureCode": 800,
+      "emoji": "🇺🇬",
+      "nameKana": "うがんだ",
+      "nameKanji": "ウガンダ",
+      "category": "flag",
+      "description": "うがんだの こっきだよ"
+    },
+    {
+      "id": "800-2",
+      "prefectureCode": 800,
+      "emoji": "☕",
+      "nameKana": "こーひー",
+      "nameKanji": "コーヒー",
+      "category": "food",
+      "description": "みどりの おかで かおりの よい まめが そだつよ",
+      "art": "world-card-800-2"
+    },
+    {
+      "id": "804-1",
+      "prefectureCode": 804,
+      "emoji": "🇺🇦",
+      "nameKana": "うくらいな",
+      "nameKanji": "ウクライナ",
+      "category": "flag",
+      "description": "うくらいなの こっきだよ"
+    },
+    {
+      "id": "804-2",
+      "prefectureCode": 804,
+      "emoji": "🌻",
+      "nameKana": "ひまわり",
+      "nameKanji": "ヒマワリ",
+      "category": "nature",
+      "description": "ひろい はたけに きいろい はなが ならぶよ",
+      "art": "world-card-804-2"
+    },
+    {
+      "id": "807-1",
+      "prefectureCode": 807,
+      "emoji": "🇲🇰",
+      "nameKana": "きたまけどにあ",
+      "nameKanji": "北マケドニア",
+      "category": "flag",
+      "description": "きたまけどにあの こっきだよ"
+    },
+    {
+      "id": "807-2",
+      "prefectureCode": 807,
+      "emoji": "🏞️",
+      "nameKana": "おふりどこ",
+      "nameKanji": "オフリド湖",
+      "category": "nature",
+      "description": "やまに かこまれた とうめいな みずうみだよ",
+      "art": "world-card-807-2"
+    },
+    {
+      "id": "818-1",
+      "prefectureCode": 818,
+      "emoji": "🇪🇬",
+      "nameKana": "えじぷと",
+      "nameKanji": "エジプト",
+      "category": "flag",
+      "description": "えじぷとの こっきだよ"
+    },
+    {
+      "id": "818-2",
+      "prefectureCode": 818,
+      "emoji": "🔺",
+      "nameKana": "ぴらみっど",
+      "nameKanji": "ピラミッド",
+      "category": "landmark",
+      "description": "おおきな いしを つんだ さんかくの いせきだよ",
+      "art": "world-card-818-2"
+    },
+    {
+      "id": "826-1",
+      "prefectureCode": 826,
+      "emoji": "🇬🇧",
+      "nameKana": "いぎりす",
+      "nameKanji": "イギリス",
+      "category": "flag",
+      "description": "いぎりすの こっきだよ"
+    },
+    {
+      "id": "826-2",
+      "prefectureCode": 826,
+      "emoji": "🕰️",
+      "nameKana": "びっぐべん",
+      "nameKanji": "ビッグ・ベン",
+      "category": "landmark",
+      "description": "おおきな とけいが ついた たかい とうだよ",
+      "art": "world-card-826-2"
+    },
+    {
+      "id": "834-1",
+      "prefectureCode": 834,
+      "emoji": "🇹🇿",
+      "nameKana": "たんざにあ",
+      "nameKanji": "タンザニア",
+      "category": "flag",
+      "description": "たんざにあの こっきだよ"
+    },
+    {
+      "id": "834-2",
+      "prefectureCode": 834,
+      "emoji": "🏔️",
+      "nameKana": "きりまんじゃろ",
+      "nameKanji": "キリマンジャロ",
+      "category": "nature",
+      "description": "あかみちかくに そびえる とても たかい やまだよ",
+      "art": "world-card-834-2"
+    },
+    {
+      "id": "840-1",
+      "prefectureCode": 840,
+      "emoji": "🇺🇸",
+      "nameKana": "あめりか",
+      "nameKanji": "アメリカ合衆国",
+      "category": "flag",
+      "description": "あめりかの こっきだよ"
+    },
+    {
+      "id": "840-2",
+      "prefectureCode": 840,
+      "emoji": "🏜️",
+      "nameKana": "ぐらんどきゃにおん",
+      "nameKanji": "グランドキャニオン",
+      "category": "nature",
+      "description": "かわが けずった おおきな たにだよ",
+      "art": "world-card-840-2"
+    },
+    {
+      "id": "854-1",
+      "prefectureCode": 854,
+      "emoji": "🇧🇫",
+      "nameKana": "ぶるきなふぁそ",
+      "nameKanji": "ブルキナファソ",
+      "category": "flag",
+      "description": "ぶるきなふぁその こっきだよ"
+    },
+    {
+      "id": "854-2",
+      "prefectureCode": 854,
+      "emoji": "🗿",
+      "nameKana": "ぶろんずちょうこく",
+      "nameKanji": "ブロンズ彫刻",
+      "category": "craft",
+      "description": "きんぞくを とかして ひとや どうぶつを つくるよ",
+      "art": "world-card-854-2"
+    },
+    {
+      "id": "858-1",
+      "prefectureCode": 858,
+      "emoji": "🇺🇾",
+      "nameKana": "うるぐあい",
+      "nameKanji": "ウルグアイ",
+      "category": "flag",
+      "description": "うるぐあいの こっきだよ"
+    },
+    {
+      "id": "858-2",
+      "prefectureCode": 858,
+      "emoji": "🧉",
+      "nameKana": "まてちゃ",
+      "nameKanji": "マテ茶",
+      "category": "food",
+      "description": "はっぱを いれた うつわから すって のむ おちゃだよ",
+      "art": "world-card-858-2"
+    },
+    {
+      "id": "860-1",
+      "prefectureCode": 860,
+      "emoji": "🇺🇿",
+      "nameKana": "うずべきすたん",
+      "nameKanji": "ウズベキスタン",
+      "category": "flag",
+      "description": "うずべきすたんの こっきだよ"
+    },
+    {
+      "id": "860-2",
+      "prefectureCode": 860,
+      "emoji": "🕌",
+      "nameKana": "れぎすたんひろば",
+      "nameKanji": "レギスタン広場",
+      "category": "landmark",
+      "description": "あおい たいるの おおきな たてものが ならぶよ",
+      "art": "world-card-860-2"
+    },
+    {
+      "id": "862-1",
+      "prefectureCode": 862,
+      "emoji": "🇻🇪",
+      "nameKana": "べねずえら",
+      "nameKanji": "ベネズエラ",
+      "category": "flag",
+      "description": "べねずえらの こっきだよ"
+    },
+    {
+      "id": "862-2",
+      "prefectureCode": 862,
+      "emoji": "💧",
+      "nameKana": "えんじぇるふぉーる",
+      "nameKanji": "エンジェルフォール",
+      "category": "nature",
+      "description": "たかい だいちから ながく おちる たきだよ",
+      "art": "world-card-862-2"
+    },
+    {
+      "id": "887-1",
+      "prefectureCode": 887,
+      "emoji": "🇾🇪",
+      "nameKana": "いえめん",
+      "nameKanji": "イエメン",
+      "category": "flag",
+      "description": "いえめんの こっきだよ"
+    },
+    {
+      "id": "887-2",
+      "prefectureCode": 887,
+      "emoji": "🌳",
+      "nameKana": "りゅうけつじゅ",
+      "nameKanji": "竜血樹",
+      "category": "nature",
+      "description": "かさの ように えだを ひろげる ふしぎな きだよ",
+      "art": "world-card-887-2"
+    },
+    {
+      "id": "894-1",
+      "prefectureCode": 894,
+      "emoji": "🇿🇲",
+      "nameKana": "ざんびあ",
+      "nameKanji": "ザンビア",
+      "category": "flag",
+      "description": "ざんびあの こっきだよ"
+    },
+    {
+      "id": "894-2",
+      "prefectureCode": 894,
+      "emoji": "💎",
+      "nameKana": "えめらるど",
+      "nameKanji": "エメラルド",
+      "category": "nature",
+      "description": "みどりいろに かがやく うつくしい いしだよ",
+      "art": "world-card-894-2"
+    }
+  ]
+}

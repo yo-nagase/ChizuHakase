@@ -20,11 +20,15 @@ struct MapDataTests {
         #expect(map.prefectures.map(\.code) == Array(1...47))
     }
 
-    @Test func mapHasUsableDimensions() {
+    @Test func mapHasUsableDimensions() throws {
         #expect(map.width == 1000)
         #expect(map.height > 0)
-        #expect(map.okinawaInset.width > 0)
-        #expect(map.okinawaInset.height > 0)
+        // Japan's one inset is Okinawa's, carried on the generalised list.
+        #expect(map.insets.map(\.code) == [47])
+        let frame = try #require(map.insets.first).frame
+        #expect(frame.width > 0 && frame.height > 0)
+        // No background scenery on the japan map — every drawn shape is a slot.
+        #expect(map.background.isEmpty)
     }
 
     @Test func everyPrefectureHasMetadata() throws {
@@ -122,8 +126,9 @@ struct MapDataTests {
 
     @Test func okinawaSitsInsideItsInsetFrame() throws {
         let okinawa = try #require(map[47])
-        #expect(map.okinawaInset.insetBy(dx: -0.5, dy: -0.5).contains(okinawa.bbox),
-                "Okinawa \(okinawa.bbox) escapes its inset \(map.okinawaInset)")
+        let frame = try #require(map.insets.first { $0.code == 47 }).frame
+        #expect(frame.insetBy(dx: -0.5, dy: -0.5).contains(okinawa.bbox),
+                "Okinawa \(okinawa.bbox) escapes its inset \(frame)")
     }
 
     @Test func stageLookupResolvesEveryStage() {
@@ -194,9 +199,12 @@ struct CardCatalogTests {
         }
     }
 
+    /// Every category except `flag`, which belongs to the world atlas —
+    /// asserting its absence here is what keeps the japan book free of a
+    /// flag filter chip that could never show a card.
     @Test func everyCategoryIsRepresented() {
         let used = Set(catalog.all.map(\.category))
-        #expect(used == Set(SpecialtyCard.Category.allCases))
+        #expect(used == Set(SpecialtyCard.Category.allCases).subtracting([.flag]))
     }
 }
 

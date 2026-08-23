@@ -27,13 +27,14 @@ nonisolated extension QuizMode {
     }
 
     /// One line on the mode switch, so the difference is legible before the
-    /// first question rather than after it.
-    func blurb(_ text: TextMode) -> String {
+    /// first question rather than after it. The thing in the red ring is
+    /// named by the atlas (けん ⇄ くに) — the stage picker serves both books.
+    func blurb(_ text: TextMode, region: AtlasNoun) -> String {
         switch (self, text.isKids) {
         case (.findOnMap, true): "なまえを きいて タップ"
         case (.findOnMap, false): "名前を聞いてタップ"
-        case (.nameIt, true): "あかい わくの けんを こたえる"
-        case (.nameIt, false): "赤い枠の県を答える"
+        case (.nameIt, true): "あかい わくの \(region.kids)を こたえる"
+        case (.nameIt, false): "赤い枠の\(region.adult)を答える"
         }
     }
 

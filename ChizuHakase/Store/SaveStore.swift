@@ -102,15 +102,26 @@ final class SaveStore {
     /// The catalog is how a streak finds the rest of its prefecture's cards —
     /// without it gold can never turn rainbow, so only tests that are not
     /// about cards pass `.empty`.
+    ///
+    /// `atlas` names the save namespace the whole result lands in
+    /// (`Atlas.saveKey`). One key for everything: region codes and stage
+    /// indexes collide across atlases, so letting a world result touch any
+    /// japan field would file バハマ's mastery under 大分県. No default —
+    /// a "silently japan" write is the twin of the read-side hazard Task 3
+    /// deleted, so every caller has to say which book it means.
     @discardableResult
-    func applyStageResult(_ result: StageResult, catalog: CardCatalog) -> StageGains {
+    func applyStageResult(_ result: StageResult, catalog: CardCatalog,
+                          atlas key: String) -> StageGains {
+        // The one slice this stage may move, mutated whole and written back
+        // once — no per-field write can end up in the other book.
+        var atlas = data.atlases[key] ?? AtlasSave()
         var newlySparkling: [Int] = []
         var newlyRainbow: [String] = []
 
         for (code, firstTry) in result.firstTryByPrefecture {
-            let before = data.masteryLevel(of: code)
+            let before = atlas.masteryLevel(of: code)
             let after = GameRules.nextMastery(current: before, firstTry: firstTry)
-            data.mastery[code] = after
+            atlas.mastery[code] = after
             if after == GameRules.maxMastery && before < GameRules.maxMastery {
                 newlySparkling.append(code)
             }
@@ -123,12 +134,27 @@ final class SaveStore {
         var goldBefore: [Int: Set<String>] = [:]
         for code in result.outcomesByPrefecture.keys {
             goldBefore[code] = Set(catalog.cards(for: code)
-                .filter { data.stars(of: $0.id) >= GameRules.maxCardStars }
+                .filter { atlas.stars(of: $0.id) >= GameRules.maxCardStars }
                 .map(\.id))
         }
 
+        // A version 7 save knows which cards are owned but not when they were
+        // earned. Give those cards one stable catalog-order baseline before
+        // appending this result's genuinely new cards in draw order.
+        var acquisitionSeen = Set(atlas.cardAcquisitionOrder)
+        for card in catalog.all where atlas.owns(card.id) {
+            if acquisitionSeen.insert(card.id).inserted {
+                atlas.cardAcquisitionOrder.append(card.id)
+            }
+        }
+
         for draw in result.cardDraws {
-            data.cards = GameRules.applyDraw(draw, to: data.cards)
+            let wasOwned = atlas.owns(draw.card.id)
+            atlas.cards = GameRules.applyDraw(draw, to: atlas.cards)
+            if !wasOwned, atlas.owns(draw.card.id),
+               acquisitionSeen.insert(draw.card.id).inserted {
+                atlas.cardAcquisitionOrder.append(draw.card.id)
+            }
         }
 
         // Streaks and the rainbow latch move together: pairing each clean
@@ -136,28 +162,51 @@ final class SaveStore {
         // count crosses, and only for cards whose gold predates the run.
         for (code, outcomes) in result.outcomesByPrefecture {
             let walked = GameRules.nextStreak(
-                current: data.streak(of: code),
+                current: atlas.streak(of: code),
                 outcomes: outcomes,
                 draws: result.cardDraws.filter { $0.card.prefectureCode == code },
                 goldCardIDs: goldBefore[code] ?? [])
-            data.streaks[code] = walked.streak
+            atlas.streaks[code] = walked.streak
             // Only the cards the latch actually caught this time. A card
             // that was already rainbow is not news, and re-announcing it
             // every stage would turn the rarest thing in the game into
             // wallpaper.
-            for id in walked.latched where data.rainbow.insert(id).inserted {
+            for id in walked.latched where atlas.rainbow.insert(id).inserted {
                 newlyRainbow.append(id)
             }
+        }
+
+        // The sampling challenge's unasked-first memory (world design §8),
+        // per mode like the records — the two modes are separate rotations.
+        // Only a result that actually drew carries codes; japan's ぜんこく
+        // (all 47 every run) arrives empty and leaves this untouched.
+        if !result.askedCodes.isEmpty {
+            var asked = atlas.askedInChallenge[result.mode.rawValue] ?? []
+            asked.formUnion(result.askedCodes)
+            // Covered the whole book → start the next lap fresh (§8 の 2 周目).
+            // "The whole book" is read off the catalog: it is the one resource
+            // already in hand that lists every recorded region (the world's
+            // catalog carries at least one card per country — pinned in
+            // AtlasTests), and the challenge stage itself is not passed in
+            // here. A catalog that fell back to empty gives no universe, so
+            // the guard leaves the history standing — that state is already a
+            // no-cards-at-all failure, and a rotation that stops resetting is
+            // its mildest symptom (the draw still works, everything simply
+            // counts as asked).
+            let universe = Set(catalog.all.map(\.prefectureCode))
+            if !universe.isEmpty, asked.isSuperset(of: universe) { asked = [] }
+            atlas.askedInChallenge[result.mode.rawValue] = asked
         }
 
         // Stars and score are kept per mode; mastery and cards above are not,
         // because they measure the prefecture rather than the run.
         let record = StageRecord(stars: result.stars, score: result.score)
-        data.records[result.mode.rawValue, default: [:]][result.stageIndex] =
+        atlas.records[result.mode.rawValue, default: [:]][result.stageIndex] =
             GameRules.bestRecord(
-                existing: data.record(forStage: result.stageIndex, mode: result.mode),
+                existing: atlas.record(forStage: result.stageIndex, mode: result.mode),
                 new: record)
 
+        data.atlases[key] = atlas
         save()
         // Both sorted: the loops above walk dictionary keys, and a celebration
         // that lists the same two prefectures in a different order each run
@@ -171,8 +220,15 @@ final class SaveStore {
         save()
     }
 
-    /// Wipe everything. The two-step confirmation lives in the my-map screen
+    /// Wipe everything — both books at once (the my-map eraser is whole-app
+    /// by design). The two-step confirmation lives in the my-map screen
     /// (CLAUDE.md §6) — this is the mechanism, not the guard.
+    ///
+    /// `SaveData()` also resets `settings.lastAtlas`, so the next launch opens
+    /// on japan's title page even when the erase was asked for from the world
+    /// map. Accepted: after a full wipe the first page is the honest starting
+    /// point, and remembering a view of records that no longer exist is not
+    /// worth a settings carve-out here.
     func eraseAll() {
         data = SaveData()
         if let fileURL {
@@ -215,6 +271,12 @@ nonisolated struct StageResult: Sendable, Hashable {
     /// a prefecture fumbled first and clean second *ended* on a run of one,
     /// which the collapsed flag has already thrown away.
     var outcomesByPrefecture: [Int: [Bool]] = [:]
+    /// The codes a *sampling* challenge drew this sitting (world design §8) —
+    /// what `askedInChallenge` accumulates so the next sitting can prefer the
+    /// countries not yet asked. Empty everywhere else, japan included: its
+    /// ぜんこく asks all 47 every run and has no rotation to remember, so an
+    /// empty set is the honest record, not a missing one.
+    var askedCodes: Set<Int> = []
 
     var missedPrefectureCount: Int {
         firstTryByPrefecture.values.filter { !$0 }.count

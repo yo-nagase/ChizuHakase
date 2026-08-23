@@ -67,7 +67,7 @@ xcodebuild test -project ChizuHakase.xcodeproj -scheme ChizuHakase \
 ## データ生成
 
 - **地図** — `tools/build_map_data.py` が GeoJSON から `PrefectureShapes.json`(47 県・約 62KB)を生成。沖縄インセットの位置も自動決定。手順は [CLAUDE.md §3](CLAUDE.md)
-- **カード絵** — `tools/build_card_art.py` が手描き原画(ローカル限定)を 480px に落として asset catalog へ書き出し
+- **カード絵** — `tools/build_card_art.py` / `tools/build_world_card_art.py` が手描き原画を 480px に落として asset catalog へ書き出し。世界編原画は Git LFS で保存
 
 App Store 用スクリーンショットは、シミュレータでデバッグルートを使って撮影できる:
 

@@ -15,6 +15,13 @@ nonisolated enum Palette {
     /// Level 0 prefectures on the my-map.
     static let unlearned  = Color(hex: 0xE7ECEF)
 
+    /// Unrecorded coastlines on the world map (dependencies, countries too
+    /// small to tap). Deeper and bluer than `unlearned` so the world my-map
+    /// never shows two lands in the same grey meaning different things —
+    /// one is "not learned yet", the other is "not in the game at all".
+    static let backgroundLand  = Color(hex: 0xD4DDE1)
+    static let backgroundShore = Color(hex: 0xB4C1C7)
+
     /// Prefecture fills, cycled by `code % 8` so neighbours rarely collide.
     /// Kept as raw hex so tints can be mixed numerically — Color.mix(with:by:)
     /// is iOS 18 and this app targets 17.

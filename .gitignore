@@ -26,12 +26,14 @@ ChizuHakase.xcodeproj/
 Packages/
 
 ## assets/ — the full-size hand-painted originals (~2.6MB each).
-## Local-only, by the same rule as the map intermediates below: what ships is
-## the 480px output under ChizuHakase/Resources/Assets.xcassets/CardArt/,
-## which IS committed. The originals never enter the repo or the app bundle —
-## the app target's sources are ChizuHakase/ only, so a build cannot pick
-## them up even by accident.
-assets/
+## World-card originals are preserved through Git LFS; all other originals
+## stay local. What ships is still only the 480px output under
+## ChizuHakase/Resources/Assets.xcassets/CardArt/: the app target's sources are
+## ChizuHakase/ only, so LFS originals cannot enter the app bundle by accident.
+assets/*
+!assets/world-cards/
+assets/world-cards/*
+!assets/world-cards/*.png
 
 ## tmp/ — scratch space for generating card art before it is cut down.
 ## Same rule: originals stay out.
@@ -39,8 +41,14 @@ tmp/
 
 ## tools/ — large intermediates. PrefectureShapes.json itself IS committed
 ## (see CLAUDE.md §3: generated but checked in, never rebuilt at build time).
+## Same rule for the world atlas: WorldShapes.json is committed, the raw and
+## simplified Natural Earth geojson stay out.
 tools/japan.geojson
 tools/japan_simplified.geojson
+tools/ne_50m_countries.geojson
+tools/ne_50m_simplified.geojson
+tools/ne_10m_countries.geojson
 tools/node_modules/
 tools/package-lock.json
 tools/package.json
+tools/__pycache__/

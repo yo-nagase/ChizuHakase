@@ -751,6 +751,11 @@ footer p {
   background: linear-gradient(145deg, #ffd7df, #ffe8a2 35%, #bcecdf 67%, #b7dff7);
 }
 
+/* 世界編。海の色を日本編の水色より深くして、めくった先の 2 冊目だと分かるように */
+.feature-visual--world {
+  background: linear-gradient(145deg, #d8f4ff, #6fc9e8 62%, #4fb4d6);
+}
+
 .story-section {
   position: relative;
   overflow: hidden;
@@ -900,6 +905,8 @@ footer p {
 
 .screens-gallery {
   display: grid;
+  /* 10 枚 = 5 列 2 段。列を増やすほど 1 枚が細くなるので、端末の画面が
+     読める大きさを優先して段を足す */
   grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: clamp(0.7rem, 2vw, 1.25rem);
 }
@@ -942,6 +949,15 @@ footer p {
 
 .screen-frame--green {
   background: linear-gradient(145deg, #def7e4, #6fce9d);
+}
+
+.screen-frame--tan {
+  background: linear-gradient(145deg, #f9edca, #ddb271);
+}
+
+/* せかいの ちず の 3 枚。特徴セクションの海と同じ深めの水色 */
+.screen-frame--sky {
+  background: linear-gradient(145deg, #d8f4ff, #5cbfe0);
 }
 
 .screens-gallery figcaption {
@@ -1111,13 +1127,6 @@ footer p {
   .screens-gallery {
     grid-template-columns: repeat(2, 1fr);
     gap: 2rem 1rem;
-  }
-
-  /* 5枚目(結果画面)の孤立行: 隣と同じ幅のまま中央に置く */
-  .screens-gallery figure:nth-child(5) {
-    grid-column: 1 / -1;
-    width: calc(50% - 0.5rem);
-    justify-self: center;
   }
 }
 
