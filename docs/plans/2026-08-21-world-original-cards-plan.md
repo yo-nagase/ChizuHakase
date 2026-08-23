@@ -243,8 +243,8 @@ cd tools && python3 build_world_cards.py
 制作順は B1 → B5、各バッチ内は `WorldShapes.json` の stage ごとの掲載順。
 日本カードと世界カードは ID が衝突するため、世界側は専用の
 `tools/build_world_card_art.py` と `world-card-{id}` アセット名前空間を使う。
-原画は `.gitignore` の既定どおりローカルの `assets/world-cards/`、アプリへ
-入る 480px 版だけを `Assets.xcassets/CardArt/` にコミットする。
+原画は `assets/world-cards/` に置き、消失防止のため Git LFS で管理する。
+アプリへ入るのは従来どおり `Assets.xcassets/CardArt/` の 480px 版だけ。
 
 | 順 | code / id | 国 / 題材 | アセット | 状態 |
 | --- | --- | --- | --- | --- |
