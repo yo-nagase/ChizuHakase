@@ -1,10 +1,15 @@
 #!/usr/bin/env python3
 """GeoJSON -> WorldShapes.json (世界アトラス版。日本版 build_map_data.py の姉妹編).
 
-ne_50m_simplified.geojson (mapshaper 出力) と world_countries.py (収録国マスタ)
+ne_10m_simplified.geojson (mapshaper 出力) と world_countries.py (収録国マスタ)
 を突き合わせ、世界地図リソースを出す。国境を接しない小国の形は生データ
-ne_50m_countries.geojson から、インセット 4 カ国はさらに詳細な 1:10m から
-取り直すので、3 つの入力ファイルが要る (10m は無ければ自動ダウンロード)。
+ne_50m_countries.geojson から、インセット 4 カ国は生の 1:10m から
+取り直すので、3 つの入力ファイルが要る (1:10m は無ければ自動ダウンロード)。
+
+主ソースは当初 1:50m だったが、1:10m を 4% に間引いたものへ替えた
+(裁定 2026-08-26)。50m は率をいくら上げてもフィヨルドや小島の形を
+そもそも持っておらず、両方測ると 10m 4% (26.4k 点 / 503 KB) のほうが
+50m 30% (31.1k 点 / 589 KB) より細部が本物でサイズも軽い。
 
 日本版との最大の違い: 座標は緯度経度のまま出す。地球儀モード (設計文書
 2026-08-16 §7) が平面への焼き込みを許さないため、投影は実行時に行う。
@@ -12,9 +17,11 @@ ne_50m_countries.geojson から、インセット 4 カ国はさらに詳細な 
 Run from tools/:
     curl -sL -o ne_10m_countries.geojson \\
         https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_10m_admin_0_countries.geojson
-    npx mapshaper ne_50m_countries.geojson \\
-        -simplify visvalingam 20% keep-shapes -clean \\
-        -o ne_50m_simplified.geojson format=geojson
+    curl -sL -o ne_50m_countries.geojson \\
+        https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_50m_admin_0_countries.geojson
+    npx mapshaper ne_10m_countries.geojson \\
+        -simplify visvalingam 4% keep-shapes -clean \\
+        -o ne_10m_simplified.geojson format=geojson
     python3 build_world_map_data.py
     mv WorldShapes.json ../ChizuHakase/Resources/
 """
@@ -30,7 +37,7 @@ import world_countries as wc
 from map_geometry import (bbox_gap, bbox_of, dist_to_segment_sq,
                           point_in_rings, pole_of_inaccessibility, ring_area)
 
-SRC = "ne_50m_simplified.geojson"
+SRC = "ne_10m_simplified.geojson"
 RAW_SRC = "ne_50m_countries.geojson"
 RAW_10M_SRC = "ne_10m_countries.geojson"
 NE_10M_URL = ("https://raw.githubusercontent.com/nvkelso/natural-earth-vector/"
@@ -54,7 +61,15 @@ COORD_DECIMALS = 4
 # 500 KB は 422 KB に約 18% の余裕を足した数字。上流 (Natural Earth) の
 # 更新でじりじり太ったら気づける幅に留めてある。次に超えたときも、
 # 黙って上げるのではなく率とサイズの両方を測り直して決めること。
-SIZE_BUDGET = 500 * 1024
+#
+# 600 KB へ再引き上げ (裁定 2026-08-26): 主ソースを 1:10m の 4% に替えて
+# 出力が 503 KB になった。50m の率上げ (30% で 589 KB / 31.1k 点) と
+# 両方測り、10m 4% (503 KB / 26.4k 点) のほうが細部が本物で軽いことを
+# 確かめて選んだ。点数 26.4k の地球儀ドラッグは上の実測 (21.9k 点で
+# 1.21ms / M1 Max) からの比例で ~1.5ms、A12 を 3 倍遅いと見ても
+# 60Hz の 16.7ms 予算に収まる。600 KB は 503 KB に約 19% の余裕 —
+# 前回と同じ「上流更新で太ったら気づける幅」で取った。
+SIZE_BUDGET = 600 * 1024
 
 # --- 国コードの解決 ---------------------------------------------------------
 # Natural Earth は ISO_N3 に -99 を入れる地物がある。収録国のうち該当する
