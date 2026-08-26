@@ -357,34 +357,30 @@ struct QuizView: View {
             globeZoom = 1
             comboBurst = nil
         }
-        // Ahead of the surrounding Spacers, or the flexible nationwide panel
-        // would be offered only an equal split of the leftover height and the
-        // rest would sit in the margins it was meant to absorb.
-        .layoutPriority(stage.isChallenge ? 1 : 0)
+        // Ahead of the surrounding Spacers, or the flexible panel would be
+        // offered only an equal split of the leftover height and the rest
+        // would sit in the margins it was meant to absorb.
+        .layoutPriority(1)
     }
 
     /// The flat map — every stage's home, and the world challenge's stand-in
     /// behind the globe.
     private func flatMap(_ quiz: QuizViewModel) -> some View {
-        Group {
-            // Regional stages hug their region's own proportions. A challenge
-            // stage — 全国チャレンジ, and the world challenge's flat map alike —
-            // takes every point of height the column has spare instead: the
-            // whole book cannot be drawn any bigger — the screen's width
-            // already caps it — so all the spare height becomes sea, and a
-            // zoomed-in child gets that much more viewport to move around in.
-            // A frame rather than a taller fixed ratio, so a short screen
-            // simply yields a shorter panel instead of shrinking the map to
-            // honour a ratio it has no room for.
-            if stage.isChallenge {
-                mapView(quiz).frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else {
-                mapView(quiz).aspectRatio(PrefectureGeometry.aspectRatio(
-                    of: atlas.mapData.prefectures(in: stage.codes)), contentMode: .fit)
-            }
-        }
-        .zoomPan(scale: $zoom, offset: $pan, oneFingerZoom: true, panInertia: true,
-                 maxScale: stage.flatMaxZoom, minScale: stage.flatMinZoom)
+        // Every stage takes every point of height the column has spare. The
+        // region cannot be drawn any bigger — the screen's width already caps
+        // it — so the spare height costs the region nothing and becomes sea
+        // and surrounding scenery, with the region centred in it, and a
+        // zoomed-in child gets that much more viewport to move around in.
+        // Regional stages used to hug their region's own proportions instead,
+        // which manufactured empty page above and below the panel on wide
+        // stages — きたヨーロッパ's panel was a short letterbox in the middle
+        // of a mostly blank column (2026-08-26). A frame rather than a fixed
+        // ratio, so a short screen simply yields a shorter panel instead of
+        // shrinking the map to honour a ratio it has no room for.
+        mapView(quiz)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .zoomPan(scale: $zoom, offset: $pan, oneFingerZoom: true, panInertia: true,
+                     maxScale: stage.flatMaxZoom, minScale: stage.flatMinZoom)
     }
 
     /// Codes a tap on either map may resolve to. Empty in 「なまえを あてる」:
