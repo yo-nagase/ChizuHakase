@@ -134,6 +134,33 @@ nonisolated enum ZoomPan {
         return (0...size.width).contains(sx) && (0...size.height).contains(sy)
     }
 
+    /// The seconds of release velocity a flick keeps as glide.
+    ///
+    /// A scroll view would keep about half a second's worth
+    /// (`UIScrollView.DecelerationRate.normal` projects `v × 0.5`), which
+    /// sends the map far past whatever the child flicked towards. A quarter
+    /// of that is enough for the map to feel like it has weight without the
+    /// place they were looking at leaving the screen.
+    static let glideCarry: CGFloat = 0.12
+
+    /// How long the glide takes to settle. Short on purpose: the offset
+    /// binding jumps to the target immediately and only the drawing animates,
+    /// so a new touch during the glide grabs the *target* position — the
+    /// smaller the window, the smaller the largest possible jump under a
+    /// fresh finger.
+    static let glideDuration: TimeInterval = 0.3
+
+    /// Where a flick released at `velocity` (points/second) comes to rest.
+    ///
+    /// The same clamp as the pan itself, so the glide can never expose an
+    /// edge or strand the map anywhere a finger could not have dragged it.
+    static func glide(from offset: CGSize, velocity: CGSize,
+                      scale: CGFloat, in size: CGSize) -> CGSize {
+        clamp(offset: CGSize(width: offset.width + velocity.width * glideCarry,
+                             height: offset.height + velocity.height * glideCarry),
+              scale: scale, in: size)
+    }
+
     /// The offset that holds `anchor` still while the scale changes.
     ///
     /// Without this the map zooms about the centre of its frame, so pinching
@@ -172,6 +199,14 @@ struct ZoomPanModifier: ViewModifier {
     /// the enlarged card turns under one, and a hold-then-turn has to stay a
     /// turn.
     var oneFingerZoom = false
+    /// Whether a released pan keeps a little of its speed (`ZoomPan.glide`).
+    ///
+    /// On for the maps, off for the enlarged card: a map is a surface being
+    /// searched, and a flick that dies under the finger reads as the map
+    /// sticking; the card is a thing being held, and a held thing stays where
+    /// it is put. Carried as a value from the caller, like `oneFingerZoom` —
+    /// the modifier never asks which screen it is on.
+    var panInertia = false
     /// This map's zoom ceiling. Every clamp in the modifier goes through it —
     /// a single site left on the bare default would stop that one gesture at
     /// 4× while the others sail past, which reads as the map sticking.
@@ -200,6 +235,10 @@ struct ZoomPanModifier: ViewModifier {
     @GestureState private var pinch = Pinch()
     @GestureState private var drag: CGSize = .zero
     @GestureState private var lift = Lift()
+    // Inertia is motion the finger did not make, so Reduce Motion turns it
+    // off (§9) — the map then stops exactly where it was released, which was
+    // the only behaviour before the glide existed.
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private var liveScale: CGFloat {
         let pinched = ZoomPan.clamp(scale: scale * pinch.magnification,
@@ -266,10 +305,18 @@ struct ZoomPanModifier: ViewModifier {
         DragGesture(minimumDistance: 0)
             .updating($drag) { value, state, _ in state = value.translation }
             .onEnded { value in
-                offset = ZoomPan.clamp(
+                let released = ZoomPan.clamp(
                     offset: CGSize(width: offset.width + value.translation.width,
                                    height: offset.height + value.translation.height),
                     scale: scale, in: size)
+                offset = released
+                guard panInertia, !reduceMotion else { return }
+                let target = ZoomPan.glide(from: released, velocity: value.velocity,
+                                           scale: scale, in: size)
+                guard target != released else { return }
+                withAnimation(.easeOut(duration: ZoomPan.glideDuration)) {
+                    offset = target
+                }
             }
     }
 
@@ -331,10 +378,12 @@ struct ZoomPanModifier: ViewModifier {
 extension View {
     func zoomPan(scale: Binding<CGFloat>, offset: Binding<CGSize>,
                  oneFingerZoom: Bool = false,
+                 panInertia: Bool = false,
                  maxScale: CGFloat = ZoomPan.maxScale,
                  minScale: CGFloat = ZoomPan.minScale) -> some View {
         modifier(ZoomPanModifier(scale: scale, offset: offset,
                                  oneFingerZoom: oneFingerZoom,
+                                 panInertia: panInertia,
                                  maxScale: maxScale,
                                  minScale: minScale))
     }
