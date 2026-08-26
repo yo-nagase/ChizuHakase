@@ -177,11 +177,11 @@ final class SaveStore {
             }
         }
 
-        // Completion rewards are evaluated after this run's draws have landed.
-        // They are not draws themselves and therefore never gain stars or alter
-        // acquisition order.
+        // Completion rewards are evaluated after this run's mastery gains have
+        // landed. They are not draws and never gain stars or alter acquisition
+        // order.
         let newlyPhantom = PhantomCard.newlyUnlocked(
-            from: phantomCards, ordinaryCatalog: catalog, save: atlas)
+            from: phantomCards, save: atlas)
         atlas.phantomCards.formUnion(newlyPhantom)
 
         // The sampling challenge's unasked-first memory (world design §8),
@@ -228,11 +228,10 @@ final class SaveStore {
     /// cards existed. Opening the book calls this once; ordinary play also runs
     /// the same rule in `applyStageResult`.
     @discardableResult
-    func reconcilePhantomCards(catalog: CardCatalog, phantomCards: [PhantomCard],
+    func reconcilePhantomCards(_ phantomCards: [PhantomCard],
                                atlas key: String) -> [String] {
         var atlas = data.atlases[key] ?? AtlasSave()
-        let newly = PhantomCard.newlyUnlocked(
-            from: phantomCards, ordinaryCatalog: catalog, save: atlas)
+        let newly = PhantomCard.newlyUnlocked(from: phantomCards, save: atlas)
         guard !newly.isEmpty else { return [] }
         atlas.phantomCards.formUnion(newly)
         data.atlases[key] = atlas

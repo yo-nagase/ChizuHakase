@@ -26,29 +26,38 @@ struct PhantomCardTests {
         #expect(Set((japan + world).map(\.id)).count == 10)
     }
 
-    @Test func collectingEastJapanOrdinaryCardsUnlocksOnlySky() {
+    @Test func masteringEveryEastJapanLocationUnlocksOnlySky() {
         let atlas = japanAtlas
         var save = AtlasSave()
-        for code in 1...14 {
-            for card in atlas.cards.cards(for: code) { save.cards[card.id] = 1 }
-        }
+        for code in 1...14 { save.mastery[code] = GameRules.maxMastery }
 
         let unlocked = PhantomCard.newlyUnlocked(
             from: PhantomCard.catalog(for: atlas),
-            ordinaryCatalog: atlas.cards, save: save)
+            save: save)
 
         #expect(unlocked == ["phantom-japan-sky"])
     }
 
-    @Test func oneMissingOrdinaryCardKeepsTheRewardHidden() {
+    @Test func oneLocationBelowMaximumKeepsTheRewardHidden() {
         let atlas = japanAtlas
         var save = AtlasSave()
-        let required = (1...14).flatMap { atlas.cards.cards(for: $0) }
-        for card in required.dropLast() { save.cards[card.id] = 1 }
+        for code in 1...14 { save.mastery[code] = GameRules.maxMastery }
+        save.mastery[14] = GameRules.maxMastery - 1
 
         let unlocked = PhantomCard.newlyUnlocked(
             from: PhantomCard.catalog(for: atlas),
-            ordinaryCatalog: atlas.cards, save: save)
+            save: save)
+
+        #expect(unlocked.isEmpty)
+    }
+
+    @Test func owningEveryOrdinaryCardDoesNotReplaceMastery() {
+        let atlas = japanAtlas
+        var save = AtlasSave()
+        for card in atlas.cards.all { save.cards[card.id] = 1 }
+
+        let unlocked = PhantomCard.newlyUnlocked(
+            from: PhantomCard.catalog(for: atlas), save: save)
 
         #expect(unlocked.isEmpty)
     }
@@ -56,11 +65,13 @@ struct PhantomCardTests {
     @Test func allSixWorldRegionsUnlockAntarcticaInTheSamePass() throws {
         let atlas = try worldAtlas()
         var save = AtlasSave()
-        for card in atlas.cards.all { save.cards[card.id] = 1 }
+        for code in Set(atlas.stages.flatMap(\.codes)) {
+            save.mastery[code] = GameRules.maxMastery
+        }
 
         let unlocked = PhantomCard.newlyUnlocked(
             from: PhantomCard.catalog(for: atlas),
-            ordinaryCatalog: atlas.cards, save: save)
+            save: save)
 
         #expect(unlocked.count == 7)
         #expect(unlocked.contains("phantom-world-antarctica"))
@@ -69,14 +80,12 @@ struct PhantomCardTests {
     @Test func existingOwnershipIsNeverAnnouncedAgain() {
         let atlas = japanAtlas
         var save = AtlasSave()
-        for code in 1...14 {
-            for card in atlas.cards.cards(for: code) { save.cards[card.id] = 1 }
-        }
+        for code in 1...14 { save.mastery[code] = GameRules.maxMastery }
         save.phantomCards.insert("phantom-japan-sky")
 
         let unlocked = PhantomCard.newlyUnlocked(
             from: PhantomCard.catalog(for: atlas),
-            ordinaryCatalog: atlas.cards, save: save)
+            save: save)
 
         #expect(unlocked.isEmpty)
     }

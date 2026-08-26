@@ -98,8 +98,7 @@ struct CardBookView: View {
         .navigationTitle(mode.cardBook)
         .navigationBarTitleDisplayMode(.inline)
         .task {
-            app.save.reconcilePhantomCards(catalog: atlas.cards,
-                                           phantomCards: phantomCards,
+            app.save.reconcilePhantomCards(phantomCards,
                                            atlas: atlas.saveKey)
             if case .card(let id) = initialFilter, let card = atlas.cards[id] { open(card) }
         }

@@ -285,14 +285,18 @@ struct RootView: View {
         }
         // The completion-reward book in its earned state. Kept separate from
         // -grantCards because granting three ordinary cards must not quietly
-        // become "grant every ordinary card" just to reach this debug screen.
+        // become "master every location" just to reach this debug screen.
         if arguments.contains("-grantPhantom") {
-            app.save.applyStageResult(StageResult(
-                mode: .findOnMap, stageIndex: 0, score: 0, stars: 3,
-                firstTryByPrefecture: [:],
-                cardDraws: atlas.cards.all.map { .new($0) }),
-                catalog: atlas.cards, atlas: atlas.saveKey,
-                phantomCards: PhantomCard.catalog(for: atlas))
+            let allCodes = Set(atlas.stages.flatMap(\.codes))
+            for _ in 0..<GameRules.maxMastery {
+                app.save.applyStageResult(StageResult(
+                    mode: .findOnMap, stageIndex: 0, score: 0, stars: 3,
+                    firstTryByPrefecture: Dictionary(uniqueKeysWithValues:
+                        allCodes.map { ($0, true) }),
+                    cardDraws: []),
+                    catalog: atlas.cards, atlas: atlas.saveKey,
+                    phantomCards: PhantomCard.catalog(for: atlas))
+            }
         }
         // Every prefecture of one regional stage answered cleanly, which is the
         // state the stage list's 「おぼえた ◯ / ◯」 has to show as full. Its own
