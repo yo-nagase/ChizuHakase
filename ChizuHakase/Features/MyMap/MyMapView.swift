@@ -145,7 +145,7 @@ struct MyMapView: View {
                      contentMode: .fit)
         // Same gesture as the quiz map: a child who learns it on one country
         // should not find it missing on the other.
-        .zoomPan(scale: $zoom, offset: $pan, oneFingerZoom: true)
+        .zoomPan(scale: $zoom, offset: $pan, oneFingerZoom: true, panInertia: true)
         .background {
             GeometryReader { geo in
                 Color.clear

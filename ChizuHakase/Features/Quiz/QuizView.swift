@@ -383,7 +383,7 @@ struct QuizView: View {
                     of: atlas.mapData.prefectures(in: stage.codes)), contentMode: .fit)
             }
         }
-        .zoomPan(scale: $zoom, offset: $pan, oneFingerZoom: true,
+        .zoomPan(scale: $zoom, offset: $pan, oneFingerZoom: true, panInertia: true,
                  maxScale: stage.flatMaxZoom, minScale: stage.flatMinZoom)
     }
 
