@@ -99,6 +99,11 @@ nonisolated extension TextMode {
     /// a button is easier to press when it says what pressing it does — and
     /// 「ずかん」 asks a five-year-old to already know that the cards live there.
     var viewCards: String { isKids ? "カードを みる" : "カードを見る" }
+    var phantomCard: String { isKids ? "まぼろしカード" : "幻カード" }
+    var phantomCards: String { isKids ? "✦ まぼろし" : "✦ 幻" }
+    var phantomCardEarned: String {
+        isKids ? "まぼろしカードを みつけた!" : "幻カードを発見!"
+    }
     var settings: String { isKids ? "せってい" : "設定" }
     var stages: String { isKids ? "ステージ" : "ステージ" }
     var close: String { isKids ? "とじる" : "閉じる" }

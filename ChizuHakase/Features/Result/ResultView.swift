@@ -29,6 +29,7 @@ struct ResultView: View {
     @State private var revealedStars = 0
     @State private var celebrating = false
     @State private var opened: WonCard?
+    @State private var openedPhantom: PhantomCard?
 
     /// The played book's slice of the save — already updated with this result
     /// by the time the screen shows (`SaveStore.applyStageResult` ran first).
@@ -80,6 +81,11 @@ struct ResultView: View {
         }
     }
 
+    private var phantomCards: [PhantomCard] {
+        let gained = Set(gains.phantomCards)
+        return PhantomCard.catalog(for: atlas).filter { gained.contains($0.id) }
+    }
+
     /// Rainbow as this run left it. `gains` is checked first because the save
     /// is the long-run truth and the run is the news — and on the debug route
     /// nothing was ever written, so the save alone would say no.
@@ -122,6 +128,7 @@ struct ResultView: View {
                     // unlike everything else on this screen it can happen
                     // without the child drawing anything — so it must not be
                     // read as a footnote to the card tally underneath it.
+                    if !phantomCards.isEmpty { phantomPanel }
                     if !rainbowCards.isEmpty { rainbowPanel }
                     if !gains.sparklingPrefectures.isEmpty { sparklePanel }
                     if !wonCards.isEmpty { cardPanel }
@@ -149,6 +156,11 @@ struct ResultView: View {
                            rainbow: won.rainbow,
                            streak: save.streak(of: won.card.prefectureCode),
                            unlock: atlas.unlockGoalNoun(for: won.card))
+                .environment(\.textMode, mode)
+                .presentationBackground(.clear)
+        }
+        .fullScreenCover(item: $openedPhantom) { card in
+            PhantomCardDetailView(card: card)
                 .environment(\.textMode, mode)
                 .presentationBackground(.clear)
         }
@@ -217,6 +229,37 @@ struct ResultView: View {
         .frame(maxWidth: .infinity)
         .padding(16)
         .stickerCard(cornerRadius: 24, isHolographic: true)
+    }
+
+    private var phantomPanel: some View {
+        VStack(spacing: 12) {
+            Text(mode.phantomCardEarned)
+                .font(AppFont.rounded(20, relativeTo: .headline))
+                .foregroundStyle(.white)
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10),
+                                     count: min(typeSize.cardColumns, phantomCards.count)),
+                      spacing: 10) {
+                ForEach(phantomCards) { card in
+                    VStack(spacing: 5) {
+                        PhantomCardFaceView(card: card, isOwned: true, metrics: .chip)
+                        Text(card.displayName(mode))
+                            .font(AppFont.heading(14, relativeTo: .caption))
+                            .foregroundStyle(.white)
+                            .lineLimit(1)
+                    }
+                        .onTapGesture { openedPhantom = card }
+                }
+            }
+        }
+        .padding(16)
+        .background(Color(red: 0.025, green: 0.025, blue: 0.10),
+                    in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .strokeBorder(LinearGradient(colors: [.cyan, .purple, .pink],
+                                             startPoint: .topLeading,
+                                             endPoint: .bottomTrailing), lineWidth: 2)
+        }
     }
 
     /// The rainbow cards themselves rather than their names.

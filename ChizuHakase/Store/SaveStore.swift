@@ -111,7 +111,8 @@ final class SaveStore {
     /// deleted, so every caller has to say which book it means.
     @discardableResult
     func applyStageResult(_ result: StageResult, catalog: CardCatalog,
-                          atlas key: String) -> StageGains {
+                          atlas key: String,
+                          phantomCards: [PhantomCard] = []) -> StageGains {
         // The one slice this stage may move, mutated whole and written back
         // once — no per-field write can end up in the other book.
         var atlas = data.atlases[key] ?? AtlasSave()
@@ -176,6 +177,13 @@ final class SaveStore {
             }
         }
 
+        // Completion rewards are evaluated after this run's draws have landed.
+        // They are not draws themselves and therefore never gain stars or alter
+        // acquisition order.
+        let newlyPhantom = PhantomCard.newlyUnlocked(
+            from: phantomCards, ordinaryCatalog: catalog, save: atlas)
+        atlas.phantomCards.formUnion(newlyPhantom)
+
         // The sampling challenge's unasked-first memory (world design §8),
         // per mode like the records — the two modes are separate rotations.
         // Only a result that actually drew carries codes; japan's ぜんこく
@@ -212,7 +220,24 @@ final class SaveStore {
         // that lists the same two prefectures in a different order each run
         // reads as two different events.
         return StageGains(sparklingPrefectures: newlySparkling.sorted(),
-                          rainbowCards: newlyRainbow.sorted())
+                          rainbowCards: newlyRainbow.sorted(),
+                          phantomCards: newlyPhantom.sorted())
+    }
+
+    /// Gives an older save rewards it had already qualified for before phantom
+    /// cards existed. Opening the book calls this once; ordinary play also runs
+    /// the same rule in `applyStageResult`.
+    @discardableResult
+    func reconcilePhantomCards(catalog: CardCatalog, phantomCards: [PhantomCard],
+                               atlas key: String) -> [String] {
+        var atlas = data.atlases[key] ?? AtlasSave()
+        let newly = PhantomCard.newlyUnlocked(
+            from: phantomCards, ordinaryCatalog: catalog, save: atlas)
+        guard !newly.isEmpty else { return [] }
+        atlas.phantomCards.formUnion(newly)
+        data.atlases[key] = atlas
+        save()
+        return newly.sorted()
     }
 
     func updateSettings(_ transform: (inout Settings) -> Void) {
@@ -253,6 +278,8 @@ nonisolated struct StageGains: Sendable, Hashable {
     /// the run, at once — that is the whole point of it being the streak's
     /// medal.
     var rainbowCards: [String] = []
+    /// Phantom completion rewards earned by this run.
+    var phantomCards: [String] = []
 }
 
 /// The finished stage, handed from the quiz to the store and the result screen,

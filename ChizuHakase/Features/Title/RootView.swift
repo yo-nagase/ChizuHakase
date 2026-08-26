@@ -283,6 +283,17 @@ struct RootView: View {
                 } ?? [:]),
                 catalog: catalog, atlas: atlas.saveKey)
         }
+        // The completion-reward book in its earned state. Kept separate from
+        // -grantCards because granting three ordinary cards must not quietly
+        // become "grant every ordinary card" just to reach this debug screen.
+        if arguments.contains("-grantPhantom") {
+            app.save.applyStageResult(StageResult(
+                mode: .findOnMap, stageIndex: 0, score: 0, stars: 3,
+                firstTryByPrefecture: [:],
+                cardDraws: atlas.cards.all.map { .new($0) }),
+                catalog: atlas.cards, atlas: atlas.saveKey,
+                phantomCards: PhantomCard.catalog(for: atlas))
+        }
         // Every prefecture of one regional stage answered cleanly, which is the
         // state the stage list's 「おぼえた ◯ / ◯」 has to show as full. Its own
         // flag rather than a rider on -grantCards: that one is about the book,
@@ -316,6 +327,7 @@ struct RootView: View {
         case "cardBook:silver": path = [.cardBook(filter: .tier(.silver))]
         case "cardBook:gold": path = [.cardBook(filter: .tier(.gold))]
         case "cardBook:rainbow": path = [.cardBook(filter: .tier(.rainbow))]
+        case "cardBook:phantom": path = [.cardBook(filter: .phantom)]
         // Opens straight onto one card, so the detail view can be looked
         // at without tapping through the book to reach it.
         case let value where value.hasPrefix("card:"):
@@ -422,8 +434,9 @@ struct RootView: View {
     /// Taken from the atlas value itself (`saveKey` is the single carrier of
     /// book-played + record-destination), not from the session state next to it.
     private func finish(_ result: StageResult, stage: Stage) {
-        let gains = app.save.applyStageResult(result, catalog: atlas.cards,
-                                              atlas: atlas.saveKey)
+        let gains = app.save.applyStageResult(
+            result, catalog: atlas.cards, atlas: atlas.saveKey,
+            phantomCards: PhantomCard.catalog(for: atlas))
         path = [.stageSelect, .result(result, gains: gains)]
     }
 

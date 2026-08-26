@@ -20,6 +20,7 @@ struct CardBookView: View {
 
     @State private var filter: CardFilter?
     @State private var opened: SpecialtyCard?
+    @State private var openedPhantom: PhantomCard?
 
     private var save: AtlasSave { app.save.data.atlas(atlas.saveKey) }
     private var active: CardFilter { filter ?? initialFilter }
@@ -44,6 +45,8 @@ struct CardBookView: View {
     }
 
     private var isWorldBook: Bool { atlas.saveKey == SaveData.worldAtlas }
+    private var phantomCards: [PhantomCard] { PhantomCard.catalog(for: atlas) }
+    private var isShowingPhantom: Bool { active == .phantom }
 
     /// Opens with the cover's own slide suppressed.
     ///
@@ -60,6 +63,7 @@ struct CardBookView: View {
     private func matches(_ card: SpecialtyCard) -> Bool {
         switch active {
         case .all, .card: true
+        case .phantom: false
         case .category(let c): card.category == c
         // The exact rung, the way `cardCount(ofTier:)` counts: a rainbow card
         // under the gold filter would put one card behind two chips, and a
@@ -73,7 +77,9 @@ struct CardBookView: View {
         ScrollView {
             LazyVStack(spacing: 16, pinnedViews: [.sectionHeaders]) {
                 Section {
-                    if isWorldBook {
+                    if isShowingPhantom {
+                        phantomCardGrid
+                    } else if isWorldBook {
                         worldCardGrid
                     } else {
                         ForEach(groups, id: \.prefecture.code) { group in
@@ -92,6 +98,9 @@ struct CardBookView: View {
         .navigationTitle(mode.cardBook)
         .navigationBarTitleDisplayMode(.inline)
         .task {
+            app.save.reconcilePhantomCards(catalog: atlas.cards,
+                                           phantomCards: phantomCards,
+                                           atlas: atlas.saveKey)
             if case .card(let id) = initialFilter, let card = atlas.cards[id] { open(card) }
         }
         .fullScreenCover(item: $opened) { card in
@@ -104,9 +113,16 @@ struct CardBookView: View {
                 .environment(\.textMode, mode)
                 .presentationBackground(.clear)
         }
+        .fullScreenCover(item: $openedPhantom) { card in
+            PhantomCardDetailView(card: card)
+                .environment(\.textMode, mode)
+                .presentationBackground(.clear)
+        }
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
-                Text("\(save.totalOwnedCards) / \(atlas.cards.count)")
+                Text(isShowingPhantom
+                     ? "\(save.phantomCards.intersection(Set(phantomCards.map(\.id))).count) / \(phantomCards.count)"
+                     : "\(save.totalOwnedCards) / \(atlas.cards.count)")
                     .font(AppFont.rounded(14, relativeTo: .footnote))
                     .foregroundStyle(Palette.ink.opacity(0.6))
                     .monospacedDigit()
@@ -119,6 +135,13 @@ struct CardBookView: View {
             HStack(spacing: 8) {
                 chip(title: mode.allCategories,
                      isOn: active == .all || isOpeningOneCard) { filter = .all }
+                chip(title: mode.phantomCards,
+                     isOn: isShowingPhantom,
+                     onFill: AnyShapeStyle(LinearGradient(
+                        colors: [.indigo, .purple, .cyan],
+                        startPoint: .topLeading, endPoint: .bottomTrailing))) {
+                    filter = isShowingPhantom ? .all : .phantom
+                }
                 // Ahead of the categories: the payoff is what a child arrives
                 // here looking for. One chip per tier rather than a single
                 // キラカード bundle — a child asking "where are my golds?" was
@@ -170,7 +193,7 @@ struct CardBookView: View {
     /// Shown when a filter leaves nothing, so an empty book reads as "none yet"
     /// rather than as broken.
     @ViewBuilder private var emptyNote: some View {
-        if isWorldBook ? worldCards.isEmpty : groups.isEmpty {
+        if !isShowingPhantom && (isWorldBook ? worldCards.isEmpty : groups.isEmpty) {
             Text(mode.notCollectedYet)
                 .font(AppFont.rounded(15, relativeTo: .body))
                 .foregroundStyle(Palette.ink.opacity(0.55))
@@ -188,6 +211,25 @@ struct CardBookView: View {
                              stars: save.stars(of: card.id),
                              rainbow: save.isRainbow(card.id),
                              onOpen: { open(card) })
+            }
+        }
+    }
+
+    private var phantomCardGrid: some View {
+        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10),
+                                 count: typeSize.cardColumns), spacing: 10) {
+            ForEach(phantomCards) { card in
+                let owned = save.phantomCards.contains(card.id)
+                VStack(spacing: 5) {
+                    PhantomCardFaceView(card: card, isOwned: owned, metrics: .chip)
+                    Text(owned ? card.displayName(mode) : "???")
+                        .font(AppFont.heading(14, relativeTo: .caption))
+                        .foregroundStyle(Palette.ink.opacity(owned ? 0.86 : 0.42))
+                        .lineLimit(1)
+                }
+                    .contentShape(Rectangle())
+                    .onTapGesture { if owned { openedPhantom = card } }
+                    .accessibilityAddTraits(owned ? .isButton : [])
             }
         }
     }
@@ -249,6 +291,7 @@ private struct CardBookParchmentBackground: View {
 /// What the card book is showing.
 nonisolated enum CardFilter: Hashable, Sendable {
     case all
+    case phantom
     case category(SpecialtyCard.Category)
     /// One exact rung of the ladder — silver, gold or rainbow. This replaced
     /// a single "silver and up" キラカード filter, which answered "where are my
