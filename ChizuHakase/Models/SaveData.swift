@@ -72,6 +72,9 @@ nonisolated struct AtlasSave: Codable, Sendable, Equatable {
     /// resets on the next fumble, and the rainbow must not reset with it
     /// (CLAUDE.md §12).
     var rainbow: Set<String> = []
+    /// One-off completion rewards. Separate from `cards`: phantom cards have no
+    /// stars and never enter the ordinary draw or tier ladder.
+    var phantomCards: Set<String> = []
     /// region code -> consecutive clean answers, running across sessions.
     var streaks: [Int: Int] = [:]
     /// quiz mode -> stage index -> best record.
@@ -101,6 +104,7 @@ nonisolated struct AtlasSave: Codable, Sendable, Equatable {
         cardAcquisitionOrder = try c.decodeIfPresent([String].self,
                                                       forKey: .cardAcquisitionOrder) ?? []
         rainbow = try c.decodeIfPresent(Set<String>.self, forKey: .rainbow) ?? []
+        phantomCards = try c.decodeIfPresent(Set<String>.self, forKey: .phantomCards) ?? []
         streaks = try c.decodeIfPresent([Int: Int].self, forKey: .streaks) ?? [:]
         records = try c.decodeIfPresent([String: [Int: StageRecord]].self,
                                         forKey: .records) ?? [:]
@@ -174,7 +178,8 @@ nonisolated struct AtlasSave: Codable, Sendable, Equatable {
 }
 
 nonisolated struct SaveData: Codable, Sendable, Equatable {
-    /// 8 records the order cards were first obtained for the world card book.
+    /// 9 adds per-atlas phantom bonus-card ownership. 8 records the order cards
+    /// were first obtained for the world card book.
     /// 7 moved the per-atlas fields under `atlases` so the world map can save
     /// beside Japan. 6 folded the card stars down to a ten-star ladder —
     /// fifteen put the first gold about eighteen clean runs of a stage away,
@@ -183,7 +188,7 @@ nonisolated struct SaveData: Codable, Sendable, Equatable {
     /// their rainbow latch. 3 gave every card five stars instead of a plain/キラ
     /// pair. 2 split the stage records per quiz mode. Version 1 had one mode
     /// and wrote a flat `stages` dictionary.
-    static let currentVersion = 8
+    static let currentVersion = 9
 
     /// Canonical `atlases` keys. Once written into save files they are as
     /// frozen as card IDs — never rename.

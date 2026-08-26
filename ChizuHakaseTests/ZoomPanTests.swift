@@ -328,4 +328,42 @@ struct ZoomPanTests {
         #expect(!ZoomPan.isZoomedOut(0.999))
         #expect(!ZoomPan.isZoomedOut(2))
     }
+
+    // MARK: - Glide (pan inertia)
+
+    /// A flick keeps a small fraction of its release velocity — enough to feel
+    /// like the map has weight, not enough to sail past what the child was
+    /// looking at.
+    @Test func glideCarriesAFractionOfTheReleaseVelocity() {
+        let target = ZoomPan.glide(from: .zero,
+                                   velocity: CGSize(width: 600, height: -400),
+                                   scale: 2, in: frame)
+        #expect(abs(target.width - 600 * ZoomPan.glideCarry) < 0.001)
+        #expect(abs(target.height - -400 * ZoomPan.glideCarry) < 0.001)
+    }
+
+    /// The glide obeys the same wall as the finger: no flick can expose a
+    /// blank edge the pan itself could not reach.
+    @Test func glideStopsAtTheEdgeLikeAnyPan() {
+        let target = ZoomPan.glide(from: CGSize(width: 140, height: 0),
+                                   velocity: CGSize(width: 9_999, height: 0),
+                                   scale: 2, in: frame)
+        #expect(target.width == frame.width / 2)
+    }
+
+    /// Lifting a still finger is not a flick — the map stays exactly put, so a
+    /// careful slow pan never twitches on release.
+    @Test func glideWithNoVelocityStaysPut() {
+        let resting = CGSize(width: 40, height: -30)
+        #expect(ZoomPan.glide(from: resting, velocity: .zero,
+                              scale: 2, in: frame) == resting)
+    }
+
+    /// At rest there is nothing to glide, the same way there is nothing to
+    /// pan: the offset clamp collapses everything to centre.
+    @Test func glideAtRestCollapsesToZero() {
+        #expect(ZoomPan.glide(from: .zero,
+                              velocity: CGSize(width: 2_000, height: 2_000),
+                              scale: 1, in: frame) == .zero)
+    }
 }

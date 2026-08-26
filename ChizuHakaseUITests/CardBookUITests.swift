@@ -46,6 +46,25 @@ final class CardBookUITests: XCTestCase {
         XCTAssertTrue(all.isSelected, "the book should open showing everything")
     }
 
+    func testThePhantomRouteShowsItsOwnBookAndOpensAnEarnedCard() {
+        app.launchArguments = ["-resetSave", "-grantPhantom", "-startAt",
+                               "cardBook:phantom"]
+        app.launch()
+
+        let filter = app.buttons["✦ まぼろし"]
+        XCTAssertTrue(filter.waitForExistence(timeout: 10))
+        XCTAssertTrue(filter.isSelected)
+        XCTAssertFalse(app.staticTexts["まだ もっていない カード"].exists,
+                       "the ordinary empty-state leaked into the phantom book")
+
+        let card = app.buttons.matching(
+            NSPredicate(format: "label BEGINSWITH %@", "てん")).firstMatch
+        XCTAssertTrue(card.waitForExistence(timeout: 5), "earned phantom card is missing")
+        card.tap()
+        XCTAssertTrue(app.buttons["とじる"].waitForExistence(timeout: 3),
+                      "earned phantom card did not open")
+    }
+
     /// A fresh save has no silver cards, so the filter empties the book. That
     /// has to read as "none yet" rather than as a screen that failed to load.
     func testAnEmptyFilterSaysSoRatherThanShowingNothing() {
