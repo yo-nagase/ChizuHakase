@@ -247,11 +247,11 @@ struct WorldDataTests {
     /// 背景も度数のまま残る — 地球儀の裏側にだけ大陸が消える嘘を作らない。
     @Test func 地球儀の背景も度数で残る() throws {
         let world = try loadedWorld()
-        // 81 = 属領・収録外の国・南極 + 収録国から外した遠隔領土。
-        // 簡略化率 20% で 77 から増えた(2026-08-23): 細かくなったぶん
-        // 距離刈りに掛かる遠隔リングを持つ国が 5 → 6 に増え、アメリカの
-        // 日付変更線の向こうの岩(DATELINE_OUTLIER_LON)が 1 件加わった。
-        #expect(world.globe.backgroundRings.count == 81)
+        // 97 = 属領・収録外の国・南極 + 収録国から外した遠隔領土。
+        // 77 → 81(簡略化率 20%、2026-08-23)→ 97(主ソースを 1:10m へ、
+        // 2026-08-26): 1:10m は属領・遠隔領土をより多く独立した地物として
+        // 持つため、収録国にならない背景がその分増えた。
+        #expect(world.globe.backgroundRings.count == 97)
         #expect(world.globe.backgroundRings.count == world.background.count)
         for rings in world.globe.backgroundRings {
             #expect(!rings.isEmpty)

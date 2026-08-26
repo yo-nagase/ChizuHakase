@@ -106,7 +106,7 @@ cd tools
 curl -sL -o japan.geojson \
   https://raw.githubusercontent.com/dataofjapan/land/master/japan.geojson
 npx mapshaper japan.geojson \
-  -simplify visvalingam 5% keep-shapes -clean \
+  -simplify visvalingam 10% keep-shapes -clean \
   -o japan_simplified.geojson format=geojson
 python3 build_map_data.py
 mv PrefectureShapes.json ../ChizuHakase/Resources/
@@ -121,8 +121,8 @@ mv PrefectureShapes.json ../ChizuHakase/Resources/
 ```jsonc
 {
   "mapWidth": 1000.0,
-  "mapHeight": 1066.7,
-  "okinawaInset": [0.0, 832.5, 56.7, 915.9],  // 沖縄インセットの枠 [x0,y0,x1,y1]
+  "mapHeight": 1065.2,
+  "okinawaInset": [187.2, 926.1, 356.4, 1065.2],  // 沖縄インセットの枠 [x0,y0,x1,y1]
   "prefectures": [
     {
       "code": 1,                      // 全国地方公共団体コードの都道府県部分 (1-47)
@@ -137,7 +137,8 @@ mv PrefectureShapes.json ../ChizuHakase/Resources/
 ```
 
 座標系は **左上原点・y 下向き**(SwiftUI と同じ)、幅 1000 に正規化済み。
-全 47 県 4,087 点、約 62 KB。
+全 47 県 7,645 点、約 110 KB。当初は 5% (4,087 点・62 KB) だったが、
+リアス海岸・瀬戸内の島・長崎の形が残るよう 10% へ上げた (2026-08-26)。
 
 ### 描画とタップ判定
 
