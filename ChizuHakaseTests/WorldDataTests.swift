@@ -21,6 +21,30 @@ struct WorldDataTests {
         try Self.world.get()
     }
 
+    @Test func detailSurvivesProjectionAndInsetPlacement() throws {
+        let world = try loadedWorld()
+        let atlas = Atlas.world(from: world)
+        for country in world.recordedCountries {
+            let flatDetail = try #require(country.detailedFlatRings)
+            let pref = try #require(atlas.mapData[country.code])
+            let detailed = pref.usingDetail(true)
+            #expect(detailed.rings == flatDetail)
+            #expect(PrefectureGeometry.boundingBox(of: [detailed]) == (pref.frameBbox ?? pref.bbox))
+            #expect(PrefectureGeometry.contains(pref.centroid, prefecture: detailed, transform: .identity))
+            let globe = try #require(world.globe.shapes.first { $0.code == country.code })
+            let globeDetail = try #require(globe.detailedRings)
+            #expect(globe.usingDetail(true).rings == globeDetail)
+            #expect(globe.usingDetail(false) == globe)
+            let projection = GlobeProjection(centerLongitude: Double(globe.centroid.x),
+                                              centerLatitude: Double(globe.centroid.y),
+                                              radius: 1600, screenCenter: CGPoint(x: 200, y: 300))
+            #expect(GlobeGeometry.directHit(at: projection.screenCenter,
+                                           among: [globe.usingDetail(true)],
+                                           projection: projection)?.code == globe.code)
+            #expect(globeDetail.reduce(0) { $0 + $1.count } >= globe.rings.reduce(0) { $0 + $1.count })
+        }
+    }
+
     // MARK: - 収録国
 
     @Test func 全収録国のパスが空でない() throws {

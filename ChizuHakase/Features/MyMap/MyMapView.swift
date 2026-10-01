@@ -112,7 +112,9 @@ struct MyMapView: View {
             }
             // No ZoomHintChip: the chip teaches ZoomPan's press-and-slide,
             // a gesture the globe does not run — there, a drag rotates.
-            .accessibilityZoomAction { globeZoom = zoomedForAccessibility(globeZoom, $0) }
+            .accessibilityZoomAction {
+                globeZoom = zoomedForAccessibility(globeZoom, $0, max: GameRules.worldMapMaxZoom)
+            }
     }
 
     /// Pinchable, and draggable once pinched. The zoom lives on the map itself
@@ -176,8 +178,10 @@ struct MyMapView: View {
     /// per gesture. One function for both panels — the flat map additionally
     /// re-centres its pan on the way out (a globe has no pan to re-centre).
     private func zoomedForAccessibility(_ zoom: CGFloat,
-                                        _ action: AccessibilityZoomGestureAction) -> CGFloat {
-        ZoomPan.clamp(scale: action.direction == .zoomIn ? zoom * 1.5 : zoom / 1.5)
+                                        _ action: AccessibilityZoomGestureAction,
+                                        max maxScale: CGFloat = ZoomPan.maxScale) -> CGFloat {
+        ZoomPan.clamp(scale: action.direction == .zoomIn ? zoom * 1.5 : zoom / 1.5,
+                      max: maxScale)
     }
 
     /// The way back out — shared by both cameras (the flat map's zoom+pan,

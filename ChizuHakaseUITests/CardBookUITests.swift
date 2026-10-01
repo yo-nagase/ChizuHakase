@@ -63,6 +63,62 @@ final class CardBookUITests: XCTestCase {
         card.tap()
         XCTAssertTrue(app.buttons["とじる"].waitForExistence(timeout: 3),
                       "earned phantom card did not open")
+        let start = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.4))
+        start.press(forDuration: 0.1, thenDragTo:
+            app.coordinate(withNormalizedOffset: CGVector(dx: 0.7, dy: 0.5)))
+        XCTAssertTrue(app.buttons["とじる"].exists, "tilting must keep the sky card open")
+        let screenshot = XCTAttachment(screenshot: app.screenshot())
+        screenshot.name = "Sky dragon in app"
+        screenshot.lifetime = .keepAlways
+        add(screenshot)
+    }
+
+    func testEarthFoxParallaxOpensAndDrags() {
+        app.launchArguments = ["-resetSave", "-grantPhantom", "-startAt",
+                               "cardBook:phantom"]
+        app.launch()
+
+        let filter = app.buttons["✦ まぼろし"]
+        XCTAssertTrue(filter.waitForExistence(timeout: 10))
+        XCTAssertTrue(filter.isSelected)
+        XCTAssertFalse(app.staticTexts["まだ もっていない カード"].exists,
+                       "the ordinary empty-state leaked into the phantom book")
+
+        let card = app.buttons.matching(
+            NSPredicate(format: "label BEGINSWITH %@", "ち")).firstMatch
+        XCTAssertTrue(card.waitForExistence(timeout: 5), "earned phantom card is missing")
+        card.tap()
+        XCTAssertTrue(app.buttons["とじる"].waitForExistence(timeout: 3),
+                      "earned phantom card did not open")
+        let start = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.4))
+        start.press(forDuration: 0.1, thenDragTo:
+            app.coordinate(withNormalizedOffset: CGVector(dx: 0.7, dy: 0.5)))
+        XCTAssertTrue(app.buttons["とじる"].exists, "tilting must keep the earth card open")
+        let screenshot = XCTAttachment(screenshot: app.screenshot())
+        screenshot.name = "Earth fox in app"
+        screenshot.lifetime = .keepAlways
+        add(screenshot)
+    }
+
+    @MainActor
+    func testPerfectJapanHologramOpensAndRemainsOpenAfterDragging() {
+        app.launchArguments = ["-resetSave", "-grantPerfectJapan", "-startAt", "cardBook:phantom"]
+        app.launch()
+        let card = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "にほん")).firstMatch
+        XCTAssertTrue(card.waitForExistence(timeout: 10))
+        card.tap()
+        let close = app.buttons["とじる"]
+        XCTAssertTrue(close.waitForExistence(timeout: 5))
+        let start = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.4))
+        let end = app.coordinate(withNormalizedOffset: CGVector(dx: 0.75, dy: 0.5))
+        start.press(forDuration: 0.1, thenDragTo: end)
+        XCTAssertTrue(close.exists, "dragging the foil must not dismiss its detail")
+        let screenshot = XCTAttachment(screenshot: app.screenshot())
+        screenshot.name = "Japan holographic reward"
+        screenshot.lifetime = .keepAlways
+        add(screenshot)
+        close.tap()
+        XCTAssertFalse(close.waitForExistence(timeout: 2))
     }
 
     /// A fresh save has no silver cards, so the filter empties the book. That

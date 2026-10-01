@@ -11,7 +11,9 @@ Run from tools/:
 
 from __future__ import annotations
 
+import argparse
 import json
+from map_detail import refine_rings, validate_detail
 import math
 import os
 import sys
@@ -121,6 +123,11 @@ def main():
     if not os.path.exists(src):
         sys.exit(f"missing {SRC} - run the mapshaper step first (CLAUDE.md sec.3)")
 
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--details", help="Higher-resolution mapshaper GeoJSON from the same source")
+    parser.add_argument("--output", help="Destination JSON (defaults to the tools directory)")
+    args = parser.parse_args()
+    details = load_features(args.details) if args.details else None
     feats = load_features(src)
     missing = sorted(set(range(1, 48)) - set(feats))
     if missing:
@@ -133,6 +140,8 @@ def main():
         kept = filter_rings(feat["rings"])
         dropped += before - len(kept)
         shapes[code] = {"name": feat["name"], "rings": project(kept)}
+        if details:
+            shapes[code]["detailedRings"] = project(refine_rings(kept, details[code]["rings"]))
 
     # Lay out the mainland first, then drop Okinawa into empty sea so the inset
     # never overlaps a real prefecture.
@@ -187,6 +196,11 @@ def main():
         target - ox0 * OKINAWA_SCALE,
         band_y0 - oy0 * OKINAWA_SCALE,
     )
+    if details:
+        shapes[OKINAWA_CODE]["detailedRings"] = transform_rings(
+            shapes[OKINAWA_CODE]["detailedRings"], OKINAWA_SCALE, OKINAWA_SCALE,
+            target - ox0 * OKINAWA_SCALE, band_y0 - oy0 * OKINAWA_SCALE)
+
 
     # The dashed inset frame is part of the map's extent, so it has to be in
     # the bbox before normalising - otherwise the frame lands outside 0...1000
@@ -218,6 +232,9 @@ def main():
     for s in shapes.values():
         s["rings"] = transform_rings(s["rings"], scale, scale,
                                      -gx0 * scale, -gy0 * scale)
+        if details:
+            s["detailedRings"] = transform_rings(s["detailedRings"], scale, scale,
+                                                  -gx0 * scale, -gy0 * scale)
     inset = [round((inset_rect[0] - gx0) * scale, COORD_DECIMALS),
              round((inset_rect[1] - gy0) * scale, COORD_DECIMALS),
              round((inset_rect[2] - gx0) * scale, COORD_DECIMALS),
@@ -259,6 +276,11 @@ def main():
             "rings": rounded,
         })
 
+        if details:
+            prefectures[-1]["detailedRings"] = [
+                [[round(x, 3), round(y, 3)] for x, y in r]
+                for r in s["detailedRings"]]
+
     out = {
         "mapWidth": OUT_WIDTH,
         "mapHeight": round(map_h, COORD_DECIMALS),
@@ -266,7 +288,8 @@ def main():
         "prefectures": prefectures,
     }
 
-    dst = os.path.join(here, DST)
+    validate_detail(prefectures)
+    dst = args.output or os.path.join(here, DST)
     with open(dst, "w", encoding="utf-8") as fh:
         json.dump(out, fh, ensure_ascii=False, separators=(",", ":"))
 

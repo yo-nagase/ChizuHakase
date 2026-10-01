@@ -58,6 +58,26 @@ final class QuizFlowUITests: XCTestCase {
 
     // MARK: - Tests
 
+    func testRegionalMapCanZoomIntoDetailAndReset() {
+        launch(at: "quiz:0")
+        XCTAssertTrue(waitUntilQuizIsReady())
+        let anchor = app.buttons["北海道"]
+        XCTAssertTrue(anchor.waitForExistence(timeout: 5))
+        let original = anchor.frame
+        anchor.pinch(withScale: 4, velocity: 1)
+        let reset = app.buttons["もとの おおきさ"]
+        XCTAssertTrue(reset.waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["14 もんちゅう 1 もんめ"].exists)
+        let screenshot = XCTAttachment(screenshot: app.screenshot())
+        screenshot.name = "japan-detailed-outline"
+        screenshot.lifetime = .keepAlways
+        add(screenshot)
+        reset.tap()
+        XCTAssertFalse(reset.waitForExistence(timeout: 2))
+        XCTAssertEqual(anchor.frame.width, original.width, accuracy: 1)
+        XCTAssertEqual(anchor.frame.midX, original.midX, accuracy: 1)
+    }
+
     func testTappingTheAskedPrefectureScores() throws {
         launch(at: "quiz:0")
         XCTAssertTrue(waitUntilQuizIsReady(), "the quiz never appeared")

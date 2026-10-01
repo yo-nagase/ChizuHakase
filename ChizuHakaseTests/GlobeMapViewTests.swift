@@ -64,10 +64,11 @@ struct GlobeMapViewLogicTests {
         #expect(radius == 94)
     }
 
-    @Test func ズームは1から4に畳まれる() {
-        // ZoomPan.clamp と同じ意味論(計画 Task 3)。94 × 上限 4 = 376。
+    @Test func ズームは1から16に畳まれる() {
+        // 地球儀でも小国へ寄れる。94 × 上限16 = 1504。
         let size = CGSize(width: 200, height: 300)
-        #expect(GlobeMapView.radius(in: size, zoom: 9) == 376)
+        #expect(GlobeMapView.radius(in: size, zoom: 9) == 846)
+        #expect(GlobeMapView.radius(in: size, zoom: 100) == 1504)
         #expect(GlobeMapView.radius(in: size, zoom: 0.1) == 94)
     }
 

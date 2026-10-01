@@ -15,6 +15,21 @@ final class StageSelectUITests: XCTestCase {
         app = XCUIApplication()
     }
 
+    func testCoursesExplainRankParticipationForBothAtlases() {
+        for atlas in ["japan", "world"] {
+            app.launchArguments = ["-resetSave", "-atlas", atlas, "-startAt", "stageSelect"]
+            app.launch()
+            let course = app.buttons.matching(NSPredicate(
+                format: "label CONTAINS %@ AND label CONTAINS %@", " もん。", "ランキングに さんかしてね")).firstMatch
+            XCTAssertTrue(course.waitForExistence(timeout: 15))
+            let shot = XCTAttachment(screenshot: app.screenshot())
+            shot.name = "\(atlas)-course-ranks"
+            shot.lifetime = .keepAlways
+            add(shot)
+            app.terminate()
+        }
+    }
+
     /// The demo save has 関東 fully learned, so its sheet must carry the
     /// learned count.
     func testTheLearnedCountSurfacesOnTheSheet() {

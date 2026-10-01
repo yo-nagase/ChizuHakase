@@ -1,5 +1,16 @@
 import SwiftUI
 
+private struct MapDetailedGeometryKey: EnvironmentKey {
+    static let defaultValue: Bool? = nil
+}
+
+extension EnvironmentValues {
+    var mapDetailedGeometry: Bool? {
+        get { self[MapDetailedGeometryKey.self] }
+        set { self[MapDetailedGeometryKey.self] = newValue }
+    }
+}
+
 /// Pinch-to-zoom maths, kept as pure functions so the edges are testable.
 ///
 /// The clamping matters more here than the gesture does: a child who pinches
@@ -262,6 +273,9 @@ struct ZoomPanModifier: ViewModifier {
 
     func body(content: Content) -> some View {
         content
+            // Propagate only the level change, not every pinch frame. The map
+            // must switch before release, while its zoom binding is still old.
+            .environment(\.mapDetailedGeometry, liveScale >= GameRules.mapDetailZoom)
             .scaleEffect(liveScale)
             .offset(liveOffset)
             // Simultaneous so a pinch and a drag can run together: fingers

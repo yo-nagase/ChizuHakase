@@ -72,7 +72,7 @@ struct GlobeMapView: View {
     /// `center = center.facing(GlobeGeometry.centering(on: shape))` を
     /// `withAnimation` で包む(Reduce Motion では素の代入でジャンプ)。
     @Binding var center: GlobeCenter
-    /// 半径の倍率。`ZoomPan.clamp(scale:)` の既定範囲に畳む。Binding なのは
+    /// 半径の倍率。世界編のズーム上限までに畳む。Binding なのは
     /// リセットボタンを親が置くため(平面版の zoom と同じ役割分担)。
     /// パンは無い — 見たい場所へは回して寄る。
     @Binding var zoom: CGFloat
@@ -94,7 +94,9 @@ struct GlobeMapView: View {
                 latitude: center.latitude,
                 radius: Self.radius(in: geo.size, zoom: zoom * pinch),
                 canvasSize: geo.size,
-                globe: globe,
+                globe: GlobeData(
+                    shapes: globe.shapes.map { $0.usingDetail(zoom * pinch >= GameRules.mapDetailZoom) },
+                    backgroundRings: globe.backgroundRings),
                 appearance: appearance,
                 interactiveCodes: interactiveCodes,
                 targetCode: targetCode,
@@ -141,7 +143,10 @@ struct GlobeMapView: View {
     private var magnify: some Gesture {
         MagnifyGesture()
             .updating($pinch) { value, state, _ in state = value.magnification }
-            .onEnded { value in zoom = ZoomPan.clamp(scale: zoom * value.magnification) }
+            .onEnded { value in
+                zoom = ZoomPan.clamp(scale: zoom * value.magnification,
+                                     max: GameRules.worldMapMaxZoom)
+            }
     }
 
     private func rotate(toHint code: Int?) {
@@ -168,7 +173,7 @@ struct GlobeMapView: View {
     nonisolated static func radius(in size: CGSize, zoom: CGFloat) -> CGFloat {
         let base = min(size.width, size.height) / 2 - GameRules.mapPaddingPoints
         guard base > 0 else { return 0 }
-        return base * ZoomPan.clamp(scale: zoom)
+        return base * ZoomPan.clamp(scale: zoom, max: GameRules.worldMapMaxZoom)
     }
 
     /// 回転救済の到達値 — 3 ミスのヒント点滅と、なまえを あてる の出題前

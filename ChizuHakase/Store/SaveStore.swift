@@ -181,7 +181,8 @@ final class SaveStore {
         // landed. They are not draws and never gain stars or alter acquisition
         // order.
         let newlyPhantom = PhantomCard.newlyUnlocked(
-            from: phantomCards, save: atlas)
+            from: FeatureFlags.phantomCardsEnabled ? phantomCards : [],
+            save: atlas, result: result, atlasKey: key)
         atlas.phantomCards.formUnion(newlyPhantom)
 
         // The sampling challenge's unasked-first memory (world design §8),
@@ -230,6 +231,7 @@ final class SaveStore {
     @discardableResult
     func reconcilePhantomCards(_ phantomCards: [PhantomCard],
                                atlas key: String) -> [String] {
+        guard FeatureFlags.phantomCardsEnabled else { return [] }
         var atlas = data.atlases[key] ?? AtlasSave()
         let newly = PhantomCard.newlyUnlocked(from: phantomCards, save: atlas)
         guard !newly.isEmpty else { return [] }
@@ -303,6 +305,7 @@ nonisolated struct StageResult: Sendable, Hashable {
     /// ぜんこく asks all 47 every run and has no rotation to remember, so an
     /// empty set is the honest record, not a missing one.
     var askedCodes: Set<Int> = []
+    var ranking: RankingRun? = nil
 
     var missedPrefectureCount: Int {
         firstTryByPrefecture.values.filter { !$0 }.count

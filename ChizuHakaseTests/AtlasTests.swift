@@ -635,11 +635,11 @@ struct AtlasTests {
 
     /// 上限は手置きではなくデータから導く(沖縄インセットの空き海域走査と
     /// 同じ流儀)。ここでも同じ比 — チャレンジ枠と各地方ステージ枠の
-    /// `max(cw/w, ch/h)` — を独立に計算して、運ばれた値と突き合わせる。
+    /// `max(cw/w, ch/h)` — に小国用の拡大倍率を掛け、運ばれた値と突き合わせる。
     /// 枠は描画のフィットと同じ `frameBbox ?? bbox`(ロシアはヨーロッパ側の
     /// 枠だけがフィットに効き、シベリアは景色としてあふれる)— 生の bbox で
     /// 測ると frameBbox 持ちステージの比を過小評価する。
-    @Test func 世界チャレンジの平面ズーム上限は最大のステージ枠比() throws {
+    @Test func 世界チャレンジの平面ズーム上限は最大のステージ枠比の4倍() throws {
         let atlas = try worldAtlas()
         let challenge = try #require(atlas.stages.first { $0.isChallenge })
         var frames: [Int: CGRect] = [:]
@@ -653,7 +653,7 @@ struct AtlasTests {
             return max(challengeBox.width / box.width,
                        challengeBox.height / box.height)
         }
-        let expected = try #require(ratios.max())
+        let expected = try #require(ratios.max()) * GameRules.worldMapZoomMultiplier
         #expect(expected > GameRules.mapMaxZoom)
         #expect(abs(challenge.flatMaxZoom - expected) < 0.001)
     }
@@ -674,18 +674,16 @@ struct AtlasTests {
     /// つまりこの上下限は「枠がじわじわ広がっていないか」の網であって、
     /// 広がったら黙って数字を書き換える場所ではない。動いたらまず
     /// どの国の bbox が伸びたのかを見ること。
-    @Test func 世界チャレンジの上限はおよそ17() throws {
+    @Test func 世界チャレンジの上限は従来のおよそ17の4倍() throws {
         let challenge = try #require(try worldAtlas().stages.first { $0.isChallenge })
-        #expect(challenge.flatMaxZoom > 17.0)
-        #expect(challenge.flatMaxZoom < 18.0)
+        #expect(challenge.flatMaxZoom > 17.0 * 4)
+        #expect(challenge.flatMaxZoom < 18.0 * 4)
     }
 
-    /// 広がるのは世界チャレンジだけ。地方ステージはその地方が枠いっぱいに
-    /// 描かれていて、4 を超える拡大は形を背後のディテールより大きくする
-    /// (ZoomPan の既定の美観判断のまま)。
-    @Test func 世界の地方ステージの平面ズーム上限は既定のまま() throws {
+    /// シンガポールのような小国も地方ステージ内でさらに拡大できる。
+    @Test func 世界の地方ステージは16倍まで拡大できる() throws {
         for stage in try worldAtlas().stages where !stage.isChallenge {
-            #expect(stage.flatMaxZoom == GameRules.mapMaxZoom)
+            #expect(stage.flatMaxZoom == 16)
         }
     }
 
@@ -728,8 +726,7 @@ struct AtlasTests {
         #expect(challenge.flatMinZoom == 1)
     }
 
-    /// 日本は全ステージ床 1 — 地方ステージは周辺県を描いておらず、縮小して
-    /// 見えるのは偽の海だけ。今日の挙動から 1 ピクセルも動かさない。
+    /// 日本は周辺県を背景に描いても、縮小の床は全ステージ1を保つ。
     @Test func 日本の全ステージの縮小の床は既定のまま() {
         for stage in Stage.all {
             #expect(stage.flatMinZoom == 1)

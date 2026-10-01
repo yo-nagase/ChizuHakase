@@ -20,19 +20,13 @@ nonisolated struct Stage: Identifiable, Sendable, Equatable {
     /// world's challenge spans 167 countries, and 47 of its ISO codes belong
     /// to other countries entirely — no count can tell a challenge apart.
     let isChallenge: Bool
-    /// How far this stage's flat map may be pinched. Almost every stage keeps
-    /// `GameRules.mapMaxZoom`: a regional map already draws its region as big
-    /// as the frame allows, so 4× is where shapes outgrow the detail behind
-    /// them. The world challenge is the exception — its frame spans the whole
-    /// globe, and at 4× the small countries stay untappable — so its atlas
-    /// derives a wider ceiling from the stage frames
-    /// (`GameRules.challengeFlatMaxZoom`) and carries it here as a value, keeping
-    /// the view free of any japan/world branch.
+    /// Per-stage zoom ceiling: Japan uses the shared default; world regions
+    /// allow extra magnification for small countries. The world challenge also
+    /// accounts for its larger frame. The view consumes the value directly.
     let flatMaxZoom: CGFloat
     /// How far this stage's flat map may be pinched *out*, below the at-rest
-    /// fit. Almost every stage keeps 1: japan's regional maps draw no
-    /// neighbouring scenery, so shrinking them would only reveal false sea,
-    /// and a challenge frame already holds its whole book. The world's
+    /// fit. Japan keeps its regional framing at a minimum of 1, and a
+    /// challenge frame already holds its whole book. The world's
     /// regional stages are the exception — where the region sits on the globe
     /// is part of what they teach — so their atlas derives a floor from the
     /// data (`GameRules.regionalFlatMinZoom`) that lets a pinch shrink the

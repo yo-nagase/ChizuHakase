@@ -15,6 +15,44 @@ struct MapDataTests {
 
     private var map: MapData { Self.map }
 
+    @Test func detailedMapsPreserveFramingAndAnswerAnchors() throws {
+        for pref in map.prefectures {
+            let rings = try #require(pref.detailedRings)
+            #expect(rings.reduce(0) { $0 + $1.count } >= pref.rings.reduce(0) { $0 + $1.count })
+            let detailed = pref.usingDetail(true)
+            #expect(PrefectureGeometry.boundingBox(of: [detailed]) == pref.bbox)
+            #expect(PrefectureGeometry.contains(pref.centroid, prefecture: detailed, transform: .identity))
+            #expect(PrefectureGeometry.directHit(at: pref.centroid, among: [detailed],
+                                                transform: .identity)?.code == pref.code)
+            #expect(pref.usingDetail(false) == pref)
+        }
+    }
+
+    @Test func detailCapeIsDrawnAndTappableOutsideTheCoarseBounds() {
+        let base: [[CGPoint]] = [[.zero, CGPoint(x: 10, y: 0), CGPoint(x: 10, y: 10),
+                                 CGPoint(x: 0, y: 10), .zero]]
+        let detail: [[CGPoint]] = [[.zero, CGPoint(x: 10, y: 0), CGPoint(x: 14, y: 5),
+                                   CGPoint(x: 10, y: 10), CGPoint(x: 0, y: 10), .zero]]
+        let pref = Prefecture(code: 1, name: "test", kana: "test",
+                              bbox: CGRect(x: 0, y: 0, width: 10, height: 10),
+                              centroid: CGPoint(x: 5, y: 5), rings: base, detailedRings: detail)
+        let point = CGPoint(x: 12, y: 5)
+        #expect(PrefectureGeometry.directHit(at: point, among: [pref], transform: .identity) == nil)
+        let selected = pref.usingDetail(true)
+        #expect(PrefectureGeometry.path(for: selected, transform: .identity).cgPath.contains(point, using: .evenOdd))
+        #expect(PrefectureGeometry.directHit(at: point, among: [selected], transform: .identity)?.code == 1)
+        #expect(PrefectureGeometry.boundingBox(of: [selected]) == pref.bbox)
+    }
+
+    @Test func missingOrMalformedDetailKeepsTheCoarseMapUsable() {
+        #expect(MapDetail.decode([]) == nil)
+        #expect(MapDetail.decode([[[0, 0], [1, 0], [1, 1], [0, .infinity], [0, 0]]]) == nil)
+        #expect(MapDetail.decode([[[0, 0], [1, 0], [1, 1], [0, 1]]]) == nil)
+        let pref = Prefecture(code: 1, name: "test", kana: "test", bbox: .zero,
+                              centroid: .zero, rings: [[.zero]])
+        #expect(pref.usingDetail(true) == pref)
+    }
+
     @Test func loadsAll47Prefectures() {
         #expect(map.prefectures.count == 47)
         #expect(map.prefectures.map(\.code) == Array(1...47))

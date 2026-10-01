@@ -16,6 +16,8 @@ final class AppState {
     /// 読み込み失敗は `Atlas.loadWorld` が空アトラスへ倒す(クラッシュしない)。
     /// 不変データなので観測は不要(@ObservationIgnored は lazy の要件でもある)。
     @ObservationIgnored private(set) lazy var world: Atlas = .loadWorld()
+    let rankings = RankingStore()
+    @ObservationIgnored lazy var gameCenter = GameCenterService(store: rankings)
     let save: SaveStore
     let voice: VoiceInputService
     /// The title theme. Owned here so returning to the title finds the same

@@ -241,7 +241,8 @@ nonisolated struct Atlas: Sendable {
                        bbox: country.flatBbox,
                        centroid: country.flatCentroid,
                        rings: country.flatRings,
-                       frameBbox: country.europeBbox)
+                       frameBbox: country.europeBbox,
+                       detailedRings: country.detailedFlatRings)
         }
         // isNationwide(== 47 県)と地域ズームの 2 つの罠は P7 Task 4/5 で
         // 解決済み: 総合ステージは stored な `Stage.isChallenge` になり、
@@ -289,11 +290,9 @@ nonisolated struct Atlas: Sendable {
         // 全 167 だが 1 回の出題は 47 問 — どの国が入るかは questionCount では
         // なく抽選(GameRules.challengeSelection)の仕事。
         //
-        // 平面ズーム上限だけはチャレンジが広く運ぶ(P9): 枠が全世界に及ぶ
-        // この面だけ、既定 4 では小国が地方ステージの大きさまで寄れない。
-        // 値は各地方ステージ枠との比から導く — データが変われば追従し、
-        // 手置きの数字がデータと食い違う余地を残さない(沖縄インセットと
-        // 同じ流儀)。地方ステージは既定のまま(Stage.flatMaxZoom の道標)。
+        // 世界編は小国を選びやすくするため、地方もチャレンジも従来の4倍まで
+        // 拡大できる。チャレンジは地方ステージ枠との比も使い、全世界表示でも
+        // 小国に十分寄れる上限を運ぶ。
         //
         // 枠はチャレンジ側・ステージ側とも描画のフィットと同じ
         // `frameBbox ?? bbox` で測る(PrefectureGeometry.boundingBox が
@@ -318,6 +317,7 @@ nonisolated struct Atlas: Sendable {
                   name: stage.name,
                   kanjiName: stage.kanjiName,
                   codes: stage.codes,
+                  flatMaxZoom: GameRules.worldMapMaxZoom,
                   flatMinZoom: GameRules.regionalFlatMinZoom(
                       bookSpan: challengeSpan, stageSpan: span))
         }
@@ -328,7 +328,7 @@ nonisolated struct Atlas: Sendable {
                               isChallenge: true,
                               flatMaxZoom: GameRules.challengeFlatMaxZoom(
                                   challengeSpan: challengeSpan,
-                                  stageSpans: stageSpans))
+                                  stageSpans: stageSpans) * GameRules.worldMapZoomMultiplier)
         // 国旗カードが銀になるまでオリジナルを配らないゲート(設計 §5)。
         return Atlas(mapData: mapData, globe: world.globe,
                      stages: flooredStages + [challenge],

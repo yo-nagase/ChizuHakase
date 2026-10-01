@@ -31,6 +31,12 @@ nonisolated struct GlobeShape: Identifiable, Sendable, Equatable {
     /// 固定するのは「自形の度数 bbox 内」まで(平面側 `flatCentroid` と
     /// 同じ流儀の正直な保証)。
     let centroid: CGPoint
+    var detailedRings: [[CGPoint]]? = nil
+
+    func usingDetail(_ detailed: Bool) -> GlobeShape {
+        guard detailed, let detailedRings else { return self }
+        return GlobeShape(code: code, rings: detailedRings, centroid: centroid)
+    }
 
     var id: Int { code }
 }

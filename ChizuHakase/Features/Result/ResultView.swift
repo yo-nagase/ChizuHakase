@@ -83,7 +83,7 @@ struct ResultView: View {
 
     private var phantomCards: [PhantomCard] {
         let gained = Set(gains.phantomCards)
-        return PhantomCard.catalog(for: atlas).filter { gained.contains($0.id) }
+        return PhantomCard.availableCatalog(for: atlas).filter { gained.contains($0.id) }
     }
 
     /// Rainbow as this run left it. `gains` is checked first because the save
@@ -123,6 +123,29 @@ struct ResultView: View {
 
                     stars
                     scoreCard
+                    if let run = result.ranking {
+                        Text("いっかいで せいかい：\(run.correct) / \(run.board.questionCount) もん")
+                            .foregroundStyle(Palette.ink)
+                        Text(RankingRun.timeLabel(run.milliseconds))
+                            .monospacedDigit()
+                            .foregroundStyle(Palette.ink)
+                        if run.interrupted {
+                            Text("ちゅうだんあり・じぶんの きろくだけ")
+                                .font(.caption)
+                                .foregroundStyle(Palette.ink)
+                        }
+                        if let error = app.rankings.errorMessage {
+                            Text(error)
+                                .font(.caption)
+                                .foregroundStyle(Palette.ink)
+                        }
+                    }
+                    NavigationLink {
+                        RankingView(atlas: atlas, stageIndex: stage.index, quizMode: result.mode)
+                    } label: {
+                        Label("ランキング・じぶんの きろく", systemImage: "trophy")
+                    }
+                    .accessibilityIdentifier("openRankings")
 
                     // Rainbow leads. It is the rarest thing the game has, and
                     // unlike everything else on this screen it can happen

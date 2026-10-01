@@ -34,6 +34,7 @@ nonisolated struct WorldCountry: Identifiable, Sendable, Equatable {
     /// ロシアのみ: ウラルまでの欧州部分の枠。ひがしヨーロッパのステージ枠が
     /// シベリアまで広がらないようにするための切り取り線。他の用途に使わない。
     let europeBbox: CGRect?
+    var detailedFlatRings: [[CGPoint]]? = nil
 
     var id: Int { code }
 
@@ -188,6 +189,7 @@ nonisolated enum WorldDataLoader {
             let bbox: [Double]
             let centroid: [Double]
             let rings: [[[Double]]]
+            let detailedRings: [[[CGFloat]]]?
             let europeBbox: [Double]?
         }
         struct Background: Decodable {
@@ -312,6 +314,7 @@ nonisolated enum WorldDataLoader {
         // 一部になる。投影はアフィンだから、拡大後の形・重心・bbox の整合は
         // そのまま保たれ、タップ判定も枠の中で普通に成立する(沖縄と同じ)。
         let place = inset.map { relocation(for: $0, originalBbox: flatBbox) } ?? .identity
+        let detail = country.detailedRings.flatMap(MapDetail.decode)
         let flat = WorldCountry(
             code: country.code,
             nameJa: country.nameJa,
@@ -324,7 +327,10 @@ nonisolated enum WorldDataLoader {
                                            lat: country.centroid[1]).applying(place),
             flatBbox: flatBbox.applying(place),
             isInset: inset != nil,
-            europeBbox: country.europeBbox.flatMap { rect(fromWire: $0, with: projection) })
+            europeBbox: country.europeBbox.flatMap { rect(fromWire: $0, with: projection) },
+            detailedFlatRings: detail.map { rings in
+                rings.map { $0.map { projection.point(lon: Double($0.x), lat: Double($0.y)).applying(place) } }
+            })
         // 地球儀は度数の素通し。インセットの `place` を掛けないのが仕様 —
         // 球の上では実位置・実縮尺で描く(`GlobeShape` の規約)。
         let globe = GlobeShape(
@@ -332,7 +338,8 @@ nonisolated enum WorldDataLoader {
             rings: country.rings.map { ring in
                 ring.map { CGPoint(x: $0[0], y: $0[1]) }
             },
-            centroid: CGPoint(x: country.centroid[0], y: country.centroid[1]))
+            centroid: CGPoint(x: country.centroid[0], y: country.centroid[1]),
+            detailedRings: detail)
         return (flat, globe)
     }
 

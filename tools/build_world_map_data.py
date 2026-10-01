@@ -28,7 +28,9 @@ Run from tools/:
 
 from __future__ import annotations
 
+import argparse
 import json
+from map_detail import refine_rings, validate_detail, detail_size, DETAIL_SIZE_BUDGET
 import math
 import os
 import sys
@@ -688,6 +690,11 @@ def main():
         sys.exit(f"missing {RAW_SRC} - download it first (module docstring)")
     ensure_10m(raw_10m)
 
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--details", help="Higher-resolution mapshaper GeoJSON from the same source")
+    parser.add_argument("--output", help="Destination JSON (defaults to the tools directory)")
+    args = parser.parse_args()
+    details = {f["props"]["ADMIN"]: f for f in load_features(args.details)} if args.details else None
     feats = load_features(src)
 
     # 収録国: コード -> 地物。属領がコードを名乗る衝突は主権国家側を採る。
@@ -836,6 +843,13 @@ def main():
             "rings": rounded,
         }
 
+        if details:
+            # Island exceptions already come from a raw source: retain its
+            # vertices instead of switching to a different coastline source.
+            candidates = source_rings if source_rings is not None else normalize_dateline(
+                split_dateline_outliers(code, details[props["ADMIN"]]["rings"])[0])
+            entry["detailedRings"] = rounded_rings(refine_rings(kept, candidates))
+
         if code == RUSSIA:
             # ひがしヨーロッパの枠はロシアのヨーロッパ側だけで計算する
             # (全土だとベーリング海峡まで伸びてモルドバが 13pt になる)。
@@ -907,7 +921,8 @@ def main():
                    for code in sorted(insets)],
     }
 
-    dst = os.path.join(here, DST)
+    validate_detail(countries)
+    dst = args.output or os.path.join(here, DST)
     with open(dst, "w", encoding="utf-8") as fh:
         json.dump(out, fh, ensure_ascii=False, separators=(",", ":"))
 
@@ -932,7 +947,10 @@ def main():
         scale, frame = insets[code]
         print(f"  inset frame: {code} x{scale} -> {frame}")
     print(f"  size       : {size / 1024:.1f} KB")
-    if size > SIZE_BUDGET:
+    detail_bytes = detail_size(countries)
+    if detail_bytes > DETAIL_SIZE_BUDGET:
+        print(f"  WARNING: detail exceeds {DETAIL_SIZE_BUDGET // 1024} KB budget")
+    if size - detail_bytes > SIZE_BUDGET:
         # 超過は報告して人が判断する。黙って簡略化率を上げない。
         print(f"  WARNING: over the {SIZE_BUDGET // 1024} KB budget")
 

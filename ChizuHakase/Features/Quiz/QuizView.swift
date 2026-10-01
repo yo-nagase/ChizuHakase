@@ -4,6 +4,7 @@ import SwiftUI
 /// this drives presentation and the timing of the advance.
 struct QuizView: View {
     @Environment(AppState.self) private var app
+    @Environment(\.scenePhase) private var scenePhase
     @Environment(\.dismiss) private var dismiss
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.dynamicTypeSize) private var typeSize
@@ -47,7 +48,7 @@ struct QuizView: View {
     /// already knows).
     @State private var globeCenter = GlobeCenter.home
     /// The globe's radius multiplier — a separate camera from the flat map's
-    /// `zoom` (same 1...4 range, different coordinate system; see
+    /// `zoom` (a different coordinate system and ceiling; see
     /// `toggleMapDisplay`).
     @State private var globeZoom: CGFloat = 1
 
@@ -78,6 +79,14 @@ struct QuizView: View {
         .navigationTitle(stage.displayName(mode))
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(.hidden, for: .navigationBar)
+        .toolbar {
+            ToolbarItem(placement: .principal) {
+                Text(stage.displayName(mode))
+                    .font(AppFont.rounded(17, relativeTo: .headline))
+                    .foregroundStyle(Palette.ink)
+                    .accessibilityAddTraits(.isHeader)
+            }
+        }
         .task {
             guard quiz == nil else { return }
             // The atlas's own namespace: japan's cards must not shadow the
@@ -98,6 +107,9 @@ struct QuizView: View {
                                       // which-stage branch.
                                       askedInChallenge:
                                         slice.askedInChallenge[quizMode.rawValue] ?? [])
+            model.beginRanking(playerID: app.rankings.participationEnabled
+                               ? app.gameCenter.playerID : nil)
+            if scenePhase != .active { model.interruptRanking() }
             quiz = model
             // The first question was the only one never read aloud: speech
             // fired on advancing to the *next* question, and the first question
@@ -118,7 +130,24 @@ struct QuizView: View {
             guard !speaking, let quiz else { return }
             rearmVoice(quiz)
         }
+        .onChange(of: app.gameCenter.playerID) { _, _ in
+            guard let quiz, quiz.phase != .finished else { return }
+            quiz.interruptRanking()
+            if scenePhase == .active { quiz.resumeRanking() }
+        }
+        .onChange(of: scenePhase) { _, phase in
+            guard let quiz, quiz.phase != .finished else { return }
+            if phase == .active { quiz.resumeRanking() }
+            else {
+                quiz.interruptRanking()
+                app.rankings.record(quiz.rankingRun(atlas: atlas.saveKey))
+            }
+        }
         .onDisappear {
+            if let quiz, quiz.phase != .finished {
+                quiz.interruptRanking()
+                app.rankings.record(quiz.rankingRun(atlas: atlas.saveKey))
+            }
             advanceTask?.cancel()
             rearmTask?.cancel()
             // Finishing a stage can leave the mode on with a session open;
@@ -427,11 +456,10 @@ struct QuizView: View {
             })
     }
 
-    /// Every recorded country outside a regional world stage. Japan keeps its
-    /// existing regional presentation; the challenge already contains the
-    /// whole atlas, so it needs no surrounding scenery layer either.
+    /// Land outside the regional stage stays visible as grey scenery in both
+    /// atlases. The challenge already draws the whole atlas.
     private var surroundingCodes: [Int] {
-        guard atlas.regionNoun == .country, !stage.isChallenge else { return [] }
+        guard !stage.isChallenge else { return [] }
         let stageCodes = Set(stage.codes)
         return atlas.mapData.prefectures.map(\.code).filter { !stageCodes.contains($0) }
     }
@@ -719,7 +747,9 @@ struct QuizView: View {
             guard !Task.isCancelled else { return }
             quiz.advance()
             if quiz.phase == .finished {
-                onFinish(quiz.makeResult())
+                var result = quiz.makeResult()
+                result.ranking = quiz.rankingRun(atlas: atlas.saveKey)
+                onFinish(result)
             } else {
                 announce(quiz)
                 // When nothing was announced (「なまえを あてる」, or speech

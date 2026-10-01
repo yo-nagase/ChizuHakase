@@ -9,6 +9,8 @@ struct StageSelectView: View {
     @Environment(\.textMode) private var mode
     @Environment(\.dismiss) private var dismiss
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.scenePhase) private var scenePhase
+    @State private var courseRankings = StageRankings()
 
     /// The book this shelf pages through. Stages, map, records and mastery all
     /// come off this one value, so the view never asks which book it is in —
@@ -22,10 +24,34 @@ struct StageSelectView: View {
     /// over (wrong stars, and stage index 3 means a different place per book).
     private var save: AtlasSave { app.save.data.atlas(atlas.saveKey) }
 
+    private func rankingBoard(_ stage: Stage) -> RankingBoard {
+        RankingBoard(atlas: atlas.saveKey, stage: stage.index,
+                     mode: quizMode, questionCount: stage.questionCount)
+    }
+
+    private var rankingContext: String {
+        "\(atlas.saveKey)|\(quizMode.rawValue)|\(app.gameCenter.playerID ?? "")|\(app.rankings.participationEnabled)|\(scenePhase == .active)"
+    }
+
+    private func reloadRanks() async {
+        guard scenePhase == .active else { return }
+        await courseRankings.reload(boards: atlas.stages.map(rankingBoard),
+            context: rankingContext, participating: app.rankings.participationEnabled,
+            playerID: app.gameCenter.playerID, load: app.gameCenter.courseRanks)
+    }
+
     var body: some View {
         ScrollView {
             VStack(spacing: 0) {
                 modeSwitch
+                NavigationLink {
+                    RankingView(atlas: atlas, stageIndex: atlas.stages.last?.index ?? 0,
+                                quizMode: quizMode)
+                } label: {
+                    Label("ランキング・じぶんの きろく", systemImage: "trophy")
+                        .padding(12)
+                }
+                .accessibilityIdentifier("openRankings")
 
                 ForEach(atlas.stageShelves) { shelf in
                     if let title = shelf.title {
@@ -39,7 +65,10 @@ struct StageSelectView: View {
                             mapData: atlas.mapData,
                             record: save.record(forStage: stage.index,
                                                 mode: quizMode),
-                            save: save
+                            save: save,
+                            rank: courseRankings.rank(for: rankingBoard(stage), context: rankingContext,
+                                participating: app.rankings.participationEnabled,
+                                playerID: app.gameCenter.playerID)
                         ) {
                             SoundService.shared.play(
                                 .decide, enabled: app.save.data.settings.soundEnabled)
@@ -54,6 +83,8 @@ struct StageSelectView: View {
             .pageColumn()
         }
         .background(StageAtlasBackground())
+        .task(id: rankingContext) { await reloadRanks() }
+        .refreshable { await reloadRanks() }
         .navigationTitle(mode.stages)
         .navigationBarTitleDisplayMode(.inline)
         .navigationBarBackButtonHidden(true)
@@ -166,6 +197,7 @@ private struct StageSignboard: View {
     /// One atlas's slice, not the whole save: the board can only ever read the
     /// book it belongs to, so a world signboard cannot show japan's mastery.
     let save: AtlasSave
+    let rank: StageRank
     var action: () -> Void
 
     private var learnedCount: Int {
@@ -205,6 +237,26 @@ private struct StageSignboard: View {
                         countChip("✨ \(mode.learnedCount) \(learnedCount)")
                             .opacity(learnedCount > 0 ? 1 : 0)
                             .accessibilityHidden(learnedCount == 0)
+
+                        Label(rank.label(mode), systemImage: rank == .ranked(1) ? "trophy.fill" : "trophy")
+                            .font(rank == .ranked(1)
+                                ? AppFont.heading(13, relativeTo: .caption)
+                                : AppFont.rounded(12, relativeTo: .caption))
+                            .foregroundStyle(rank == .ranked(1) ? Palette.goldInk : Palette.ink)
+                            .monospacedDigit()
+                            .fixedSize(horizontal: false, vertical: true)
+                            .padding(.horizontal, rank == .ranked(1) ? 8 : 0)
+                            .padding(.vertical, rank == .ranked(1) ? 3 : 0)
+                            .background {
+                                if rank == .ranked(1) {
+                                    RoundedRectangle(cornerRadius: 8)
+                                        .fill(Palette.goldStock)
+                                        .overlay {
+                                            RoundedRectangle(cornerRadius: 8)
+                                                .strokeBorder(Palette.goldInk.opacity(0.65), lineWidth: 1)
+                                        }
+                                }
+                            }
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
 
@@ -216,7 +268,7 @@ private struct StageSignboard: View {
                 .padding(.vertical, 6)
             }
             .frame(maxWidth: .infinity)
-            .frame(height: 84)
+            .frame(minHeight: 108)
             .contentShape(Rectangle())
         }
         .buttonStyle(SignPressStyle())
@@ -264,6 +316,7 @@ private struct StageSignboard: View {
         var text = "\(stage.displayName(mode))。\(stage.questionCount) もん。"
             + mode.starCount(record?.stars ?? 0)
         if learnedCount > 0 { text += "。\(mode.learnedCount) \(learnedCount)" }
+        text += "。\(rank.label(mode))"
         return text
     }
 }

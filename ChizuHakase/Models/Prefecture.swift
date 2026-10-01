@@ -24,9 +24,12 @@ nonisolated struct Prefecture: Identifiable, Sendable, Equatable {
     /// Hit-testing and VoiceOver keep the true `bbox` — a tap on visible
     /// Siberia is a tap on Russia.
     let frameBbox: CGRect?
+    let detailedRings: [[CGPoint]]?
+    private let detailedBbox: CGRect?
 
     init(code: Int, name: String, kana: String, bbox: CGRect,
-         centroid: CGPoint, rings: [[CGPoint]], frameBbox: CGRect? = nil) {
+         centroid: CGPoint, rings: [[CGPoint]], frameBbox: CGRect? = nil,
+         detailedRings: [[CGPoint]]? = nil) {
         self.code = code
         self.name = name
         self.kana = kana
@@ -34,6 +37,19 @@ nonisolated struct Prefecture: Identifiable, Sendable, Equatable {
         self.centroid = centroid
         self.rings = rings
         self.frameBbox = frameBbox
+        self.detailedRings = detailedRings
+        self.detailedBbox = detailedRings.map { rings in
+            rings.joined().reduce(bbox) { $0.union(CGRect(origin: $1, size: .zero)) }
+        }
+    }
+
+    /// Keep the fitting frame and label anchor stable when changing outlines.
+    /// The selected value is shared by drawing, hit testing and accessibility.
+    func usingDetail(_ detailed: Bool) -> Prefecture {
+        guard detailed, let detailedRings, let detailedBbox else { return self }
+        return Prefecture(code: code, name: name, kana: kana, bbox: detailedBbox,
+                          centroid: centroid, rings: detailedRings,
+                          frameBbox: frameBbox ?? bbox)
     }
 
     var id: Int { code }

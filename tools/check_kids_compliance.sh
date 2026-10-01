@@ -2,7 +2,7 @@
 # Verifies the CLAUDE.md §1 constraints against the built binary and the source,
 # not against anyone's memory of what was added.
 #
-#   ./tools/check_kids_compliance.sh path/to/WakuwakuChizu.app
+#   ./tools/check_kids_compliance.sh path/to/ChizuHakase.app
 #
 # These are the App Store Kids category (Guideline 1.3 / 5.1.4) conditions. A
 # failure here is a release blocker, not a warning.
@@ -10,8 +10,13 @@ set -uo pipefail
 
 APP="${1:-}"
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-SRC="$ROOT/WakuwakuChizu"
+SRC="$ROOT/ChizuHakase"
 fails=0
+
+if [ ! -d "$SRC" ]; then
+    echo "Source directory not found: $SRC" >&2
+    exit 1
+fi
 
 pass() { printf '  \033[32mok\033[0m   %s\n' "$1"; }
 fail() { printf '  \033[31mFAIL\033[0m %s\n' "$1"; fails=$((fails + 1)); }

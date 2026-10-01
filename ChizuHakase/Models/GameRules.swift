@@ -184,6 +184,13 @@ nonisolated enum GameRules {
     /// the shared ceiling cannot drift apart between the gesture and the data.
     static let mapMaxZoom: CGFloat = 4
 
+    /// Switch both the visible outline and tap geometry while magnifying.
+    static let mapDetailZoom: CGFloat = 3
+
+    /// 小国を指で選べる大きさまで寄れるよう、世界編は従来の4倍まで拡大する。
+    static let worldMapZoomMultiplier: CGFloat = 4
+    static let worldMapMaxZoom = mapMaxZoom * worldMapZoomMultiplier
+
     /// The zoom ceiling for a challenge stage's flat map, derived from the
     /// data rather than hand-placed (the same discipline as the Okinawa
     /// inset's sea scan): the largest frame ratio `max(cw/w, ch/h)` between

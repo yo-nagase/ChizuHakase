@@ -21,6 +21,7 @@ nonisolated enum MapDataLoader {
             let bbox: [CGFloat]
             let centroid: [CGFloat]
             let rings: [[[CGFloat]]]
+            let detailedRings: [[[CGFloat]]]?
         }
         let mapWidth: CGFloat
         let mapHeight: CGFloat
@@ -106,7 +107,8 @@ nonisolated enum MapDataLoader {
                           kana: p.kana,
                           bbox: bbox,
                           centroid: CGPoint(x: p.centroid[0], y: p.centroid[1]),
-                          rings: rings)
+                          rings: rings,
+                          detailedRings: p.detailedRings.flatMap(MapDetail.decode))
     }
 
     /// `[x0, y0, x1, y1]` -> CGRect.
@@ -116,5 +118,16 @@ nonisolated enum MapDataLoader {
                       y: values[1],
                       width: values[2] - values[0],
                       height: values[3] - values[1])
+    }
+}
+
+/// Optional detail must never make an otherwise usable map disappear.
+nonisolated enum MapDetail {
+    static func decode(_ rings: [[[CGFloat]]]) -> [[CGPoint]]? {
+        guard !rings.isEmpty, rings.allSatisfy({ ring in
+            ring.count >= 4 && ring.allSatisfy { $0.count == 2 && $0.allSatisfy(\.isFinite) }
+                && ring.first == ring.last
+        }) else { return nil }
+        return rings.map { $0.map { CGPoint(x: $0[0], y: $0[1]) } }
     }
 }

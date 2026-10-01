@@ -23,7 +23,10 @@ struct CardBookView: View {
     @State private var openedPhantom: PhantomCard?
 
     private var save: AtlasSave { app.save.data.atlas(atlas.saveKey) }
-    private var active: CardFilter { filter ?? initialFilter }
+    private var active: CardFilter {
+        let selected = filter ?? initialFilter
+        return selected == .phantom && !FeatureFlags.phantomCardsEnabled ? .all : selected
+    }
     private var isOpeningOneCard: Bool {
         if case .card = active { true } else { false }
     }
@@ -45,7 +48,7 @@ struct CardBookView: View {
     }
 
     private var isWorldBook: Bool { atlas.saveKey == SaveData.worldAtlas }
-    private var phantomCards: [PhantomCard] { PhantomCard.catalog(for: atlas) }
+    private var phantomCards: [PhantomCard] { PhantomCard.availableCatalog(for: atlas) }
     private var isShowingPhantom: Bool { active == .phantom }
 
     /// Opens with the cover's own slide suppressed.
@@ -134,12 +137,14 @@ struct CardBookView: View {
             HStack(spacing: 8) {
                 chip(title: mode.allCategories,
                      isOn: active == .all || isOpeningOneCard) { filter = .all }
-                chip(title: mode.phantomCards,
-                     isOn: isShowingPhantom,
-                     onFill: AnyShapeStyle(LinearGradient(
-                        colors: [.indigo, .purple, .cyan],
-                        startPoint: .topLeading, endPoint: .bottomTrailing))) {
-                    filter = isShowingPhantom ? .all : .phantom
+                if FeatureFlags.phantomCardsEnabled {
+                    chip(title: mode.phantomCards,
+                         isOn: isShowingPhantom,
+                         onFill: AnyShapeStyle(LinearGradient(
+                            colors: [.indigo, .purple, .cyan],
+                            startPoint: .topLeading, endPoint: .bottomTrailing))) {
+                        filter = isShowingPhantom ? .all : .phantom
+                    }
                 }
                 // Ahead of the categories: the payoff is what a child arrives
                 // here looking for. One chip per tier rather than a single

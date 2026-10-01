@@ -22,6 +22,7 @@ from collections import Counter
 
 import world_countries as wc
 from map_geometry import point_in_rings
+from map_detail import validate_detail, detail_size, DETAIL_SIZE_BUDGET
 
 DEFAULT_DST = os.path.join("..", "ChizuHakase", "Resources", "WorldShapes.json")
 
@@ -252,7 +253,11 @@ def main():
     assert by_code[643]["centroid"][0] < URAL_LON, \
         ("ロシアの centroid がウラル線の東", by_code[643]["centroid"])
 
-    size = os.path.getsize(path)
+    validate_detail(recorded)
+    detail_bytes = detail_size(recorded)
+    if detail_bytes > DETAIL_SIZE_BUDGET:
+        print(f"WARNING: detail exceeds {DETAIL_SIZE_BUDGET // 1024} KB budget")
+    size = os.path.getsize(path) - detail_bytes
     if size > SIZE_BUDGET:
         print(f"WARNING: {size / 1024:.1f} KB > {SIZE_BUDGET // 1024} KB budget - "
               "黙って簡略化率を上げず、報告して判断を仰ぐこと")

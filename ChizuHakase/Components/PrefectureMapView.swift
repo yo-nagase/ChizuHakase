@@ -163,7 +163,12 @@ struct PrefectureMapView: View {
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    private var prefectures: [Prefecture] { mapData.prefectures(in: codes) }
+    @Environment(\.mapDetailedGeometry) private var liveDetailedGeometry
+
+    private var usesDetail: Bool { liveDetailedGeometry ?? (zoom >= GameRules.mapDetailZoom) }
+    private var prefectures: [Prefecture] {
+        mapData.prefectures(in: codes).map { $0.usingDetail(usesDetail) }
+    }
 
     var body: some View {
         GeometryReader { geo in
@@ -261,7 +266,8 @@ struct PrefectureMapView: View {
                                            canvasSize: CGSize) -> some View {
         let stageCodes = Set(codes)
         let canvasRect = drawableRect(canvasSize)
-        let path = mapData.prefectures(in: contextCodes).reduce(into: Path()) { path, pref in
+        let path = mapData.prefectures(in: contextCodes).reduce(into: Path()) { path, original in
+            let pref = original.usingDetail(usesDetail)
             guard !stageCodes.contains(pref.code),
                   pref.bbox.applying(transform).intersects(canvasRect)
             else { return }
@@ -394,7 +400,7 @@ struct PrefectureMapView: View {
     private func resolve(_ point: CGPoint, transform: CGAffineTransform) -> Prefecture? {
         let candidates = prefectures.filter { interactiveCodes.contains($0.code) }
         guard !candidates.isEmpty else { return nil }
-        let target = targetCode.flatMap { mapData[$0] }
+        let target = targetCode.flatMap { mapData[$0]?.usingDetail(usesDetail) }
         let magnification = ZoomPan.magnification(zoom)
         return PrefectureGeometry.resolveTap(
             at: point, target: target, among: candidates, transform: transform,

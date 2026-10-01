@@ -4,6 +4,7 @@ import SwiftUI
 /// result screen and unwind cleanly afterwards.
 struct RootView: View {
     @Environment(AppState.self) private var app
+    @Environment(\.scenePhase) private var scenePhase
 
     @State private var path: [Route] = []
     @State private var showsSettings = false
@@ -63,6 +64,14 @@ struct RootView: View {
                 .navigationDestination(for: Route.self, destination: destination)
         }
         .tint(Palette.orange)
+        .sheet(item: Binding(get: { app.gameCenter.signIn },
+                             set: { app.gameCenter.signIn = $0 }),
+               onDismiss: { app.gameCenter.signInDismissed() }) { signIn in
+            GameCenterSignInView(controller: signIn.controller)
+        }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active { Task { await app.gameCenter.submitPending() } }
+        }
         // One injection point: every screen reads the mode from the environment
         // rather than reaching into the save store itself.
         .environment(\.textMode, app.save.data.settings.textMode)
@@ -122,6 +131,7 @@ struct RootView: View {
             // this hides would otherwise run inside that tap's button action
             // and read as the app hesitating.
             SoundService.shared.warmUp()
+            app.gameCenter.authenticate()
         }
     }
 
@@ -160,6 +170,7 @@ struct RootView: View {
         let arguments = ProcessInfo.processInfo.arguments
         if arguments.contains("-resetSave") {
             app.save.eraseAll()
+            app.rankings.erase()
             // The page restore read lastAtlas *before* this erase (at init).
             // A reset run must not inherit whichever page the previous run
             // left open — the japan suite launches with -resetSave and no
@@ -295,8 +306,17 @@ struct RootView: View {
                         allCodes.map { ($0, true) }),
                     cardDraws: []),
                     catalog: atlas.cards, atlas: atlas.saveKey,
-                    phantomCards: PhantomCard.catalog(for: atlas))
+                    phantomCards: PhantomCard.availableCatalog(for: atlas))
             }
+        }
+        // Exercise the real nationwide reward path when previewing its foil.
+        if arguments.contains("-grantPerfectJapan"), atlas.saveKey == SaveData.japanAtlas {
+            app.save.applyStageResult(StageResult(
+                mode: .findOnMap, stageIndex: 6, score: 0, stars: 3,
+                firstTryByPrefecture: Dictionary(uniqueKeysWithValues:
+                    (1...47).map { ($0, true) }), cardDraws: []),
+                catalog: atlas.cards, atlas: atlas.saveKey,
+                phantomCards: PhantomCard.availableCatalog(for: atlas))
         }
         // Every prefecture of one regional stage answered cleanly, which is the
         // state the stage list's 「おぼえた ◯ / ◯」 has to show as full. Its own
@@ -438,9 +458,13 @@ struct RootView: View {
     /// Taken from the atlas value itself (`saveKey` is the single carrier of
     /// book-played + record-destination), not from the session state next to it.
     private func finish(_ result: StageResult, stage: Stage) {
+        if let run = result.ranking {
+            app.rankings.record(run)
+            Task { await app.gameCenter.submitPending() }
+        }
         let gains = app.save.applyStageResult(
             result, catalog: atlas.cards, atlas: atlas.saveKey,
-            phantomCards: PhantomCard.catalog(for: atlas))
+            phantomCards: PhantomCard.availableCatalog(for: atlas))
         path = [.stageSelect, .result(result, gains: gains)]
     }
 

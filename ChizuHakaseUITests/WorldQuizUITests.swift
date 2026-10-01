@@ -49,6 +49,25 @@ final class WorldQuizUITests: XCTestCase {
                       "a correct first tap on \(target) should score 100")
     }
 
+    func testRegionalMapCanZoomIntoDetailAndReset() {
+        app.launchArguments = ["-resetSave", "-atlas", "world", "-startAt", "quiz:15"]
+        app.launch()
+        XCTAssertTrue(app.staticTexts["12 もんちゅう 1 もんめ"].waitForExistence(timeout: 10))
+        let anchor = app.buttons["中華人民共和国"]
+        XCTAssertTrue(anchor.waitForExistence(timeout: 5))
+        let original = anchor.frame
+        record("world-before-detail")
+        anchor.pinch(withScale: 3.5, velocity: 1)
+        let reset = app.buttons["もとの おおきさ"]
+        XCTAssertTrue(reset.waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["12 もんちゅう 1 もんめ"].exists)
+        record("world-detailed-outline")
+        reset.tap()
+        XCTAssertFalse(reset.waitForExistence(timeout: 2))
+        XCTAssertEqual(anchor.frame.width, original.width, accuracy: 1)
+        XCTAssertEqual(anchor.frame.midX, original.midX, accuracy: 1)
+    }
+
     /// A world regional stage pinches *out* below its fit (2026-08-22 plan):
     /// the road to 「この地方は世界のどのあたり?」. Shrinking summons the same
     /// 「もとの おおきさ」 chip zooming in does, and the chip brings the

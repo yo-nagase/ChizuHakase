@@ -412,7 +412,7 @@ struct TitleView: View {
     /// The foil-card counts live inside the card tile because they are a
     /// breakdown of that collection, not a third destination. Gold, silver
     /// and rainbow are exclusive here: a rainbow card is no longer repeated
-    /// under gold, so the three numbers remain an honest inventory.
+    /// under gold. Phantom cards are separate completion rewards, counted alongside them.
     private func progressLine(for atlas: Atlas, slice: AtlasSave) -> some View {
         HStack(spacing: 10) {
             // 「おぼえた」 is claimed at the top of the mastery ladder, not on
@@ -433,25 +433,31 @@ struct TitleView: View {
             tally("TitleCardsHUD", slice.totalOwnedCards, max(atlas.cards.count, 1),
                   mode.ownedCards, Palette.collected,
                   breakdown: TallyBreakdown(items: [
-                    .init(tier: .silver,
+                    .init(mark: .tier(.silver),
                           name: mode.cardTierName(.silver) ?? "シルバーカード",
                           count: slice.cardCount(ofTier: .silver),
                           countTint: Palette.silverMark),
-                    .init(tier: .gold,
+                    .init(mark: .tier(.gold),
                           name: mode.cardTierName(.gold) ?? "ゴールドカード",
                           count: slice.cardCount(ofTier: .gold),
                           countTint: Palette.goldInk),
-                    .init(tier: .rainbow,
+                    .init(mark: .tier(.rainbow),
                           name: mode.cardTierName(.rainbow) ?? "にじいろカード",
                           count: slice.cardCount(ofTier: .rainbow),
                           countTint: Palette.rainbowMark),
-                  ]),
+                  ] + (FeatureFlags.phantomCardsEnabled ? [
+                    .init(mark: .phantom,
+                          name: mode.phantomCard,
+                          count: slice.phantomCards.intersection(
+                            Set(PhantomCard.availableCatalog(for: atlas).map(\.id))).count,
+                          countTint: .purple),
+                  ] : [])),
                   hint: mode.viewCards) {
                 onCardBook(.all)
             }
         }
         // Holds the row to its tallest tile instead of letting the flexible
-        // heights above stretch it down the screen. The three tier counts need
+        // heights above stretch it down the screen. The four card-kind counts need
         // a little more breathing room than the old one-phrase note, while the
         // row still fits inside the phone column without touching its edges.
         .fixedSize(horizontal: false, vertical: true)
@@ -459,10 +465,15 @@ struct TitleView: View {
                                  : (hSize == .regular ? 440 : 382))
     }
 
-    /// The exclusive rungs inside the owned-card total.
+    /// Ordinary card finishes and the separate phantom-card collection.
     private struct TallyBreakdown {
+        enum Mark {
+            case tier(CardTier)
+            case phantom
+        }
+
         struct Item: Identifiable {
-            let tier: CardTier
+            let mark: Mark
             let name: String
             let count: Int
             let countTint: Color
@@ -564,7 +575,7 @@ struct TitleView: View {
                     HStack(spacing: 5) {
                         ForEach(breakdown.items) { item in
                             HStack(spacing: 2) {
-                                TierCardMark(tier: item.tier)
+                                TierCardMark(mark: item.mark)
                                 Text(verbatim: "\(item.count)")
                                     .foregroundStyle(item.countTint)
                             }
@@ -585,25 +596,39 @@ struct TitleView: View {
 
     /// A tiny piece of the actual card finish, rather than a kanji abbreviation.
     /// The order and the material now match the ladder in the card book:
-    /// silver, gold, then rainbow.
+    /// silver, gold, rainbow, then the phantom collection.
     private struct TierCardMark: View {
-        let tier: CardTier
+        let mark: TallyBreakdown.Mark
 
         private var stops: [Gradient.Stop] {
-            switch tier {
-            case .silver: Palette.silverRamp
-            case .gold: Palette.foilRamp
-            case .rainbow: Palette.rainbowRamp
-            case .none, .plain: []
+            switch mark {
+            case .tier(.silver): Palette.silverRamp
+            case .tier(.gold): Palette.foilRamp
+            case .tier(.rainbow): Palette.rainbowRamp
+            case .phantom: [
+                .init(color: .indigo, location: 0),
+                .init(color: .purple, location: 0.55),
+                .init(color: .cyan, location: 1),
+            ]
+            case .tier(.none), .tier(.plain): []
             }
         }
 
         private var edge: Color {
-            switch tier {
-            case .silver: Palette.silverEdge
-            case .gold: Palette.foilEdge
-            case .rainbow: Palette.rainbowEdge
-            case .none, .plain: .white
+            switch mark {
+            case .tier(.silver): Palette.silverEdge
+            case .tier(.gold): Palette.foilEdge
+            case .tier(.rainbow): Palette.rainbowEdge
+            case .phantom: .purple
+            case .tier(.none), .tier(.plain): .white
+            }
+        }
+
+        private var symbol: String {
+            switch mark {
+            case .phantom: "diamond.fill"
+            case .tier(.rainbow): "sparkles"
+            default: "star.fill"
             }
         }
 
@@ -617,7 +642,7 @@ struct TitleView: View {
                         .stroke(edge, lineWidth: 1)
                 }
                 .overlay {
-                    Image(systemName: tier == .rainbow ? "sparkles" : "star.fill")
+                    Image(systemName: symbol)
                         .font(.system(size: 5, weight: .bold))
                         .foregroundStyle(.white.opacity(0.92))
                 }

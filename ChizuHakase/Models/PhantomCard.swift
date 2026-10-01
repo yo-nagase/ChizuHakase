@@ -7,7 +7,7 @@ import Foundation
 /// stars and no place in the normal draw pool.
 nonisolated struct PhantomCard: Identifiable, Sendable, Hashable {
     enum Motif: String, Sendable, Hashable {
-        case sky, earth, sea
+        case sky, earth, sea, japan
         case northAmerica, southAmerica, europe, africa, asia, oceania, antarctica
     }
 
@@ -16,6 +16,8 @@ nonisolated struct PhantomCard: Identifiable, Sendable, Hashable {
         case masteredRegions(Set<Int>)
         /// Used by Antarctica, which has no ordinary country cards in the atlas.
         case phantomCards(Set<String>)
+        /// A single complete, flawless run; never inferred from cumulative progress.
+        case perfectChallenge(atlas: String, stageIndex: Int, codes: Set<Int>)
     }
 
     let id: String
@@ -37,6 +39,10 @@ nonisolated struct PhantomCard: Identifiable, Sendable, Hashable {
     /// The cards that belong to one atlas. World group membership is read from
     /// the atlas's stage codes so it stays in step with WorldShapes.json instead
     /// of duplicating 167 ISO codes here.
+    static func availableCatalog(for atlas: Atlas) -> [PhantomCard] {
+        FeatureFlags.phantomCardsEnabled ? catalog(for: atlas) : []
+    }
+
     static func catalog(for atlas: Atlas) -> [PhantomCard] {
         switch atlas.saveKey {
         case SaveData.japanAtlas:
@@ -101,7 +107,9 @@ nonisolated struct PhantomCard: Identifiable, Sendable, Hashable {
     /// unlock in the same result without making the order of the catalog matter.
     static func newlyUnlocked(
         from candidates: [PhantomCard],
-        save: AtlasSave
+        save: AtlasSave,
+        result: StageResult? = nil,
+        atlasKey: String? = nil
     ) -> Set<String> {
         var owned = save.phantomCards
         var changed = true
@@ -113,6 +121,14 @@ nonisolated struct PhantomCard: Identifiable, Sendable, Hashable {
                 case .masteredRegions(let codes):
                     ready = !codes.isEmpty && codes.allSatisfy {
                         save.masteryLevel(of: $0) >= GameRules.maxMastery
+                    }
+                case .perfectChallenge(let atlas, let stageIndex, let codes):
+                    if let result, atlasKey == atlas {
+                        ready = !codes.isEmpty && result.stageIndex == stageIndex
+                            && Set(result.firstTryByPrefecture.keys) == codes
+                            && result.firstTryByPrefecture.values.allSatisfy { $0 }
+                    } else {
+                        ready = false
                     }
                 case .phantomCards(let required):
                     ready = !required.isEmpty && owned.isSuperset(of: required)
@@ -131,19 +147,26 @@ nonisolated struct PhantomCard: Identifiable, Sendable, Hashable {
                     nameKana: "てん", nameKanji: "天",
                     descriptionKana: "ひがしの そらに うかぶ にほん",
                     descriptionKanji: "東の空に浮かぶ日本",
-                    motif: .sky, setIndex: 1, setCount: 3,
+                    motif: .sky, setIndex: 1, setCount: 4,
                     unlockRule: .masteredRegions(Set(1...14))),
         PhantomCard(id: "phantom-japan-earth",
                     nameKana: "ち", nameKanji: "地",
                     descriptionKana: "まんなかの だいちに ねむる にほん",
                     descriptionKanji: "中央の大地に眠る日本",
-                    motif: .earth, setIndex: 2, setCount: 3,
+                    motif: .earth, setIndex: 2, setCount: 4,
                     unlockRule: .masteredRegions(Set(15...30))),
         PhantomCard(id: "phantom-japan-sea",
                     nameKana: "うみ", nameKanji: "海",
                     descriptionKana: "にしの うみに きらめく にほん",
                     descriptionKanji: "西の海にきらめく日本",
-                    motif: .sea, setIndex: 3, setCount: 3,
+                    motif: .sea, setIndex: 3, setCount: 4,
                     unlockRule: .masteredRegions(Set(31...47))),
+        PhantomCard(id: "phantom-japan-perfect",
+                    nameKana: "にほん", nameKanji: "日本",
+                    descriptionKana: "ぜんこく チャレンジで 47もん ぜんぶ いっぱつせいかい！",
+                    descriptionKanji: "全国チャレンジで47問すべて一発正解！",
+                    motif: .japan, setIndex: 4, setCount: 4,
+                    unlockRule: .perfectChallenge(atlas: SaveData.japanAtlas,
+                                                 stageIndex: 6, codes: Set(1...47))),
     ]
 }

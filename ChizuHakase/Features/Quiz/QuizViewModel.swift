@@ -52,6 +52,45 @@ final class QuizViewModel {
     /// having tried it with it.
     private(set) var ruledOut: Set<Int> = []
 
+    private var rankingTimer = RankingTimer()
+    private var rankingActive = false
+    private let rankingID = UUID()
+    private let rankingDate = Date()
+    private var rankingPlayerID: String?
+    private var rankingStarted = false
+    private let rankingNow: () -> TimeInterval
+
+    func beginRanking(playerID: String?) {
+        guard !rankingStarted else { return }
+        rankingStarted = true
+        rankingPlayerID = playerID
+        resumeRanking()
+    }
+
+    func resumeRanking() {
+        rankingActive = true
+        if phase == .asking { rankingTimer.start(at: rankingNow()) }
+    }
+
+    func interruptRanking() {
+        guard phase != .finished else { return }
+        rankingActive = false
+        rankingTimer.interrupt(at: rankingNow())
+    }
+
+    func rankingRun(atlas: String) -> RankingRun {
+        RankingRun(id: rankingID,
+                   board: RankingBoard(atlas: atlas, stage: stage.index, mode: mode,
+                                       questionCount: questionCount),
+                   date: rankingDate,
+                   correct: outcomesByPrefecture.values.flatMap { $0 }.filter { $0 }.count,
+                   milliseconds: rankingTimer.milliseconds(at: rankingNow()),
+                   completed: phase == .finished,
+                   interrupted: rankingTimer.interrupted || !rankingStarted
+                       || questionCount != stage.questionCount,
+                   playerID: rankingPlayerID)
+    }
+
     private var firstTryByPrefecture: [Int: Bool] = [:]
     /// Each asking's clean flag in the order asked, per prefecture — what the
     /// streak is fed from. Recorded once per question, when it is answered.
@@ -82,7 +121,9 @@ final class QuizViewModel {
          ownedCards: [String: Int] = [:],
          drawPolicy: GameRules.DrawPolicy,
          askedInChallenge: Set<Int>,
-         generator: AnyRandomNumberGenerator = AnyRandomNumberGenerator()) {
+         generator: AnyRandomNumberGenerator = AnyRandomNumberGenerator(),
+         rankingNow: @escaping () -> TimeInterval = { ProcessInfo.processInfo.systemUptime }) {
+        self.rankingNow = rankingNow
         self.stage = stage
         self.mode = mode
         self.mapData = mapData
@@ -190,6 +231,7 @@ final class QuizViewModel {
     }
 
     private func recordHit(_ target: Prefecture) -> Answer {
+        rankingTimer.pause(at: rankingNow())
         let firstTry = attempts == 0
         combo = GameRules.nextCombo(current: combo, correct: true, firstTry: firstTry)
         let points = GameRules.score(firstTry: firstTry, combo: combo)
@@ -239,6 +281,7 @@ final class QuizViewModel {
         effect = nil
         phase = index >= order.count ? .finished : .asking
         dealChoices()
+        if phase == .asking && rankingActive { rankingTimer.start(at: rankingNow()) }
     }
 
     private func fire(_ kind: MapEffect.Kind, on code: Int) {
